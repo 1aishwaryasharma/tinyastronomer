@@ -559,11 +559,20 @@ float fbm(vec3 p) {
       shadowLight: opts.shadowLight || null
     });
 
+    let lastW = window.innerWidth;
+    let lastH = window.innerHeight;
     function resize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // iOS shows/hides the URL bar with a height-only change; resizing the
+      // WebGL surface for that makes every overlay appear to drift.
+      if (w === lastW && Math.abs(h - lastH) < 120) return;
+      lastW = w;
+      lastH = h;
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      if (composer) composer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(w, h);
+      if (composer) composer.setSize(w, h);
     }
     window.addEventListener('resize', opts.onResize
       ? function () { resize(); opts.onResize(); }

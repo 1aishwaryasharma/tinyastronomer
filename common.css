@@ -33,6 +33,7 @@ canvas:focus-visible {
 html, body {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   background: var(--bg);
   color: var(--ink);
   font-family: 'Newsreader', Georgia, serif;
@@ -149,7 +150,9 @@ canvas { display: block; }
 .rail-btn:hover {
   background: var(--panel-bright);
   border-color: rgba(244, 197, 96, 0.3);
-  transform: translateX(-3px);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rail-btn:hover { transform: translateX(-3px); }
 }
 .rail-btn.active {
   border-color: var(--accent);
@@ -377,9 +380,8 @@ canvas { display: block; }
   display: none !important;
 }
 
-/* Tablet headers carry the page identity; on interactive scenes with a
-   bottom dock, live telemetry relocates to a compact status strip above it.
-   Scrolling pages like Missions keep metadata in the header. */
+/* Tablet: compact the header. Interactive scenes move live telemetry out of
+   the title row so it no longer fights the Explore control. */
 @media (max-width: 1024px) {
   .header {
     padding: calc(16px + env(safe-area-inset-top, 0px))
@@ -419,72 +421,111 @@ canvas { display: block; }
     pointer-events: none;
     z-index: 10;
   }
-
-  .controls,
-  .date-controls {
-    right: 16px !important;
-    left: 16px !important;
-    width: auto !important;
-    max-width: none !important;
-    transform: none !important;
-    flex-wrap: nowrap !important;
-    justify-content: center !important;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent);
-    mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent);
-  }
-  .controls::-webkit-scrollbar,
-  .date-controls::-webkit-scrollbar {
-    display: none;
-  }
-  .controls > *,
-  .date-controls > * {
-    flex: 0 0 auto;
-  }
-  .controls .speed-group,
-  .controls .toggle-group {
-    flex-wrap: nowrap;
-  }
 }
 
-@media (max-width: 820px) {
+/* Phones and narrow windows. Layout is width-driven (not pointer-type) so
+   desktop emulation, iPads, and real phones all get the same stable chrome.
+   svh is used so the iOS address bar cannot shove menus on and off screen. */
+@media (max-width: 820px), (max-height: 520px) and (orientation: landscape) {
   .header {
-    padding: calc(12px + env(safe-area-inset-top, 0px))
-             calc(14px + env(safe-area-inset-right, 0px))
-             12px
-             calc(14px + env(safe-area-inset-left, 0px)) !important;
+    padding: calc(10px + env(safe-area-inset-top, 0px))
+             calc(12px + env(safe-area-inset-right, 0px))
+             10px
+             calc(12px + env(safe-area-inset-left, 0px)) !important;
   }
   .title {
     font-size: 16px !important;
-    max-width: calc(100vw - 132px);
+    max-width: calc(100vw - 128px);
   }
+  .header-meta,
+  body:has(.controls) .header-meta,
+  body:has(.date-controls) .header-meta,
+  body:has(.walk-controls) .header-meta {
+    display: none !important;
+  }
+
+  /* Pin Explore to the top-right and grow its menu left so every item stays
+     inside the viewport. */
   .scene-nav {
-    top: calc(12px + env(safe-area-inset-top, 0px));
+    top: calc(10px + env(safe-area-inset-top, 0px));
     left: auto;
-    right: calc(12px + env(safe-area-inset-right, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
     transform: none;
   }
   .scene-nav-btn { padding: 6px 10px; font-size: 8px; }
+  .scene-menu {
+    top: calc(100% + 6px);
+    left: auto;
+    right: 0;
+    transform: none;
+    min-width: 176px;
+    max-width: min(220px, calc(100vw - 20px));
+    max-height: min(70svh, calc(100svh - 72px));
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
 
-  /* Keep the scene visible on phones. Educational copy becomes a small
-     title drawer and is available on demand instead of covering the model. */
-  .info-panel.mobile-info-panel {
+  /* Every picker becomes a horizontal chip strip under the title. A vertical
+     190px rail covers the model on a phone and was the main source of menus
+     sliding through the scene. */
+  .side-rail,
+  .side-rail.scroll {
+    top: calc(56px + env(safe-area-inset-top, 0px));
+    right: 10px;
+    bottom: auto;
+    left: 10px;
+    transform: none;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 6px;
+    max-height: none;
+    width: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .side-rail::-webkit-scrollbar,
+  .side-rail.scroll::-webkit-scrollbar { display: none; }
+  .side-rail .rail-sep { display: none; }
+  .rail-btn {
+    width: auto;
+    min-width: 0;
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+    transform: none;
+  }
+  .rail-btn:hover { transform: none; }
+  .rail-btn .num { display: none; }
+
+  /* Floating planet tags hop on and off the edges of a small viewport. */
+  .label-3d { display: none !important; }
+
+  /* Educational copy is a bottom drawer. Persistent panels (Sky Tonight)
+     stay a scrollable sheet because they *are* the page. */
+  .info-panel.mobile-info-panel,
+  .info-panel[data-keep-open] {
     top: auto !important;
-    right: 12px !important;
-    bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important;
-    left: 12px !important;
+    right: 10px !important;
+    bottom: calc(152px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 10px !important;
     width: auto !important;
     max-width: none !important;
-    max-height: min(52dvh, calc(100dvh - 168px)) !important;
+    max-height: min(52svh, calc(100svh - 220px)) !important;
     padding: 12px 64px 12px 16px;
     overflow: auto;
+    overscroll-behavior: contain;
     transition: max-height 0.25s ease, padding 0.25s ease;
   }
+  .info-panel[data-keep-open] {
+    padding: 14px 16px;
+    max-height: calc(100svh - 220px) !important;
+  }
   .info-panel.mobile-info-panel:not(.is-expanded) {
-    max-height: 66px !important;
+    max-height: 64px !important;
     overflow: hidden;
   }
   .info-panel.mobile-info-panel:not(.is-expanded) > :not(.info-label):not(.info-title):not(.mobile-info-toggle) {
@@ -498,6 +539,7 @@ canvas { display: block; }
   }
   .info-panel.mobile-info-panel > .info-title {
     margin-bottom: 0;
+    font-size: 18px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -510,11 +552,11 @@ canvas { display: block; }
     display: inline-flex;
     position: absolute;
     top: 50%;
-    right: 12px;
+    right: 10px;
     transform: translateY(-50%);
     align-items: center;
     justify-content: center;
-    min-width: 42px;
+    min-width: 44px;
     min-height: 32px;
     padding: 6px 8px;
     border: 1px solid rgba(244, 197, 96, 0.28);
@@ -532,71 +574,65 @@ canvas { display: block; }
     transform: none;
   }
 
-  /* A single, horizontally scrollable dock keeps controls in one stable row.
-     Secondary actions remain reachable by swiping instead of causing reflow. */
+  /* Wrap the dock so every control stays on-screen. Horizontal fade-scroll
+     hid Axis / Tour / Quiz off the right edge. */
   .controls,
-  .date-controls {
-    right: 12px !important;
+  .date-controls,
+  .walk-controls {
+    right: 10px !important;
     bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-    left: 12px !important;
+    left: 10px !important;
     width: auto !important;
     max-width: none !important;
     transform: none !important;
-    flex-wrap: nowrap !important;
-    justify-content: flex-start !important;
-    gap: 8px !important;
-    padding: 9px 10px !important;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent);
-    mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent);
-  }
-  .controls::-webkit-scrollbar,
-  .date-controls::-webkit-scrollbar {
-    display: none;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px 10px !important;
+    padding: 8px 10px !important;
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
   .controls > *,
-  .date-controls > * {
+  .date-controls > *,
+  .walk-controls > * {
     flex: 0 0 auto;
   }
-  .controls .speed-group,
-  .controls .toggle-group {
+  .controls .speed-group {
+    display: flex;
     flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
   }
-  /* Keep the speed caption — an anonymous slider is hard to decode on a phone. */
+  .controls .toggle-group {
+    display: contents;
+  }
   .controls .speed-label,
   .date-controls .date-label {
     font-size: 8px;
     letter-spacing: 0.1em;
   }
-  .controls .divider {
-    display: block !important;
-    flex: 0 0 1px;
-  }
+  .controls .divider { display: none !important; }
   .play-btn {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
   }
   .speed-group { gap: 8px; }
+  .speed-slider { width: 88px; }
   .speed-value { min-width: 40px; }
-
-  body:has(.controls) .header-meta,
-  body:has(.date-controls) .header-meta,
-  body:has(.walk-controls) .header-meta {
-    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
-    left: calc(12px + env(safe-area-inset-left, 0px));
-    right: calc(12px + env(safe-area-inset-right, 0px));
+  .toggle-btn {
+    padding: 7px 10px;
+    font-size: 8px;
   }
 
-  /* First-visit gesture guidance — page-level rules used to hide this entirely. */
   .hint {
-    bottom: calc(102px + env(safe-area-inset-bottom, 0px));
+    top: 46%;
+    bottom: auto;
     left: 50%;
     right: auto;
-    transform: translateX(-50%);
-    max-width: calc(100vw - 24px);
+    transform: translate(-50%, -50%);
+    max-width: calc(100vw - 48px);
     padding: 8px 12px;
     text-align: center;
     background: var(--panel);
@@ -612,13 +648,14 @@ canvas { display: block; }
     visibility: hidden;
   }
 
-  .walk-controls {
-    bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
   .scale-note,
   .stage {
-    bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
   }
 }
 
@@ -629,91 +666,100 @@ canvas { display: block; }
     height: 44px;
   }
   .play-btn svg { width: 16px; height: 16px; }
-  .speed-slider {
+  .speed-slider,
+  .date-slider {
     height: 44px;
     background-size: 100% 3px;
   }
-  .speed-slider::-webkit-slider-thumb {
+  .speed-slider::-webkit-slider-thumb,
+  .date-slider::-webkit-slider-thumb {
     width: 18px;
     height: 18px;
   }
-  .speed-slider::-moz-range-thumb {
+  .speed-slider::-moz-range-thumb,
+  .date-slider::-moz-range-thumb {
     width: 18px;
     height: 18px;
   }
   .toggle-btn,
   .scene-nav-btn,
-  .mobile-info-toggle {
+  .mobile-info-toggle,
+  .walk-btn,
+  .today-btn,
+  .rail-btn {
     min-height: 44px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .header {
+    padding: calc(8px + env(safe-area-inset-top, 0px))
+             calc(12px + env(safe-area-inset-right, 0px))
+             8px
+             calc(12px + env(safe-area-inset-left, 0px)) !important;
+  }
+  .title { font-size: 15px !important; }
+  .subtitle, .hint, .divider { display: none !important; }
+  .header-meta,
+  body:has(.controls) .header-meta,
+  body:has(.date-controls) .header-meta,
+  body:has(.walk-controls) .header-meta {
+    display: none !important;
   }
 
-  .side-rail { top: 80px; right: 16px; transform: none; }
+  .scene-nav {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: auto;
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    transform: none;
+  }
+  .scene-menu {
+    left: auto;
+    right: 0;
+    transform: none;
+    max-height: calc(100svh - 56px);
+    overflow: auto;
+  }
+
+  .side-rail,
   .side-rail.scroll {
-    top: 136px;
-    left: 10px;
-    right: 10px;
+    top: calc(44px + env(safe-area-inset-top, 0px));
+    right: 8px;
+    left: 8px;
+    transform: none;
     flex-direction: row;
     max-height: none;
     overflow-x: auto;
     overflow-y: hidden;
   }
-  .side-rail.scroll .rail-sep { display: none; }
-  .rail-btn { width: auto; min-width: 128px; padding: 7px 10px; font-size: 11px; }
-  .rail-btn .num { display: none; }
-}
+  .rail-btn {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
 
-@media (max-height: 520px) and (orientation: landscape) {
-  .side-rail { top: 64px; right: 16px; transform: none; max-height: calc(100dvh - 140px); }
-  .rail-btn { width: 150px; padding: 6px 10px; font-size: 11px; }
-  .header {
-    padding: calc(12px + env(safe-area-inset-top, 0px))
-             calc(16px + env(safe-area-inset-right, 0px))
-             12px
-             calc(16px + env(safe-area-inset-left, 0px));
+  .info-panel.mobile-info-panel,
+  .info-panel[data-keep-open] {
+    top: auto !important;
+    right: 8px !important;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 8px !important;
+    width: auto !important;
+    max-height: min(40svh, calc(100svh - 120px)) !important;
   }
-  .title { font-size: 16px; }
-  .subtitle, .hint, .divider { display: none; }
-  .header-meta {
-    display: none !important;
-  }
-  .info-panel {
-    top: calc(64px + env(safe-area-inset-top, 0px)) !important;
-    bottom: auto !important;
-    left: calc(12px + env(safe-area-inset-left, 0px)) !important;
-    max-height: calc(100dvh - 140px) !important;
-    overflow: auto;
-    padding: 14px 16px;
-  }
-  .info-title { font-size: 19px; }
+  .info-title { font-size: 17px; }
   .info-body { font-size: 12px; }
+
   .controls,
   .date-controls,
   .walk-controls {
-    bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 6px 8px !important;
+    gap: 6px 8px !important;
   }
-  .controls {
-    padding: 7px 10px;
-    gap: 8px;
-    flex-wrap: nowrap;
-    max-width: calc(100vw - 24px);
-  }
-  .speed-slider { width: 80px; }
-  .toggle-group { gap: 4px; flex-wrap: nowrap; }
-  .toggle-btn { padding: 5px 7px; font-size: 9px; }
-  .scene-nav {
-    top: calc(8px + env(safe-area-inset-top, 0px));
-    right: calc(8px + env(safe-area-inset-right, 0px));
-  }
-  .info-panel.mobile-info-panel {
-    top: calc(56px + env(safe-area-inset-top, 0px)) !important;
-    right: auto !important;
-    bottom: auto !important;
-    left: calc(12px + env(safe-area-inset-left, 0px)) !important;
-    width: min(320px, calc(100vw - 180px)) !important;
-    max-height: calc(100dvh - 120px) !important;
-  }
+  .speed-slider { width: 72px; }
+  .toggle-btn { padding: 5px 8px; font-size: 8px; }
+
   .scale-note,
   .stage {
     bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;

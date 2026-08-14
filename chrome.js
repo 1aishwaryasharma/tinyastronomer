@@ -17,6 +17,11 @@ function setText(el, text) {
 function initMobileHints() {
   const hints = document.querySelectorAll('.hint');
   if (!hints.length) return;
+  if (window.matchMedia('(max-width: 820px)').matches) {
+    hints.forEach((h) => {
+      h.innerHTML = '<span class="key">Drag</span> to rotate · <span class="key">Pinch</span> to zoom';
+    });
+  }
   let done = false;
   function dismiss() {
     if (done) return;
@@ -75,19 +80,24 @@ function buildNav(currentKey) {
     e.stopPropagation();
     setOpen(!nav.classList.contains('open'));
   });
+  nav.addEventListener('click', (e) => e.stopPropagation());
   nav.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       setOpen(false);
       btn.focus();
     }
   });
-  document.addEventListener('click', () => setOpen(false));
+  document.addEventListener('pointerdown', (e) => {
+    if (!nav.contains(e.target)) setOpen(false);
+  });
   document.body.appendChild(nav);
 }
 
 function initMobileInfoPanels() {
   document.querySelectorAll('.info-panel').forEach((panel, index) => {
     if (panel.classList.contains('mobile-info-panel')) return;
+    // Sky Tonight's panel is the page content; collapsing it would hide the list.
+    if (panel.hasAttribute('data-keep-open')) return;
 
     panel.classList.add('mobile-info-panel');
     panel.classList.remove('is-expanded');

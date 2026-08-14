@@ -155,15 +155,25 @@ test("interactive info panels use the shared mobile drawer", () => {
   expect(commonCss).toContain(".info-panel.mobile-info-panel:not(.is-expanded)");
 });
 
-test('small-screen chrome stays compact and controls do not reflow', () => {
+test('small-screen chrome keeps menus and controls inside the viewport', () => {
   const commonCss = readFileSync('common.css', 'utf8');
   expect(commonCss).toContain('@media (max-width: 1024px)');
+  expect(commonCss).toContain('@media (max-width: 820px)');
   expect(commonCss).toMatch(/\.subtitle\s*\{[\s\S]*?display:\s*none\s*!important/);
   expect(commonCss).toMatch(/\.header-meta\s*\{[\s\S]*?position:\s*fixed/);
-  expect(commonCss).toMatch(/\.controls,[\s\S]*?flex-wrap:\s*nowrap\s*!important/);
-  expect(commonCss).toContain('overflow-x: auto');
-  expect(commonCss).toMatch(/-webkit-mask-image:|mask-image:/);
+  expect(commonCss).toMatch(/\.scene-menu[\s\S]*?right:\s*0/);
+  expect(commonCss).toMatch(/\.side-rail[\s\S]*?flex-direction:\s*row/);
+  expect(commonCss).toMatch(/\.label-3d[\s\S]*?display:\s*none\s*!important/);
+  expect(commonCss).toMatch(/\.controls,[\s\S]*?flex-wrap:\s*wrap\s*!important/);
+  expect(commonCss).toContain('100svh');
   expect(commonCss).toContain('@media (pointer: coarse)');
+});
+
+test('sky tonight keeps its planet list visible on small screens', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  const chromeJs = readFileSync('chrome.js', 'utf8');
+  expect(sky).toContain('data-keep-open');
+  expect(chromeJs).toContain('data-keep-open');
 });
 
 test("current mission figures remain current", () => {
