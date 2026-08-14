@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260814-3">
+<link rel="stylesheet" href="common.css?v=20260814-4">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -39,9 +39,35 @@
   .label-3d.earth { color: var(--accent-cool); border-color: rgba(106, 176, 255, 0.3); }
   .label-3d.moon { color: #c9c5b8; border-color: rgba(201, 197, 184, 0.3); }
 
+  .aurora-stage {
+    position: fixed;
+    z-index: 12;
+    top: 92px;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(520px, calc(100vw - 40px));
+    padding: 8px 12px;
+    border: 1px solid rgba(100, 236, 190, 0.28);
+    background: rgba(5, 8, 16, 0.78);
+    color: rgba(225, 242, 238, 0.92);
+    font: 10px/1.4 'Fragment Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0;
+    transform: translate(-50%, -8px);
+    transition: opacity 300ms ease, transform 300ms ease;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+  }
+  .aurora-stage.active { opacity: 1; transform: translate(-50%, 0); }
+  .aurora-stage-step { color: #67e8b2; white-space: nowrap; }
+
   @media (max-width: 820px) {
     .info-body { font-size: 13px; }
     .info-panel .fact-callout { font-size: 12px; }
+    .aurora-stage { top: 96px; max-width: calc(100vw - 28px); font-size: 9px; }
   }
 </style>
 </head>
@@ -106,6 +132,10 @@
     <span class="num">05</span>
     <span class="lbl">Lunar <em>Eclipse</em></span>
   </button>
+  <button type="button" class="rail-btn preset-btn" data-preset="aurora" aria-pressed="false">
+    <span class="num">06</span>
+    <span class="lbl">Polar <em>Lights</em></span>
+  </button>
 </div>
 
 <div class="controls">
@@ -122,6 +152,7 @@
     <button type="button" class="toggle-btn active" id="toggle-orbits" aria-pressed="true">Orbits</button>
     <button type="button" class="toggle-btn active" id="toggle-labels" aria-pressed="true">Labels</button>
     <button type="button" class="toggle-btn" id="toggle-axis" aria-pressed="false">Axis</button>
+    <button type="button" class="toggle-btn" id="toggle-aurora" aria-pressed="false">Aurora</button>
   </div>
 </div>
 
@@ -132,6 +163,10 @@
 <div class="label-3d sun" id="label-sun" aria-hidden="true">Sun</div>
 <div class="label-3d earth" id="label-earth" aria-hidden="true">Earth</div>
 <div class="label-3d moon" id="label-moon" aria-hidden="true">Moon</div>
+<div class="aurora-stage" id="aurora-stage" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+  <span class="aurora-stage-step" id="aurora-stage-step">1 / 4</span>
+  <span id="aurora-stage-text">A CME launches a cloud of charged particles</span>
+</div>
 
 <script type="importmap">
 {
@@ -399,7 +434,283 @@ const atmosphere = new THREE.Mesh(
       }`
   })
 );
+atmosphere.renderOrder = 2;
 earthGroup.add(atmosphere);
+
+// Off unless the Polar Lights preset (or the toggle) asks for it: the oval
+// shader is the most expensive thing in the scene and it is the subject of
+// exactly one study.
+const AURORA = SPACE.createAurora(EARTH_RADIUS * 1.028);
+AURORA.mesh.visible = false;
+earth.add(AURORA.mesh);
+
+const SOLAR_STORM_TIMELINE = {
+  duration: 18,
+  eruptionRise: [0.15, 1.35],
+  eruptionFade: [2.3, 3.5],
+  particleLaunch: [0.9, 3.6],
+  particleTravel: 5.8,
+  guideRise: [6.5, 8.2],
+  guideFade: [14.0, 16.5],
+  impactRise: [7.3, 9.4],
+  cameraRise: [7.0, 9.5],
+  reset: [14.0, 17.0],
+  stages: [
+    { until: 1.5, text: 'A CME launches a cloud of charged particles' },
+    { until: 6.8, text: 'Charged particles race through interplanetary space' },
+    { until: 9.4, text: 'Earth’s magnetic field funnels energy poleward' },
+    { until: Infinity, text: 'The upper atmosphere glows as aurora' }
+  ]
+};
+
+function createSolarStorm() {
+  const PARTICLE_COUNT = 140;
+  const AURORA_OVAL_COLAT = 0.40;
+  const AURORA_ARRIVAL_RADIUS = EARTH_RADIUS * 1.075;
+  const MAGNETOPAUSE_RADIUS = EARTH_RADIUS * 1.72;
+  const positions = new Float32Array(PARTICLE_COUNT * 3);
+  const colors = new Float32Array(PARTICLE_COUNT * 3);
+  const alphas = new Float32Array(PARTICLE_COUNT);
+  const sizes = new Float32Array(PARTICLE_COUNT);
+  const launchTimes = new Float32Array(PARTICLE_COUNT);
+  const lanesY = new Float32Array(PARTICLE_COUNT);
+  const lanesZ = new Float32Array(PARTICLE_COUNT);
+  const poles = new Float32Array(PARTICLE_COUNT);
+  const ovalOffsets = new Float32Array(PARTICLE_COUNT);
+  const random = SPACE.seededRandom(240511);
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    launchTimes[i] = THREE.MathUtils.lerp(
+      SOLAR_STORM_TIMELINE.particleLaunch[0],
+      SOLAR_STORM_TIMELINE.particleLaunch[1],
+      random()
+    );
+    lanesY[i] = (random() - 0.5) * 1.35;
+    lanesZ[i] = (random() - 0.5) * 1.35;
+    poles[i] = random() < 0.5 ? -1 : 1;
+    // Cluster arrivals on the nightward half of each visible aurora oval.
+    ovalOffsets[i] = (random() - 0.5) * 1.4;
+    sizes[i] = 1.2 + random() * 1.7;
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geometry.setAttribute('aAlpha', new THREE.BufferAttribute(alphas, 1));
+  geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+
+  const particles = new THREE.Points(
+    geometry,
+    new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true,
+      vertexShader: `
+        attribute float aAlpha;
+        attribute float aSize;
+        varying float vAlpha;
+        varying vec3 vColor;
+        void main() {
+          vAlpha = aAlpha;
+          vColor = color;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = clamp(aSize * (120.0 / max(-mvPosition.z, 1.0)), 2.0, 10.0);
+          gl_Position = projectionMatrix * mvPosition;
+        }`,
+      fragmentShader: `
+        varying float vAlpha;
+        varying vec3 vColor;
+        void main() {
+          float d = length(gl_PointCoord - vec2(0.5));
+          float edge = 1.0 - smoothstep(0.14, 0.5, d);
+          float alpha = vAlpha * edge;
+          if (alpha < 0.01) discard;
+          gl_FragColor = vec4(vColor * 1.7, alpha);
+        }`
+    })
+  );
+  particles.frustumCulled = false;
+
+  const flareCanvas = document.createElement('canvas');
+  flareCanvas.width = flareCanvas.height = 96;
+  const flareCtx = flareCanvas.getContext('2d');
+  const flareGlow = flareCtx.createRadialGradient(48, 48, 2, 48, 48, 46);
+  flareGlow.addColorStop(0, 'rgba(255,255,235,1)');
+  flareGlow.addColorStop(0.18, 'rgba(255,196,94,0.9)');
+  flareGlow.addColorStop(0.52, 'rgba(255,94,38,0.38)');
+  flareGlow.addColorStop(1, 'rgba(255,64,20,0)');
+  flareCtx.fillStyle = flareGlow;
+  flareCtx.fillRect(0, 0, 96, 96);
+  const flare = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(flareCanvas),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    opacity: 0
+  }));
+
+  const magNorth = AURORA.uniforms.uMagNorth.value;
+  const magReference = new THREE.Vector3().crossVectors(
+    magNorth,
+    new THREE.Vector3(0, 0, 1)
+  ).normalize();
+  const magEast = new THREE.Vector3().crossVectors(magNorth, magReference).normalize();
+  const ovalCos = Math.cos(AURORA_OVAL_COLAT);
+  const ovalSin = Math.sin(AURORA_OVAL_COLAT);
+
+  function auroraOvalWorldPoint(sign, longitude, target) {
+    target.copy(magNorth).multiplyScalar(sign * ovalCos);
+    target.addScaledVector(magReference, Math.cos(longitude) * ovalSin);
+    target.addScaledVector(magEast, Math.sin(longitude) * ovalSin);
+    target.multiplyScalar(AURORA_ARRIVAL_RADIUS);
+    return earth.localToWorld(target);
+  }
+
+  function fieldLine(sign, ovalOffset) {
+    const pointCount = 37;
+    const controls = [
+      new THREE.Vector3(),
+      new THREE.Vector3(),
+      new THREE.Vector3(),
+      new THREE.Vector3()
+    ];
+    const curve = new THREE.CatmullRomCurve3(controls);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(new Float32Array(pointCount * 3), 3)
+    );
+    const line = new THREE.Line(
+      geometry,
+      new THREE.LineBasicMaterial({
+        color: 0x67e8b2,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false
+      })
+    );
+    return { line, curve, controls, pointCount, sign, ovalOffset };
+  }
+  const northGuide = fieldLine(1, -0.34);
+  const southGuide = fieldLine(-1, 0.34);
+  const group = new THREE.Group();
+  group.add(particles, flare, northGuide.line, southGuide.line);
+  group.visible = false;
+  scene.add(group);
+
+  const start = new THREE.Vector3();
+  const sunward = new THREE.Vector3();
+  const towardEarth = new THREE.Vector3();
+  const magnetopause = new THREE.Vector3();
+  const streamUp = new THREE.Vector3(0, 1, 0);
+  const streamAcross = new THREE.Vector3();
+  const approachPoint = new THREE.Vector3();
+  const arrivalPoint = new THREE.Vector3();
+  const localNight = new THREE.Vector3();
+  const guideTarget = new THREE.Vector3();
+  const guideTargetDirection = new THREE.Vector3();
+  const guideSample = new THREE.Vector3();
+  const warm = new THREE.Color(0xffb456);
+  const cool = new THREE.Color(0x79e8ff);
+  const particleColor = new THREE.Color();
+
+  function updateFieldGuide(guide, nightLongitude) {
+    auroraOvalWorldPoint(
+      guide.sign,
+      nightLongitude + guide.ovalOffset,
+      guideTarget
+    );
+    guideTargetDirection.copy(guideTarget).normalize();
+    guide.controls[0].copy(sunward).multiplyScalar(2.5);
+    guide.controls[1].copy(sunward).multiplyScalar(1.8)
+      .addScaledVector(guideTargetDirection, 0.48);
+    guide.controls[2].copy(guideTargetDirection).multiplyScalar(1.42);
+    guide.controls[3].copy(guideTarget);
+
+    const attribute = guide.line.geometry.attributes.position;
+    for (let i = 0; i < guide.pointCount; i++) {
+      guide.curve.getPoint(i / (guide.pointCount - 1), guideSample);
+      attribute.setXYZ(i, guideSample.x, guideSample.y, guideSample.z);
+    }
+    attribute.needsUpdate = true;
+  }
+
+  function update(cycleTime) {
+    sunward.copy(sunGroup.position).normalize();
+    towardEarth.copy(sunward).negate();
+    start.copy(sunGroup.position).addScaledVector(towardEarth, SUN_RADIUS * 1.04);
+    magnetopause.copy(sunward).multiplyScalar(MAGNETOPAUSE_RADIUS);
+    streamAcross.crossVectors(towardEarth, streamUp).normalize();
+
+    // Convert the anti-solar direction to Earth-local coordinates so both
+    // particle arrivals and field guides follow the rotating magnetic oval.
+    earth.worldToLocal(localNight.copy(sunward));
+    localNight.negate().normalize();
+    const nightLongitude = Math.atan2(
+      localNight.dot(magEast),
+      localNight.dot(magReference)
+    );
+
+    const eruption = THREE.MathUtils.smoothstep(cycleTime, ...SOLAR_STORM_TIMELINE.eruptionRise)
+      * (1 - THREE.MathUtils.smoothstep(cycleTime, ...SOLAR_STORM_TIMELINE.eruptionFade));
+    flare.position.copy(start).addScaledVector(towardEarth, 0.18);
+    flare.scale.setScalar(0.8 + eruption * 3.2);
+    flare.material.opacity = eruption * 0.9;
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const travel = (cycleTime - launchTimes[i]) / SOLAR_STORM_TIMELINE.particleTravel;
+      const o = i * 3;
+      if (travel <= 0 || travel >= 1.08) {
+        positions[o] = start.x;
+        positions[o + 1] = start.y;
+        positions[o + 2] = start.z;
+        alphas[i] = 0;
+        continue;
+      }
+
+      const p = Math.min(travel, 1);
+      const approach = Math.min(p / 0.82, 1);
+      const funnel = THREE.MathUtils.smoothstep(p, 0.78, 1.0);
+      const spread = Math.sin(Math.PI * approach);
+      approachPoint.copy(start).lerp(magnetopause, approach);
+      approachPoint.addScaledVector(streamUp, lanesY[i] * spread);
+      approachPoint.addScaledVector(streamAcross, lanesZ[i] * spread);
+      if (funnel > 0) {
+        auroraOvalWorldPoint(
+          poles[i],
+          nightLongitude + ovalOffsets[i],
+          arrivalPoint
+        );
+        approachPoint.lerp(arrivalPoint, funnel);
+      }
+      positions[o] = approachPoint.x;
+      positions[o + 1] = approachPoint.y;
+      positions[o + 2] = approachPoint.z;
+
+      const fadeIn = THREE.MathUtils.smoothstep(travel, 0, 0.05);
+      const fadeOut = 1 - THREE.MathUtils.smoothstep(travel, 0.98, 1.08);
+      alphas[i] = fadeIn * fadeOut * (0.5 + 0.5 * Math.sin(i * 2.17));
+      particleColor.copy(warm).lerp(cool, funnel * 0.82 + approach * 0.18);
+      colors[o] = particleColor.r;
+      colors[o + 1] = particleColor.g;
+      colors[o + 2] = particleColor.b;
+    }
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
+    geometry.attributes.aAlpha.needsUpdate = true;
+
+    updateFieldGuide(northGuide, nightLongitude);
+    updateFieldGuide(southGuide, nightLongitude);
+    const guideOpacity = THREE.MathUtils.smoothstep(cycleTime, ...SOLAR_STORM_TIMELINE.guideRise)
+      * (1 - THREE.MathUtils.smoothstep(cycleTime, ...SOLAR_STORM_TIMELINE.guideFade)) * 0.32;
+    northGuide.line.material.opacity = guideOpacity;
+    southGuide.line.material.opacity = guideOpacity;
+  }
+
+  return { group, update };
+}
+const SOLAR_STORM = createSolarStorm();
 
 // Earth axis helper line (toggleable)
 const axisGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -458,10 +769,10 @@ scene.add(moonOrbitFrame);
 // 7. CAMERA CONTROLS (shared orbit controls)
 // ─────────────────────────────────────────────────────────
 const cam = SPACE.createOrbitControls(camera, renderer.domElement, {
-  maxDistance: 55,
+  maxDistance: 100,
   minDistance: 3
 });
-SPACE.bindCameraKeys(cam, { maxDistance: 55, minDistance: 3 });
+SPACE.bindCameraKeys(cam, { maxDistance: 100, minDistance: 3 });
 
 // ─────────────────────────────────────────────────────────
 // 8. SIMULATION STATE
@@ -481,8 +792,10 @@ const sim = {
   showOrbits: true,
   showLabels: true,
   showAxis: false,
+  showAurora: false,
   preset: 'free'
 };
+const solarWeather = { elapsed: 0, stage: -1 };
 
 function sliderToSpeed(v) {
   // map -3..3 nonlinearly: at 0 = 1×, slider=1 → 2×, slider=2 → ~4×, etc.
@@ -499,10 +812,14 @@ const speedValue  = document.getElementById('speed-value');
 const toggleOrbits = document.getElementById('toggle-orbits');
 const toggleLabels = document.getElementById('toggle-labels');
 const toggleAxis   = document.getElementById('toggle-axis');
+const toggleAurora = document.getElementById('toggle-aurora');
 const presetEls    = document.querySelectorAll('.preset-btn');
 const labelSun   = document.getElementById('label-sun');
 const labelEarth = document.getElementById('label-earth');
 const labelMoon  = document.getElementById('label-moon');
+const auroraStage = document.getElementById('aurora-stage');
+const auroraStageStep = document.getElementById('aurora-stage-step');
+const auroraStageText = document.getElementById('aurora-stage-text');
 const metaDay    = document.getElementById('meta-day');
 const metaPhase  = document.getElementById('meta-phase');
 const metaEvent  = document.getElementById('meta-event');
@@ -545,6 +862,62 @@ toggleAxis.addEventListener('click', () => {
   toggleAxis.classList.toggle('active', sim.showAxis);
   toggleAxis.setAttribute('aria-pressed', String(sim.showAxis));
 });
+function setAuroraVisible(visible) {
+  sim.showAurora = visible;
+  AURORA.mesh.visible = visible;
+  AURORA.uniforms.uIntensity.value = visible && sim.preset !== 'aurora' ? 1 : 0;
+  toggleAurora.classList.toggle('active', visible);
+  toggleAurora.setAttribute('aria-pressed', String(visible));
+}
+toggleAurora.addEventListener('click', () => {
+  setAuroraVisible(!sim.showAurora);
+});
+
+function setAuroraStage(stage) {
+  if (solarWeather.stage === stage) return;
+  solarWeather.stage = stage;
+  auroraStageStep.textContent = `${stage + 1} / ${SOLAR_STORM_TIMELINE.stages.length}`;
+  auroraStageText.textContent = SOLAR_STORM_TIMELINE.stages[stage].text;
+}
+
+function solarStormWideDistance() {
+  const aspect = Math.max(window.innerWidth / window.innerHeight, 0.45);
+  return Math.min(98, Math.max(74, 62 / (0.828 * aspect)));
+}
+
+function updateSolarStorm(dt) {
+  if (sim.preset !== 'aurora') {
+    SOLAR_STORM.group.visible = false;
+    auroraStage.classList.remove('active');
+    auroraStage.setAttribute('aria-hidden', 'true');
+    return;
+  }
+
+  if (sim.playing && !SPACE.prefersReducedMotion) solarWeather.elapsed += dt;
+  const cycle = solarWeather.elapsed % SOLAR_STORM_TIMELINE.duration;
+  const fadeOut = 1 - THREE.MathUtils.smoothstep(cycle, ...SOLAR_STORM_TIMELINE.reset);
+  const impactIn = THREE.MathUtils.smoothstep(cycle, ...SOLAR_STORM_TIMELINE.impactRise);
+  const impact = impactIn * fadeOut;
+  AURORA.uniforms.uIntensity.value = impact;
+
+  SOLAR_STORM.group.visible = true;
+  SOLAR_STORM.update(cycle);
+  auroraStage.classList.add('active');
+  auroraStage.setAttribute('aria-hidden', 'false');
+
+  setAuroraStage(SOLAR_STORM_TIMELINE.stages.findIndex(stage => cycle < stage.until));
+
+  const closeIn = THREE.MathUtils.smoothstep(cycle, ...SOLAR_STORM_TIMELINE.cameraRise);
+  const close = closeIn * fadeOut;
+  cam.target.set(
+    THREE.MathUtils.lerp(-17.5, 0.15, close),
+    THREE.MathUtils.lerp(0, 0.38, close),
+    0
+  );
+  cam.azimuthTarget = THREE.MathUtils.lerp(0.02, 1.45, close);
+  cam.elevationTarget = THREE.MathUtils.lerp(0.12, 0.72, close);
+  cam.distanceTarget = THREE.MathUtils.lerp(solarStormWideDistance(), 5.1, close);
+}
 
 // ─────────────────────────────────────────────────────────
 // 10. PRESETS
@@ -627,6 +1000,31 @@ const presetData = {
       cam.distanceTarget = 9;
       cam.target.set(1, 0, 0);
     }
+  },
+  aurora: {
+    label: '— Phenomenon 05 —',
+    title: 'Polar Lights',
+    body: 'A <strong>solar flare</strong> can erupt alongside a <strong>coronal mass ejection</strong> (CME), which hurls magnetized plasma into space. When that disturbance reaches Earth, it transfers energy into our <strong>magnetic field</strong>. Charged particles are guided toward the poles and collide with oxygen and nitrogen high in the atmosphere, making them glow green, red, and violet.',
+    fact: 'This trip is compressed for the model. A fast CME can reach Earth in roughly a day; slower ones may take several days. The aurora then forms in ovals around the magnetic poles, mostly on the night side.',
+    apply: () => {
+      setPlaying(true);
+      setAuroraVisible(true);
+      sim.speed = 0.7;
+      speedSlider.value = Math.log2(0.7).toFixed(2);
+      speedValue.textContent = '0.70×';
+      speedSlider.setAttribute('aria-valuetext', '0.70× speed');
+      sim.sunLongitude = Math.PI;
+      sim.moonNodeLongitude = THREE.MathUtils.degToRad(32);
+      sim.moonPhaseAngle = Math.PI * 0.5;
+      solarWeather.elapsed = SPACE.prefersReducedMotion ? 10.5 : 0;
+      solarWeather.stage = -1;
+      moon.visible = false;
+      moonOrbitFrame.visible = false;
+      cam.azimuthTarget = SPACE.prefersReducedMotion ? 1.45 : 0.02;
+      cam.elevationTarget = SPACE.prefersReducedMotion ? 0.72 : 0.12;
+      cam.distanceTarget = SPACE.prefersReducedMotion ? 5.1 : solarStormWideDistance();
+      cam.target.set(SPACE.prefersReducedMotion ? 0.15 : -17.5, SPACE.prefersReducedMotion ? 0.38 : 0, 0);
+    }
   }
 };
 
@@ -637,6 +1035,14 @@ function applyPreset(name) {
     el.classList.toggle('active', active);
     el.setAttribute('aria-pressed', String(active));
   });
+  // Every preset starts without the aurora; only the one that studies it
+  // switches it back on in apply().
+  setAuroraVisible(false);
+  SOLAR_STORM.group.visible = false;
+  moon.visible = true;
+  moonOrbitFrame.visible = sim.showOrbits;
+  auroraStage.classList.remove('active');
+  auroraStage.setAttribute('aria-hidden', 'true');
   const p = presetData[name];
   infoLabel.textContent = p.label;
   infoTitle.textContent = p.title;
@@ -761,6 +1167,10 @@ function animate() {
   moon.up.copy(_orbitNormal);
   moon.lookAt(0, 0, 0);
 
+  // The Polar Lights preset is a guided causal sequence: solar eruption,
+  // particle transit, magnetic deflection, then a smooth aurora response.
+  updateSolarStorm(dt);
+
   // Smooth camera
   cam.update();
 
@@ -779,6 +1189,7 @@ function animate() {
   earthNightUniforms.sunDirView.value.copy(_sunDirView);
   _sunDirWorld.copy(sunGroup.position).normalize();
   atmosphere.material.uniforms.sunDir.value.copy(_sunDirWorld);
+  AURORA.uniforms.uSunDir.value.copy(_sunDirWorld);
 
   // In totality the Moon is very dim; filtered sunlight adds only a restrained
   // copper cast rather than the previous saturated red glow.
@@ -805,7 +1216,7 @@ function animate() {
   // Labels
   SPACE.projectToScreen(sunGroup, labelSun, camera, -50, sim.showLabels);
   SPACE.projectToScreen(earthGroup, labelEarth, camera, -38, sim.showLabels);
-  SPACE.projectToScreen(moon, labelMoon, camera, -22, sim.showLabels);
+  SPACE.projectToScreen(moon, labelMoon, camera, -22, sim.showLabels && moon.visible);
 
   // Telemetry
   const dayFraction = (sim.time * sim.earthSpinSpeed) / (Math.PI * 2);

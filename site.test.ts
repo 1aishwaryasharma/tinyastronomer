@@ -122,6 +122,76 @@ test('Three.js is loaded as a local ES module', () => {
   }
 });
 
+test('Light Study includes a night-side aurora around the magnetic poles', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const common = readFileSync('common.js', 'utf8');
+  expect(common).toContain('function createAurora');
+  expect(common).toContain('uMagNorth');
+  expect(index).toContain('SPACE.createAurora');
+  expect(index).toContain('data-preset="aurora"');
+  expect(index).toContain('id="toggle-aurora"');
+});
+
+test('Aurora stays off until its preset selects it', () => {
+  const index = readFileSync('index.html', 'utf8');
+  expect(index).toMatch(/toggle-aurora[^>]*aria-pressed=["']false["']/);
+  expect(index).toContain('showAurora: false');
+  expect(index).toContain('AURORA.mesh.visible = false');
+  // applyPreset clears it, so only the aurora preset's apply() re-enables it.
+  expect(index).toContain('setAuroraVisible(true)');
+});
+
+test('Aurora surface stays temporally stable so it cannot flicker over Earth', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const aurora = common.slice(
+    common.indexOf('function createAurora'),
+    common.indexOf('// ── Custom orbit-camera controls')
+  );
+  // Local noise must stay fixed to the rotating Earth. The visible response
+  // to a solar storm is one slow, uniform intensity envelope instead.
+  expect(aurora).not.toContain('uTime');
+  expect(aurora).not.toContain('uOutputScale');
+  expect(aurora).toContain('uIntensity');
+  expect(aurora).toContain('col * glow * 1.1');
+  // GLSL smoothstep requires edge0 < edge1. Invert the result rather than
+  // reversing its edges, which is undefined and varies between GPU drivers.
+  expect(aurora).toContain('1.0 - smoothstep(-0.06, 0.18');
+  expect(aurora).not.toContain('smoothstep(0.18, -0.06');
+});
+
+test('Polar Lights visualizes the solar-eruption-to-aurora chain', () => {
+  const index = readFileSync('index.html', 'utf8');
+  expect(index).toContain('function createSolarStorm');
+  expect(index).toContain('SOLAR_STORM.update');
+  expect(index).toContain('A CME launches a cloud of charged particles');
+  expect(index).toContain('Earth’s magnetic field funnels energy poleward');
+  expect(index).toContain('The upper atmosphere glows as aurora');
+});
+
+test('Polar Lights announces each causal stage to assistive technology', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const stage = index.match(/<div class="aurora-stage"[^>]*>/)?.[0] || '';
+  expect(stage).toContain('role="status"');
+  expect(stage).toContain('aria-live="polite"');
+  expect(stage).toContain('aria-atomic="true"');
+});
+
+test('Solar-storm particles meet the rotating aurora oval above Earth', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const storm = index.slice(
+    index.indexOf('function createSolarStorm'),
+    index.indexOf('// Earth axis helper line')
+  );
+  expect(storm).toContain('function auroraOvalWorldPoint');
+  expect(storm).toContain('AURORA.uniforms.uMagNorth.value');
+  expect(storm).toContain('earth.localToWorld(target)');
+  expect(storm).toContain('AURORA_ARRIVAL_RADIUS = EARTH_RADIUS * 1.075');
+  expect(index).toContain('SPACE.createAurora(EARTH_RADIUS * 1.028)');
+  expect(storm).toMatch(/auroraOvalWorldPoint\([\s\S]*?arrivalPoint/);
+  expect(storm).toContain('updateFieldGuide(northGuide, nightLongitude)');
+  expect(storm).not.toContain('THREE.MathUtils.lerp(positions[o], -0.08');
+});
+
 test('Earth night shader uses the current Three.js map UV varying', () => {
   const index = readFileSync('index.html', 'utf8');
   expect(index).toContain('texture2D(nightMap, vMapUv)');

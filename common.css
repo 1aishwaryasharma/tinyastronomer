@@ -284,7 +284,7 @@ canvas { display: block; }
 }
 .divider { width: 1px; height: 24px; background: var(--line); }
 
-.toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.toggle-group { display: flex; gap: 8px; flex-wrap: nowrap; }
 .toggle-btn {
   background: transparent; border: 1px solid var(--line); color: var(--ink-dim);
   padding: 7px 12px; font-family: 'Fragment Mono', monospace;

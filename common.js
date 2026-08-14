@@ -137,7 +137,7 @@ float fbm(vec3 p) {
         varying vec3 vColor; varying float vTwinkle;
         void main() {
           float d = length(gl_PointCoord - 0.5);
-          float a = smoothstep(0.5, 0.0, d) * vTwinkle * 0.9;
+          float a = (1.0 - smoothstep(0.0, 0.5, d)) * vTwinkle * 0.9;
           gl_FragColor = vec4(vColor, a);
         }`
     });
@@ -206,6 +206,119 @@ float fbm(vec3 p) {
     const corona = glowShell(radius * 1.45, 0xff8a30, 0.55, 3.0, 0.6);
     group.add(core, inner, corona);
     return { group, core, inner, corona, uniforms };
+  }
+
+  // ── Earth aurora: night-side ovals around the geomagnetic poles ──
+  // Quiet-time ovals sit near 67° magnetic latitude. The centered dipole is
+  // tilted ~11° from the spin axis (NOAA / WMM geomagnetic pole).
+  function createAurora(radius) {
+    const uniforms = {
+      uIntensity: { value: 1 },
+      uSunDir: { value: new THREE.Vector3(-1, 0, 0) }
+    };
+    // Geomagnetic north, WMM2020: 80.65°N, 72.68°W. Three.js SphereGeometry
+    // with the Blue Marble map puts lon 0° on +X and 90°W on +Z.
+    const lat = 80.65 * Math.PI / 180;
+    const lonW = 72.68 * Math.PI / 180;
+    uniforms.uMagNorth = {
+      value: new THREE.Vector3(
+        Math.cos(lat) * Math.cos(lonW),
+        Math.sin(lat),
+        Math.cos(lat) * Math.sin(lonW)
+      ).normalize()
+    };
+
+    // The shader is entirely per-fragment, so the tessellation only has to
+    // keep the silhouette smooth — it matches the atmosphere shell's.
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(radius, 64, 48),
+      new THREE.ShaderMaterial({
+        uniforms,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.FrontSide,
+        vertexShader: `
+          varying vec3 vPos;
+          varying vec3 vViewN;
+          varying vec3 vWorldN;
+          void main() {
+            vPos = position;
+            vViewN = normalize(normalMatrix * normal);
+            vWorldN = normalize(mat3(modelMatrix) * position);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }`,
+        fragmentShader: GLSL_NOISE + `
+          varying vec3 vPos;
+          varying vec3 vViewN;
+          varying vec3 vWorldN;
+          uniform vec3 uMagNorth;
+          uniform vec3 uSunDir;
+          uniform float uIntensity;
+
+          // Quiet oval ~23° from each magnetic pole and ~8° thick. Its small
+          // irregularities are fixed to Earth; a single slow intensity
+          // envelope supplies the storm response without per-pixel shimmer.
+          const float OVAL_COLAT = 0.40;
+          const float OVAL_WIDTH = 0.072;
+          const float WOBBLE = 0.028;
+          const float CUTOFF = 0.008;
+          // patches peaks a little above 1 because fbm3 is not normalised.
+          const float PATCH_MAX = 1.2;
+
+          // Three octaves. The glow is soft enough that the two extra ones
+          // fbm() carries cost far more than they show.
+          float fbm3(vec3 p) {
+            float f = 0.0; float a = 0.5;
+            for (int i = 0; i < 3; i++) { f += a * snoise(p); p *= 2.02; a *= 0.5; }
+            return f;
+          }
+
+          void main() {
+            vec3 p = normalize(vPos);
+            vec3 magN = normalize(uMagNorth);
+            float magColat = acos(clamp(abs(dot(p, magN)), 0.0, 1.0));
+            float night = 1.0 - smoothstep(-0.06, 0.18, dot(normalize(vWorldN), normalize(uSunDir)));
+            float limb = 0.4 + 0.6 * pow(1.0 - abs(dot(normalize(vViewN), vec3(0.0, 0.0, 1.0))), 1.35);
+
+            // Noise-free upper bound on glow: how bright this fragment could
+            // get if the wobble pushed the oval as far onto it as it can go.
+            // Only the thin night-side ring that survives this pays for the
+            // noise below, instead of every lit fragment of the shell.
+            float reach = max(abs(magColat - OVAL_COLAT) - WOBBLE, 0.0);
+            float bandMax = exp(-pow(reach / OVAL_WIDTH, 2.0));
+            if (bandMax * night * limb * uIntensity * PATCH_MAX < CUTOFF) discard;
+
+            vec3 magRef = normalize(cross(magN, vec3(0.0, 0.0, 1.0)));
+            vec3 magE = normalize(cross(magN, magRef));
+            float magLon = atan(dot(p, magE), dot(p, magRef));
+
+            float wobble = WOBBLE * snoise(p * 3.2);
+            float band = exp(-pow((magColat - OVAL_COLAT - wobble) / OVAL_WIDTH, 2.0));
+
+            float curtains = 0.5 + 0.5 * sin(
+              magLon * 16.0 + fbm3(p * 4.6) * 3.0
+            );
+            curtains = pow(max(curtains, 0.0), 1.8);
+            float patches = 0.62 + 0.38 * fbm3(p * 6.2);
+
+            float glow = band * mix(0.32, 1.0, curtains) * patches * night * limb * uIntensity;
+
+            float hue = clamp((magColat - 0.30) / 0.18, 0.0, 1.0);
+            vec3 red = vec3(0.95, 0.20, 0.28);
+            vec3 green = vec3(0.18, 1.0, 0.42);
+            vec3 violet = vec3(0.52, 0.28, 1.0);
+            vec3 col = mix(red, green, smoothstep(0.12, 0.55, hue));
+            col = mix(col, violet, smoothstep(0.78, 1.0, hue) * 0.4);
+
+            // Keep the surface output stable when adaptive quality enables or
+            // disables bloom. The additive blend already reads as a glow.
+            gl_FragColor = vec4(col * glow * 1.1, glow);
+          }`
+      })
+    );
+    mesh.renderOrder = 1;
+    return { mesh, uniforms };
   }
 
   // ── Custom orbit-camera controls (mouse + touch, optional pick) ──
@@ -624,6 +737,7 @@ float fbm(vec3 p) {
     bindCameraKeys,
     buildNav,
     clamp,
+    createAurora,
     createLoader,
     createOrbitControls,
     createQualityGovernor,
