@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260814-4">
+<link rel="stylesheet" href="common.css?v=20260815-1">
 <style>
   /* this page scrolls, unlike the fixed 3D scenes */
   html, body { overflow-x: hidden; overflow-y: auto; }
@@ -59,7 +59,20 @@
   .card .wow { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); }
   .card .wow b { color: var(--ink); font-weight: 500; }
   .card .wow .lbl { display: block; font-family: 'Fragment Mono', monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
-  .foot { text-align: center; margin-top: 44px; font-family: 'Fragment Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); }
+  .card .live { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); }
+  .card .live b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .card .live .lbl { display: block; font-family: 'Fragment Mono', monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent-cool); margin-bottom: 5px; }
+  .card .go {
+    display: inline-block; margin-top: 14px; font-family: 'Fragment Mono', monospace;
+    font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent-cool); text-decoration: none;
+    border-bottom: 1px solid transparent; padding-bottom: 2px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .card .go:hover { color: var(--accent); border-color: rgba(244, 197, 96, 0.4); }
+  .foot { text-align: center; margin-top: 44px; font-family: 'Fragment Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); line-height: 2.2; }
+  .foot-next { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; padding-bottom: 2px; transition: color 0.2s, border-color 0.2s; }
+  .foot-next:hover { color: #ffd47a; border-color: rgba(244, 197, 96, 0.4); }
   @media (max-width: 620px) {
     .wrap {
       padding: calc(104px + env(safe-area-inset-top, 0px))
@@ -98,7 +111,8 @@
     <p>People have built robots, telescopes, and spaceships and sent them out to visit the worlds you've been exploring. Here are some of the most amazing real missions — every one of them actually happened.</p>
   </div>
   <div class="grid" id="grid"></div>
-  <div class="foot">Every mission here is real · Ask a grown-up to help you look up their latest pictures</div>
+  <div class="foot">Every mission here is real · Ask a grown-up to help you look up their latest pictures<br>
+    <a class="foot-next" href="sky-tonight.html">Next stop · See tonight&rsquo;s sky yourself →</a></div>
 </main>
 
 <script type="module">
@@ -106,28 +120,37 @@ import { SPACE } from './chrome.js';
 const MISSIONS = [
   { icon:'🛰️', name:'Voyager 1 & 2', tag:'The farthest travellers', year:'1977', color:'#6ab0ff',
     blurb:'Two probes that flew past the giant planets and kept going. They are now beyond every planet, drifting in the space between the stars. Each carries a golden record of sounds and pictures from Earth.',
-    wow:'Voyager 1 is so far away that its faint radio whisper takes about <b>24 hours</b> to reach us.' },
+    wow:'Voyager 1 is so far away that its faint radio whisper takes about <b>24 hours</b> to reach us.',
+    live:true,
+    go:{ href:'solar-system.html#neptune', label:'Visit Neptune, its last flyby' } },
   { icon:'🤖', name:'Perseverance', tag:'A robot geologist on Mars', year:'2020', color:'#d0674a',
     blurb:'A car-sized rover driving across an ancient dried-up lake on Mars, collecting rocks that might hold clues to tiny life long ago. It even brought a little helicopter called Ingenuity.',
-    wow:'Ingenuity was the <b>first machine ever to fly</b> in the sky of another planet.' },
+    wow:'Ingenuity was the <b>first machine ever to fly</b> in the sky of another planet.',
+    go:{ href:'solar-system.html#mars', label:'Visit Mars, where it drives today' } },
   { icon:'🔭', name:'James Webb Telescope', tag:'A time machine for light', year:'2021', color:'#f4c560',
     blurb:'A giant telescope with a golden mirror, parked far from Earth. It sees heat (infrared) light, letting it peer through dust and spot galaxies from when the universe was very young.',
-    wow:'Webb can catch light that left its stars <b>over 13 billion years ago</b>.' },
+    wow:'Webb can catch light that left its stars <b>over 13 billion years ago</b>.',
+    go:{ href:'solar-system.html', label:'Tour the neighbourhood Webb looks beyond' } },
   { icon:'🪐', name:'Cassini', tag:"Saturn's explorer", year:'1997', color:'#e6d3a0',
     blurb:'A spacecraft that circled Saturn for 13 years, studying its rings and many moons, and dropped a little probe onto the cloudy moon Titan. It finished by diving into Saturn itself.',
-    wow:'It discovered that Saturn\'s icy moon Enceladus shoots <b>giant fountains of water</b> into space.' },
+    wow:'It discovered that Saturn\'s icy moon Enceladus shoots <b>giant fountains of water</b> into space.',
+    go:{ href:'solar-system.html#saturn', label:'Visit Saturn and its rings' } },
   { icon:'🚀', name:'New Horizons', tag:'The Pluto flyby', year:'2006', color:'#c9b8a0',
     blurb:'A fast little probe about the size of a piano. After nine years of travel it zoomed past Pluto in 2015 and gave us our very first close-up photographs of that faraway world.',
-    wow:'It flew past Pluto at over 50,000 km/h and spotted a huge <b>heart-shaped patch of ice</b>.' },
+    wow:'It flew past Pluto at over 50,000 km/h and spotted a huge <b>heart-shaped patch of ice</b>.',
+    go:{ href:'solar-system.html#pluto', label:'Visit Pluto in the Grand Tour' } },
   { icon:'☀️', name:'Parker Solar Probe', tag:'The Sun-toucher', year:'2018', color:'#e89248',
     blurb:'A spacecraft that flies closer to the Sun than anything before it, hiding behind a special heat shield so it does not melt. It studies the Sun\'s scorching outer air.',
-    wow:'It flew through the Sun\'s outer atmosphere — the first craft ever to <b>"touch" the Sun</b>.' },
+    wow:'It flew through the Sun\'s outer atmosphere — the first craft ever to <b>"touch" the Sun</b>.',
+    go:{ href:'index.html', label:'Meet the Sun in the Light Study' } },
   { icon:'🌕', name:'Apollo 11', tag:'First footsteps on the Moon', year:'1969', color:'#c9c5b8',
     blurb:'The mission that carried the first people to walk on the Moon. Two astronauts stepped onto the dusty grey surface while a third orbited above in the spacecraft.',
-    wow:'Their footprints have no wind or rain to erase them — they could last <b>millions of years</b>.' },
+    wow:'Their footprints have no wind or rain to erase them — they could last <b>millions of years</b>.',
+    go:{ href:'index.html', label:'Watch the Moon\'s phases in the Light Study' } },
   { icon:'✨', name:'Hubble Telescope', tag:'Our eye in the sky', year:'1990', color:'#a9e0e2',
     blurb:'A school-bus-sized telescope orbiting high above Earth for more than 30 years. It has taken some of the most beautiful and famous pictures of stars and galaxies ever made.',
-    wow:'Hubble has made more than <b>1.7 million observations</b> of the universe.' }
+    wow:'Hubble has made more than <b>1.7 million observations</b> of the universe.',
+    go:{ href:'sky-tonight.html', label:'See what\'s in your sky tonight' } }
 ];
 
 const grid = document.getElementById('grid');
@@ -141,9 +164,32 @@ MISSIONS.forEach(m => {
     <h3>${m.name}</h3>
     <div class="tag">${m.tag}</div>
     <p class="blurb">${m.blurb}</p>
-    <div class="wow"><span class="lbl">✦ Wow</span>${m.wow}</div>`;
+    <div class="wow"><span class="lbl">✦ Wow</span>${m.wow}</div>
+    ${m.live ? '<div class="live"><span class="lbl">⟡ Right now</span>Voyager 1 is about <b><span id="voyager-dist">…</span> km</b> from the Sun — and gets about 17 km farther every second. Watch it go!</div>' : ''}`;
+  if (m.go) {
+    const go = document.createElement('a');
+    go.className = 'go';
+    go.href = m.go.href;
+    go.textContent = m.go.label + ' →';
+    c.appendChild(go);
+  }
   grid.appendChild(c);
 });
+
+// Live Voyager 1 distance: a linear estimate from a recent epoch. The probe
+// recedes at ~16.9 km/s, so the last digits visibly climb every second.
+const voyagerDist = document.getElementById('voyager-dist');
+if (voyagerDist) {
+  const EPOCH = Date.UTC(2026, 0, 1);
+  const KM_AT_EPOCH = 25.4e9;
+  const KM_PER_SEC = 16.9;
+  const tick = () => {
+    const km = KM_AT_EPOCH + ((Date.now() - EPOCH) / 1000) * KM_PER_SEC;
+    voyagerDist.textContent = Math.round(km).toLocaleString('en-US');
+  };
+  tick();
+  setInterval(tick, 1000);
+}
 
 // subtle drifting starfield background
 const canvas = document.getElementById('bg'), ctx = canvas.getContext('2d');

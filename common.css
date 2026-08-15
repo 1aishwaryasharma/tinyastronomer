@@ -374,6 +374,33 @@ canvas { display: block; }
 .scene-menu a .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; }
 .scene-menu a.current .dot { opacity: 1; }
 
+/* ──── Journey chrome inside the scene menu ──── */
+.scene-menu-head {
+  padding: 7px 12px 5px;
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+.scene-menu a .step {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+.scene-menu a.current .step { color: var(--accent); }
+.scene-menu a.visited .dot { background: var(--accent); color: var(--accent); opacity: 0.85; }
+.scene-menu a.scene-next {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 10px;
+}
+.scene-menu a.scene-next:hover { color: #ffd47a; background: rgba(244, 197, 96, 0.06); }
+.scene-menu a.scene-next .arrow { margin-left: auto; }
+
 /* Explore menu is the sole cross-page nav; drop the redundant header links. */
 .nav-link,
 .back-link {

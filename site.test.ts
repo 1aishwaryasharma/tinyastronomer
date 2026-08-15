@@ -192,6 +192,62 @@ test('Solar-storm particles meet the rotating aurora oval above Earth', () => {
   expect(storm).not.toContain('THREE.MathUtils.lerp(positions[o], -0.08');
 });
 
+test('Light Study teaches ocean tides as a guided study', () => {
+  const index = readFileSync('index.html', 'utf8');
+  expect(index).toContain('data-preset="tides"');
+  expect(index).toContain('function createOceanTide');
+  expect(index).toContain('two high tides a day');
+  expect(index).toContain('spring tides');
+  expect(index).toContain('neap tides');
+  // The bulge is the P2 (quadrupole) stretch of each pull, so spring and
+  // neap alignments fall out of the same shader.
+  expect(index).toContain('1.5 * pow(dot(p, uMoonDir), 2.0) - 0.5');
+  expect(index).toContain('uMoonAmp');
+  expect(index).toContain('uSunAmp');
+});
+
+test('Tide overlays stay hidden outside their preset', () => {
+  const index = readFileSync('index.html', 'utf8');
+  expect(index).toContain('TIDE.shell.visible = false');
+  expect(index).toContain('TIDE.marker.visible = false');
+  expect(index).toMatch(/if \(sim\.preset !== 'tides'\)/);
+});
+
+test('Ocean Tides announces each stage to assistive technology', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const stage = index.match(/<div class="aurora-stage tide-stage"[^>]*>/)?.[0] || '';
+  expect(stage).toContain('role="status"');
+  expect(stage).toContain('aria-live="polite"');
+  expect(stage).toContain('aria-atomic="true"');
+});
+
+test('scene navigation is one journey with progress and a next stop', () => {
+  const chrome = readFileSync('chrome.js', 'utf8');
+  expect(chrome).toContain("JOURNEY_KEY = 'ta-journey'");
+  expect(chrome).toContain('Your journey');
+  expect(chrome).toContain('Next stop');
+  expect(chrome).toContain('Journey complete');
+  // The story ends outside, looking up: Sky Tonight is the final stop.
+  const order = [...chrome.matchAll(/key: '(\w+)'/g)].map((m) => m[1]);
+  expect(order[0]).toBe('light');
+  expect(order[order.length - 1]).toBe('sky');
+});
+
+test('missions link to the worlds they explored', () => {
+  const missions = readFileSync('missions.html', 'utf8');
+  for (const target of ['#neptune', '#mars', '#saturn', '#pluto']) {
+    expect(missions).toContain(`solar-system.html${target}`);
+  }
+  expect(missions).toContain('id="voyager-dist"');
+  expect(missions).toContain('KM_PER_SEC');
+});
+
+test('grand tour honours body deep links', () => {
+  const tour = readFileSync('solar-system.html', 'utf8');
+  expect(tour).toContain('function applyBodyHash');
+  expect(tour).toContain("window.addEventListener('hashchange', applyBodyHash)");
+});
+
 test('Earth night shader uses the current Three.js map UV varying', () => {
   const index = readFileSync('index.html', 'utf8');
   expect(index).toContain('texture2D(nightMap, vMapUv)');

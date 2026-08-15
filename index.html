@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Sol · Terra · Luna — A Light Study</title>
-<meta name="description" content="An interactive 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, and eclipses unfold. Free, ad-free astronomy for curious kids.">
+<meta name="description" content="An interactive 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, ocean tides, and eclipses unfold. Free, ad-free astronomy for curious kids.">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -12,19 +12,19 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="An Interactive Solar System">
 <meta property="og:title" content="Sol · Terra · Luna — A Light Study">
-<meta property="og:description" content="An interactive 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, and eclipses unfold. Free, ad-free astronomy for curious kids.">
+<meta property="og:description" content="An interactive 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, ocean tides, and eclipses unfold. Free, ad-free astronomy for curious kids.">
 <meta property="og:url" content="https://tinyastronomer.com/">
 <meta property="og:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Sol · Terra · Luna — A Light Study">
-<meta name="twitter:description" content="An interactive 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, and eclipses. Free, ad-free astronomy for kids.">
+<meta name="twitter:description" content="An interactive 3D model of the Sun, Earth, and Moon — watch day and night, phases, tides, and eclipses. Free, ad-free astronomy for kids.">
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260814-4">
+<link rel="stylesheet" href="common.css?v=20260815-1">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -38,6 +38,7 @@
   .label-3d.sun { color: var(--accent); border-color: rgba(244, 197, 96, 0.3); }
   .label-3d.earth { color: var(--accent-cool); border-color: rgba(106, 176, 255, 0.3); }
   .label-3d.moon { color: #c9c5b8; border-color: rgba(201, 197, 184, 0.3); }
+  .label-3d.beach { color: #9fd8ff; border-color: rgba(159, 216, 255, 0.3); }
 
   .aurora-stage {
     position: fixed;
@@ -63,6 +64,8 @@
   }
   .aurora-stage.active { opacity: 1; transform: translate(-50%, 0); }
   .aurora-stage-step { color: #67e8b2; white-space: nowrap; }
+  .aurora-stage.tide-stage { border-color: rgba(127, 200, 255, 0.28); }
+  .tide-stage .aurora-stage-step { color: #7fc8ff; }
 
   @media (max-width: 820px) {
     .info-body { font-size: 13px; }
@@ -124,16 +127,20 @@
     <span class="num">03</span>
     <span class="lbl">Lunar <em>Phases</em></span>
   </button>
-  <button type="button" class="rail-btn preset-btn" data-preset="solar" aria-pressed="false">
+  <button type="button" class="rail-btn preset-btn" data-preset="tides" aria-pressed="false">
     <span class="num">04</span>
+    <span class="lbl">Ocean <em>Tides</em></span>
+  </button>
+  <button type="button" class="rail-btn preset-btn" data-preset="solar" aria-pressed="false">
+    <span class="num">05</span>
     <span class="lbl">Solar <em>Eclipse</em></span>
   </button>
   <button type="button" class="rail-btn preset-btn" data-preset="lunar" aria-pressed="false">
-    <span class="num">05</span>
+    <span class="num">06</span>
     <span class="lbl">Lunar <em>Eclipse</em></span>
   </button>
   <button type="button" class="rail-btn preset-btn" data-preset="aurora" aria-pressed="false">
-    <span class="num">06</span>
+    <span class="num">07</span>
     <span class="lbl">Polar <em>Lights</em></span>
   </button>
 </div>
@@ -163,9 +170,14 @@
 <div class="label-3d sun" id="label-sun" aria-hidden="true">Sun</div>
 <div class="label-3d earth" id="label-earth" aria-hidden="true">Earth</div>
 <div class="label-3d moon" id="label-moon" aria-hidden="true">Moon</div>
+<div class="label-3d beach" id="label-beach" aria-hidden="true">Your beach</div>
 <div class="aurora-stage" id="aurora-stage" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
   <span class="aurora-stage-step" id="aurora-stage-step">1 / 4</span>
   <span id="aurora-stage-text">A CME launches a cloud of charged particles</span>
+</div>
+<div class="aurora-stage tide-stage" id="tide-stage" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+  <span class="aurora-stage-step" id="tide-stage-step">1 / 4</span>
+  <span id="tide-stage-text">The Moon&rsquo;s gravity stretches the ocean into two bulges</span>
 </div>
 
 <script type="importmap">
@@ -712,6 +724,104 @@ function createSolarStorm() {
 }
 const SOLAR_STORM = createSolarStorm();
 
+// The Ocean Tides preset is another guided causal sequence. An exaggerated
+// water shell stretches along the P2 (quadrupole) term of the lunar and solar
+// pulls; the sum of those two quadrupoles is exactly what tidal theory gives,
+// so spring and neap tides emerge from one shader with no special cases.
+const TIDE_TIMELINE = {
+  duration: 40,
+  bulgeRise: [0.6, 3.4],
+  sunRise: [18.0, 21.5],
+  reset: [37.0, 39.5],
+  moonStartAngle: 0.9,
+  stages: [
+    { until: 8, text: 'The Moon’s gravity stretches the ocean into two bulges' },
+    { until: 18, text: 'Earth spins through both bulges — two high tides a day' },
+    { until: 28, text: 'Full moon: Sun and Moon pull in line — big spring tides' },
+    { until: Infinity, text: 'Quarter moon: pulls at right angles — gentle neap tides' }
+  ],
+  camera: [
+    { azimuth: 0.55, elevation: 0.42, distance: 10.5 },
+    { azimuth: 0.55, elevation: 0.25, distance: 5.4 },
+    { azimuth: 0.9, elevation: 1.25, distance: 14.5 },
+    { azimuth: 0.9, elevation: 1.25, distance: 14.5 }
+  ],
+  moonTargets: [0.9, 0.9, 0, Math.PI / 2]
+};
+
+function createOceanTide() {
+  const uniforms = {
+    uMoonAmp: { value: 0 },
+    uMoonDir: { value: new THREE.Vector3(1, 0, 0) },
+    uSunAmp: { value: 0 },
+    uSunDir: { value: new THREE.Vector3(-1, 0, 0) }
+  };
+  const shell = new THREE.Mesh(
+    new THREE.SphereGeometry(EARTH_RADIUS * 1.02, 96, 96),
+    new THREE.ShaderMaterial({
+      uniforms,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: `
+        uniform vec3 uMoonDir;
+        uniform vec3 uSunDir;
+        uniform float uMoonAmp;
+        uniform float uSunAmp;
+        varying float vHigh;
+        varying vec3 vViewN;
+        void main() {
+          vec3 p = normalize(position);
+          float moonStretch = 1.5 * pow(dot(p, uMoonDir), 2.0) - 0.5;
+          float sunStretch = 1.5 * pow(dot(p, uSunDir), 2.0) - 0.5;
+          float stretch = uMoonAmp * moonStretch + uSunAmp * sunStretch;
+          vHigh = clamp(stretch / max(uMoonAmp + uSunAmp, 1e-4), 0.0, 1.0);
+          vViewN = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix
+            * vec4(position * (1.0 + stretch), 1.0);
+        }`,
+      fragmentShader: `
+        varying float vHigh;
+        varying vec3 vViewN;
+        uniform float uMoonAmp;
+        uniform float uSunAmp;
+        void main() {
+          float env = clamp((uMoonAmp + uSunAmp) / 0.12, 0.0, 1.0);
+          float rim = 0.35 + 0.65 * pow(
+            1.0 - abs(dot(normalize(vViewN), vec3(0.0, 0.0, 1.0))), 1.6);
+          vec3 col = mix(vec3(0.05, 0.16, 0.38), vec3(0.35, 0.75, 1.0), vHigh);
+          float a = (0.14 + 0.55 * vHigh) * rim * env;
+          gl_FragColor = vec4(col * (0.9 + 1.4 * vHigh), a);
+        }`
+    })
+  );
+  // Displaced vertices exceed the base bounding sphere near the bulge tips.
+  shell.frustumCulled = false;
+  shell.renderOrder = 1;
+  shell.visible = false;
+  scene.add(shell);
+
+  // A fixed coastal point (near Recife, on Brazil's Atlantic coast) rides
+  // Earth's rotation so the two daily high tides happen to somewhere a kid
+  // can track. Blue Marble mapping puts longitude 0° on +X and 90°W on +Z.
+  const lat = THREE.MathUtils.degToRad(-8.05);
+  const lonW = THREE.MathUtils.degToRad(34.9);
+  const marker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.032, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x9fd8ff })
+  );
+  marker.position.set(
+    Math.cos(lat) * Math.cos(lonW),
+    Math.sin(lat),
+    Math.cos(lat) * Math.sin(lonW)
+  ).multiplyScalar(EARTH_RADIUS * 1.012);
+  marker.visible = false;
+  earth.add(marker);
+
+  return { marker, shell, uniforms };
+}
+const TIDE = createOceanTide();
+
 // Earth axis helper line (toggleable)
 const axisGeometry = new THREE.BufferGeometry().setFromPoints([
   new THREE.Vector3(0, -1.6, 0),
@@ -796,6 +906,7 @@ const sim = {
   preset: 'free'
 };
 const solarWeather = { elapsed: 0, stage: -1 };
+const tideStudy = { elapsed: 0, eventText: '—', stage: -1 };
 
 function sliderToSpeed(v) {
   // map -3..3 nonlinearly: at 0 = 1×, slider=1 → 2×, slider=2 → ~4×, etc.
@@ -817,9 +928,13 @@ const presetEls    = document.querySelectorAll('.preset-btn');
 const labelSun   = document.getElementById('label-sun');
 const labelEarth = document.getElementById('label-earth');
 const labelMoon  = document.getElementById('label-moon');
+const labelBeach = document.getElementById('label-beach');
 const auroraStage = document.getElementById('aurora-stage');
 const auroraStageStep = document.getElementById('aurora-stage-step');
 const auroraStageText = document.getElementById('aurora-stage-text');
+const tideStage = document.getElementById('tide-stage');
+const tideStageStep = document.getElementById('tide-stage-step');
+const tideStageText = document.getElementById('tide-stage-text');
 const metaDay    = document.getElementById('meta-day');
 const metaPhase  = document.getElementById('meta-phase');
 const metaEvent  = document.getElementById('meta-event');
@@ -919,6 +1034,63 @@ function updateSolarStorm(dt) {
   cam.distanceTarget = THREE.MathUtils.lerp(solarStormWideDistance(), 5.1, close);
 }
 
+function setTideStage(stage) {
+  if (tideStudy.stage === stage) return;
+  tideStudy.stage = stage;
+  tideStageStep.textContent = `${stage + 1} / ${TIDE_TIMELINE.stages.length}`;
+  tideStageText.textContent = TIDE_TIMELINE.stages[stage].text;
+}
+
+const _markerDir = new THREE.Vector3();
+function updateTides(dt) {
+  if (sim.preset !== 'tides') {
+    TIDE.shell.visible = false;
+    TIDE.marker.visible = false;
+    tideStage.classList.remove('active');
+    tideStage.setAttribute('aria-hidden', 'true');
+    return;
+  }
+
+  if (sim.playing && !SPACE.prefersReducedMotion) tideStudy.elapsed += dt;
+  const cycle = tideStudy.elapsed % TIDE_TIMELINE.duration;
+  const stage = TIDE_TIMELINE.stages.findIndex(s => cycle < s.until);
+
+  const fadeOut = 1 - THREE.MathUtils.smoothstep(cycle, ...TIDE_TIMELINE.reset);
+  const rise = THREE.MathUtils.smoothstep(cycle, ...TIDE_TIMELINE.bulgeRise);
+  const sunRise = THREE.MathUtils.smoothstep(cycle, ...TIDE_TIMELINE.sunRise);
+  TIDE.uniforms.uMoonAmp.value = 0.15 * rise * fadeOut;
+  TIDE.uniforms.uSunAmp.value = 0.065 * sunRise * fadeOut;
+  TIDE.uniforms.uMoonDir.value.copy(moon.position).normalize();
+  TIDE.uniforms.uSunDir.value.copy(sunGroup.position).normalize();
+  TIDE.shell.visible = true;
+  TIDE.marker.visible = true;
+
+  // Ease the Moon toward each stage's teaching position; its natural orbital
+  // drift is negligible at study speeds.
+  sim.moonPhaseAngle += (TIDE_TIMELINE.moonTargets[stage] - sim.moonPhaseAngle)
+    * Math.min(1, dt * 2.0);
+
+  tideStage.classList.add('active');
+  tideStage.setAttribute('aria-hidden', 'false');
+  setTideStage(stage);
+
+  const view = TIDE_TIMELINE.camera[stage];
+  cam.target.set(0, 0, 0);
+  cam.azimuthTarget = view.azimuth;
+  cam.elevationTarget = view.elevation;
+  cam.distanceTarget = view.distance;
+
+  // Live telemetry: is the beach marker inside a bulge right now?
+  TIDE.marker.getWorldPosition(_markerDir).normalize();
+  const moonP2 = 1.5 * TIDE.uniforms.uMoonDir.value.dot(_markerDir) ** 2 - 0.5;
+  const sunP2 = 1.5 * TIDE.uniforms.uSunDir.value.dot(_markerDir) ** 2 - 0.5;
+  const amps = TIDE.uniforms.uMoonAmp.value + TIDE.uniforms.uSunAmp.value;
+  const local = amps > 1e-4
+    ? (TIDE.uniforms.uMoonAmp.value * moonP2 + TIDE.uniforms.uSunAmp.value * sunP2) / amps
+    : 0;
+  tideStudy.eventText = local > 0.55 ? 'High Tide' : (local < -0.2 ? 'Low Tide' : 'Tide Turning');
+}
+
 // ─────────────────────────────────────────────────────────
 // 10. PRESETS
 // ─────────────────────────────────────────────────────────
@@ -969,8 +1141,31 @@ const presetData = {
       cam.target.set(0, 0, 0);
     }
   },
-  solar: {
+  tides: {
     label: '— Phenomenon 03 —',
+    title: 'Ocean Tides',
+    body: 'The <strong>Moon\'s gravity</strong> pulls hardest on the ocean nearest it and weakest on the far side, stretching the sea into <strong>two bulges</strong>. As Earth spins through them, every beach gets about <strong>two high tides and two low tides a day</strong>. When the Sun and Moon line up, the bulges stack into big <strong>spring tides</strong>; at quarter moon their pulls fight, making gentle <strong>neap tides</strong>.',
+    fact: 'The bulges here are hugely exaggerated — the real open-ocean bulge is only about a metre tall. Real tides also run a little late, because water needs time to flow around coastlines.',
+    apply: () => {
+      setPlaying(true);
+      sim.speed = 1.6;
+      speedSlider.value = Math.log2(1.6).toFixed(2);
+      speedValue.textContent = '1.6×';
+      speedSlider.setAttribute('aria-valuetext', '1.6× speed');
+      sim.sunLongitude = Math.PI;
+      sim.moonNodeLongitude = THREE.MathUtils.degToRad(32);
+      sim.moonPhaseAngle = SPACE.prefersReducedMotion ? 0 : TIDE_TIMELINE.moonStartAngle;
+      tideStudy.elapsed = SPACE.prefersReducedMotion ? 23 : 0;
+      tideStudy.stage = -1;
+      const view = TIDE_TIMELINE.camera[SPACE.prefersReducedMotion ? 2 : 0];
+      cam.azimuthTarget = view.azimuth;
+      cam.elevationTarget = view.elevation;
+      cam.distanceTarget = view.distance;
+      cam.target.set(0, 0, 0);
+    }
+  },
+  solar: {
+    label: '— Phenomenon 04 —',
     title: 'Solar Eclipse',
     body: 'When the <strong>Moon passes between the Sun and Earth</strong>, it casts a small shadow on Earth\'s surface. Anyone standing inside that shadow sees the Sun blocked — a <strong>solar eclipse</strong>. It happens at new moon, but only when the Moon\'s tilted orbit aligns precisely with the Sun-Earth line.',
     fact: 'The Moon\'s shadow races across Earth faster than 2,000 km/h — quicker than any jet plane.',
@@ -986,7 +1181,7 @@ const presetData = {
     }
   },
   lunar: {
-    label: '— Phenomenon 04 —',
+    label: '— Phenomenon 05 —',
     title: 'Lunar Eclipse',
     body: 'When the <strong>Earth passes between the Sun and Moon</strong>, Earth\'s shadow falls onto the Moon. The full moon dims dramatically and can take on a muted copper tone from sunlight filtered through Earth\'s atmosphere. This is a <strong>lunar eclipse</strong>, visible to anyone on Earth\'s night side.',
     fact: 'The copper tint is real but usually subtle: Earth\'s atmosphere removes more blue light while bending the remaining warm light into the shadow.',
@@ -1002,7 +1197,7 @@ const presetData = {
     }
   },
   aurora: {
-    label: '— Phenomenon 05 —',
+    label: '— Phenomenon 06 —',
     title: 'Polar Lights',
     body: 'A <strong>solar flare</strong> can erupt alongside a <strong>coronal mass ejection</strong> (CME), which hurls magnetized plasma into space. When that disturbance reaches Earth, it transfers energy into our <strong>magnetic field</strong>. Charged particles are guided toward the poles and collide with oxygen and nitrogen high in the atmosphere, making them glow green, red, and violet.',
     fact: 'This trip is compressed for the model. A fast CME can reach Earth in roughly a day; slower ones may take several days. The aurora then forms in ovals around the magnetic poles, mostly on the night side.',
@@ -1035,14 +1230,18 @@ function applyPreset(name) {
     el.classList.toggle('active', active);
     el.setAttribute('aria-pressed', String(active));
   });
-  // Every preset starts without the aurora; only the one that studies it
-  // switches it back on in apply().
+  // Every preset starts without the aurora or tide overlays; only the
+  // presets that study them switch them back on in apply()/their update.
   setAuroraVisible(false);
   SOLAR_STORM.group.visible = false;
+  TIDE.shell.visible = false;
+  TIDE.marker.visible = false;
   moon.visible = true;
   moonOrbitFrame.visible = sim.showOrbits;
   auroraStage.classList.remove('active');
   auroraStage.setAttribute('aria-hidden', 'true');
+  tideStage.classList.remove('active');
+  tideStage.setAttribute('aria-hidden', 'true');
   const p = presetData[name];
   infoLabel.textContent = p.label;
   infoTitle.textContent = p.title;
@@ -1171,6 +1370,10 @@ function animate() {
   // particle transit, magnetic deflection, then a smooth aurora response.
   updateSolarStorm(dt);
 
+  // The Ocean Tides preset stretches the water shell along the current
+  // Moon and Sun directions and walks through spring and neap alignments.
+  updateTides(dt);
+
   // Smooth camera
   cam.update();
 
@@ -1217,12 +1420,15 @@ function animate() {
   SPACE.projectToScreen(sunGroup, labelSun, camera, -50, sim.showLabels);
   SPACE.projectToScreen(earthGroup, labelEarth, camera, -38, sim.showLabels);
   SPACE.projectToScreen(moon, labelMoon, camera, -22, sim.showLabels && moon.visible);
+  SPACE.projectToScreen(TIDE.marker, labelBeach, camera, -16,
+    sim.showLabels && TIDE.marker.visible);
 
   // Telemetry
   const dayFraction = (sim.time * sim.earthSpinSpeed) / (Math.PI * 2);
   SPACE.setText(metaDay, (dayFraction % 1).toFixed(2));
   SPACE.setText(metaPhase, describePhase(moon.position, sunGroup.position));
-  SPACE.setText(metaEvent, detectEvent(moon.position));
+  SPACE.setText(metaEvent,
+    sim.preset === 'tides' ? tideStudy.eventText : detectEvent(moon.position));
 
   setup.render();
 }

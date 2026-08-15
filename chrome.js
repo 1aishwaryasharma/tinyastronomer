@@ -37,14 +37,42 @@ function initMobileHints() {
   window.setTimeout(dismiss, 8000);
 }
 
+// Ordered as one journey: start at home, learn what Earth and Moon do,
+// meet the neighbourhood, feel the distances, see who we sent — and end
+// by going outside to look up.
 const SCENES = [
   { href: 'index.html', key: 'light', label: 'Light Study' },
-  { href: 'solar-system.html', key: 'tour', label: 'Grand Tour' },
   { href: 'seasons.html', key: 'seasons', label: 'Seasons' },
+  { href: 'solar-system.html', key: 'tour', label: 'Grand Tour' },
   { href: 'scale-walk.html', key: 'scale', label: 'Scale Walk' },
-  { href: 'sky-tonight.html', key: 'sky', label: 'Sky Tonight' },
-  { href: 'missions.html', key: 'missions', label: 'Missions' }
+  { href: 'missions.html', key: 'missions', label: 'Missions' },
+  { href: 'sky-tonight.html', key: 'sky', label: 'Sky Tonight' }
 ];
+
+// A tiny logbook: which stops the visitor has already explored. localStorage
+// can throw (private browsing, blocked storage) — the journey still works,
+// it just forgets.
+const JOURNEY_KEY = 'ta-journey';
+function readVisited() {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(JOURNEY_KEY));
+    return Array.isArray(list) ? list : [];
+  } catch (err) {
+    return [];
+  }
+}
+function markVisited(key) {
+  try {
+    const list = readVisited();
+    if (!list.includes(key)) {
+      list.push(key);
+      window.localStorage.setItem(JOURNEY_KEY, JSON.stringify(list));
+    }
+    return list;
+  } catch (err) {
+    return [key];
+  }
+}
 
 function buildNav(currentKey) {
   const nav = document.createElement('nav');
@@ -61,14 +89,41 @@ function buildNav(currentKey) {
   menu.id = 'scene-menu';
   menu.hidden = true;
   btn.setAttribute('aria-controls', menu.id);
-  SCENES.forEach((s) => {
+
+  const visited = markVisited(currentKey);
+  const seen = SCENES.filter((s) => visited.includes(s.key)).length;
+  const head = document.createElement('div');
+  head.className = 'scene-menu-head';
+  head.textContent = 'Your journey · ' + seen + ' / ' + SCENES.length;
+  menu.appendChild(head);
+
+  SCENES.forEach((s, i) => {
     const a = document.createElement('a');
     a.href = s.href;
-    a.className = s.key === currentKey ? 'current' : '';
-    if (s.key === currentKey) a.setAttribute('aria-current', 'page');
-    a.innerHTML = '<span class="dot"></span>' + s.label;
+    if (s.key === currentKey) {
+      a.className = 'current';
+      a.setAttribute('aria-current', 'page');
+    } else if (visited.includes(s.key)) {
+      a.className = 'visited';
+    }
+    a.innerHTML = '<span class="dot"></span>' + s.label
+      + '<span class="step">' + String(i + 1).padStart(2, '0') + '</span>';
     menu.appendChild(a);
   });
+
+  // The journey always knows where to go next; the final stop loops home.
+  const currentIndex = SCENES.findIndex((s) => s.key === currentKey);
+  const next = currentIndex >= 0 && currentIndex < SCENES.length - 1
+    ? SCENES[currentIndex + 1]
+    : null;
+  const nextLink = document.createElement('a');
+  nextLink.className = 'scene-next';
+  nextLink.href = (next || SCENES[0]).href;
+  nextLink.innerHTML = next
+    ? 'Next stop · ' + next.label + ' <span class="arrow">→</span>'
+    : 'Journey complete · start again <span class="arrow">↻</span>';
+  menu.appendChild(nextLink);
+
   nav.appendChild(btn);
   nav.appendChild(menu);
   function setOpen(open) {
