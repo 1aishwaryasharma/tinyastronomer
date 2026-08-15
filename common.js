@@ -13,6 +13,7 @@ import {
   initMobileHints,
   initMobileInfoPanels,
   prefersReducedMotion,
+  revealRailButton,
   setText
 } from './chrome.js';
 import * as THREE from 'three';
@@ -752,6 +753,7 @@ float fbm(vec3 p) {
     initMobileInfoPanels,
     prefersReducedMotion,
     projectToScreen,
+    revealRailButton,
     seededRandom,
     setText,
     wirePlayPause

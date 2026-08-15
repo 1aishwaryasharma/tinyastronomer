@@ -401,6 +401,21 @@ test("interactive info panels use the shared mobile drawer", () => {
   expect(commonCss).toContain(".info-panel.mobile-info-panel:not(.is-expanded)");
 });
 
+test('mobile drawer scrolls as one box and pins Close', () => {
+  // The panel is the overflow box a finger actually pans. Close is the
+  // first child and sticky so it stays on screen after the list scrolls.
+  const chromeJs = readFileSync('chrome.js', 'utf8');
+  const commonCss = readFileSync('common.css', 'utf8');
+  expect(chromeJs).toContain('panel.insertBefore(toggle, panel.firstChild)');
+  expect(chromeJs).not.toContain('mobile-info-scroll');
+  expect(commonCss).toMatch(
+    /\.info-panel\.mobile-info-panel\s*\{[\s\S]*?overflow:\s*auto/
+  );
+  expect(commonCss).toMatch(
+    /\.info-panel\.mobile-info-panel\.is-expanded \.mobile-info-toggle\s*\{[\s\S]*?position:\s*sticky/
+  );
+});
+
 test('small-screen chrome keeps menus and controls inside the viewport', () => {
   const commonCss = readFileSync('common.css', 'utf8');
   expect(commonCss).toContain('@media (max-width: 1024px)');
@@ -413,13 +428,29 @@ test('small-screen chrome keeps menus and controls inside the viewport', () => {
   expect(commonCss).toMatch(/\.controls,[\s\S]*?flex-wrap:\s*wrap\s*!important/);
   expect(commonCss).toContain('100svh');
   expect(commonCss).toContain('@media (pointer: coarse)');
+  expect(commonCss).toMatch(/\.scene-nav-btn\s*\{[\s\S]*?color:\s*var\(--accent\)/);
 });
 
-test('sky tonight keeps its planet list visible on small screens', () => {
+test('horizontal chip rails scroll the selected stop into view', () => {
+  const chromeJs = readFileSync('chrome.js', 'utf8');
+  const commonJs = readFileSync('common.js', 'utf8');
+  expect(chromeJs).toContain('function revealRailButton');
+  expect(chromeJs).toContain("inline: 'center'");
+  expect(commonJs).toContain('revealRailButton');
+  for (const file of ['index.html', 'seasons.html', 'solar-system.html', 'scale-walk.html']) {
+    expect(readFileSync(file, 'utf8')).toContain('SPACE.revealRailButton');
+  }
+});
+
+test('sky tonight uses the shared mobile drawer so the sky stays visible', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   const chromeJs = readFileSync('chrome.js', 'utf8');
-  expect(sky).toContain('data-keep-open');
-  expect(chromeJs).toContain('data-keep-open');
+  const commonCss = readFileSync('common.css', 'utf8');
+  expect(sky).not.toContain('data-keep-open');
+  expect(chromeJs).not.toContain('data-keep-open');
+  expect(commonCss).not.toContain('[data-keep-open]');
+  expect(sky).toContain('class="info-panel"');
+  expect(chromeJs).toContain('initMobileInfoPanels');
 });
 
 test("current mission figures remain current", () => {

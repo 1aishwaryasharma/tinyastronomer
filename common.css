@@ -348,12 +348,17 @@ canvas { display: block; }
   z-index: 30; font-family: 'Fragment Mono', monospace;
 }
 .scene-nav-btn {
-  background: var(--panel); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--line); color: var(--ink-dim); border-radius: 2px;
-  padding: 7px 14px; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+  background: rgba(244, 197, 96, 0.08);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(244, 197, 96, 0.4); color: var(--accent); border-radius: 2px;
+  padding: 7px 14px; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
   cursor: pointer; transition: all 0.2s; white-space: nowrap; min-height: 32px;
 }
-.scene-nav-btn:hover, .scene-nav.open .scene-nav-btn { color: var(--accent); border-color: rgba(244,197,96,0.4); }
+.scene-nav-btn:hover, .scene-nav.open .scene-nav-btn {
+  color: #ffd47a;
+  border-color: rgba(244, 197, 96, 0.7);
+  background: rgba(244, 197, 96, 0.14);
+}
 .scene-menu {
   position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
   min-width: 190px; background: var(--panel-bright);
@@ -462,7 +467,7 @@ canvas { display: block; }
   }
   .title {
     font-size: 16px !important;
-    max-width: calc(100vw - 128px);
+    max-width: calc(100vw - 148px);
   }
   .header-meta,
   body:has(.controls) .header-meta,
@@ -479,7 +484,7 @@ canvas { display: block; }
     right: calc(10px + env(safe-area-inset-right, 0px));
     transform: none;
   }
-  .scene-nav-btn { padding: 6px 10px; font-size: 8px; }
+  .scene-nav-btn { padding: 8px 12px; font-size: 10px; }
   .scene-menu {
     top: calc(100% + 6px);
     left: auto;
@@ -520,6 +525,7 @@ canvas { display: block; }
     width: auto;
     min-width: 0;
     flex: 0 0 auto;
+    min-height: 44px;
     padding: 8px 12px;
     font-size: 12px;
     white-space: nowrap;
@@ -531,10 +537,10 @@ canvas { display: block; }
   /* Floating planet tags hop on and off the edges of a small viewport. */
   .label-3d { display: none !important; }
 
-  /* Educational copy is a bottom drawer. Persistent panels (Sky Tonight)
-     stay a scrollable sheet because they *are* the page. */
-  .info-panel.mobile-info-panel,
-  .info-panel[data-keep-open] {
+  /* Educational copy is a bottom drawer so the scene stays visible.
+     The panel itself is the scroll box (so a finger swipe always
+     scrolls). Close is the first child and sticky, so it stays put. */
+  .info-panel.mobile-info-panel {
     top: auto !important;
     right: 10px !important;
     bottom: calc(152px + env(safe-area-inset-bottom, 0px)) !important;
@@ -545,11 +551,8 @@ canvas { display: block; }
     padding: 12px 64px 12px 16px;
     overflow: auto;
     overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     transition: max-height 0.25s ease, padding 0.25s ease;
-  }
-  .info-panel[data-keep-open] {
-    padding: 14px 16px;
-    max-height: calc(100svh - 220px) !important;
   }
   .info-panel.mobile-info-panel:not(.is-expanded) {
     max-height: 64px !important;
@@ -581,6 +584,7 @@ canvas { display: block; }
     top: 50%;
     right: 10px;
     transform: translateY(-50%);
+    z-index: 2;
     align-items: center;
     justify-content: center;
     min-width: 44px;
@@ -588,7 +592,7 @@ canvas { display: block; }
     padding: 6px 8px;
     border: 1px solid rgba(244, 197, 96, 0.28);
     border-radius: 2px;
-    background: rgba(244, 197, 96, 0.06);
+    background: var(--panel-bright);
     color: var(--accent);
     font-family: 'Fragment Mono', monospace;
     font-size: 8px;
@@ -596,9 +600,15 @@ canvas { display: block; }
     text-transform: uppercase;
     cursor: pointer;
   }
+  .info-panel.mobile-info-panel.is-expanded {
+    padding-right: 16px;
+  }
   .info-panel.mobile-info-panel.is-expanded .mobile-info-toggle {
-    top: 12px;
+    position: sticky;
+    top: 0;
+    float: right;
     transform: none;
+    margin: 0 0 8px 8px;
   }
 
   /* Wrap the dock so every control stays on-screen. Horizontal fade-scroll
@@ -765,8 +775,7 @@ canvas { display: block; }
     font-size: 11px;
   }
 
-  .info-panel.mobile-info-panel,
-  .info-panel[data-keep-open] {
+  .info-panel.mobile-info-panel {
     top: auto !important;
     right: 8px !important;
     bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;

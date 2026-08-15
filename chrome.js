@@ -14,6 +14,23 @@ function setText(el, text) {
   }
 }
 
+// Horizontal chip strips hide the selected stop. Bring it back into view
+// without yanking the page — only the rail scrolls.
+function revealRailButton(btn) {
+  if (!btn) return;
+  const rail = btn.closest('.side-rail');
+  if (!rail) return;
+  const railRect = rail.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  const pad = 8;
+  if (btnRect.left >= railRect.left + pad && btnRect.right <= railRect.right - pad) return;
+  btn.scrollIntoView({
+    inline: 'center',
+    block: 'nearest',
+    behavior: prefersReducedMotion ? 'auto' : 'smooth'
+  });
+}
+
 function initMobileHints() {
   const hints = document.querySelectorAll('.hint');
   if (!hints.length) return;
@@ -151,8 +168,6 @@ function buildNav(currentKey) {
 function initMobileInfoPanels() {
   document.querySelectorAll('.info-panel').forEach((panel, index) => {
     if (panel.classList.contains('mobile-info-panel')) return;
-    // Sky Tonight's panel is the page content; collapsing it would hide the list.
-    if (panel.hasAttribute('data-keep-open')) return;
 
     panel.classList.add('mobile-info-panel');
     panel.classList.remove('is-expanded');
@@ -177,7 +192,9 @@ function initMobileInfoPanels() {
       );
     });
 
-    panel.appendChild(toggle);
+    // First child so position:sticky can pin Close to the top of the
+    // same overflow box the finger actually scrolls.
+    panel.insertBefore(toggle, panel.firstChild);
   });
 }
 
@@ -197,6 +214,7 @@ const SPACE = {
   initMobileHints,
   initMobileInfoPanels,
   prefersReducedMotion,
+  revealRailButton,
   setText
 };
 
@@ -209,5 +227,6 @@ export {
   initMobileHints,
   initMobileInfoPanels,
   prefersReducedMotion,
+  revealRailButton,
   setText
 };
