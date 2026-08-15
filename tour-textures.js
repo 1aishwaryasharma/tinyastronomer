@@ -5,6 +5,7 @@
    ───────────────────────────────────────────────────────── */
 import * as THREE from 'three';
 import { SPACE } from './common.js';
+import { loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 
 export function createTourTextures(renderer) {
   const clamp = SPACE.clamp;
@@ -34,7 +35,7 @@ export function createTourTextures(renderer) {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     return tex;
   }
 
@@ -133,23 +134,71 @@ export function createTourTextures(renderer) {
     return finishTexture(c);
   }
 
+  function makeUnresolvedTexture(p, W, H) {
+    // Eris has never been imaged closely enough for a global surface map.
+    // A plain observed-color globe is more truthful than invented terrain.
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = p.dot;
+    ctx.fillRect(0, 0, W, H);
+    return finishTexture(c);
+  }
+
   const loadingManager = new THREE.LoadingManager();
-  const textureLoader = new THREE.TextureLoader(loadingManager);
+  const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day', 'normal', 'specular', 'lights']);
+  const earthDay = earthTextures.day;
+  const earthNormal = earthTextures.normal;
+  const earthSpecular = earthTextures.specular;
+  const earthLights = earthTextures.lights;
+  const earthNightUniforms = {
+    nightMap: { value: earthLights },
+    sunDirView: { value: new THREE.Vector3(1, 0, 0) }
+  };
 
   function planetTexture(p) {
-    const W = 1024;
-    const H = 512;
-    if (p.type === 'earth') {
-      const tex = textureLoader.load('assets/earth/day.jpg');
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.ClampToEdgeWrapping;
-      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      return tex;
-    }
+    const W = 2048;
+    const H = 1024;
+    if (p.type === 'earth') return earthDay;
+    if (p.key === 'eris') return makeUnresolvedTexture(p, W, H);
     if (p.type === 'gas' || p.type === 'ice') return makeBandedTexture(p, W, H);
     if (p.type === 'venus') return makeVenusTexture(p, W, H);
     return makeRockTexture(p, W, H);
+  }
+
+  function planetMaterial(p) {
+    if (p.type !== 'earth') {
+      return new THREE.MeshStandardMaterial({ map: planetTexture(p), roughness: 1, metalness: 0 });
+    }
+
+    const material = new THREE.MeshPhongMaterial({
+      map: earthDay,
+      normalMap: earthNormal,
+      normalScale: new THREE.Vector2(0.45, 0.45),
+      specularMap: earthSpecular,
+      specular: new THREE.Color(0x52657a),
+      shininess: 12
+    });
+    material.onBeforeCompile = shader => {
+      shader.uniforms.nightMap = earthNightUniforms.nightMap;
+      shader.uniforms.sunDirView = earthNightUniforms.sunDirView;
+      shader.fragmentShader =
+        'uniform sampler2D nightMap;\nuniform vec3 sunDirView;\n' +
+        shader.fragmentShader.replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          float dayMix = smoothstep(-0.08, 0.22, dot(normalize(vNormal), sunDirView));
+          vec3 cityLights = texture2D(nightMap, vMapUv).rgb;
+          totalEmissiveRadiance += cityLights * (1.0 - dayMix) * 1.35;`
+        );
+    };
+    material.customProgramCacheKey = () => 'grand-tour-earth-night-v1';
+    return material;
+  }
+
+  function updateEarthLighting(sunDirectionView) {
+    earthNightUniforms.sunDirView.value.copy(sunDirectionView);
   }
 
   function makeRingTexture() {
@@ -175,7 +224,7 @@ export function createTourTextures(renderer) {
     return tex;
   }
 
-  return { loadingManager, makeRingTexture, planetTexture };
+  return { loadingManager, makeRingTexture, planetMaterial, planetTexture, updateEarthLighting };
 }
 
 window.createTourTextures = createTourTextures;

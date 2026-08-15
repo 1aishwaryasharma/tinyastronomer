@@ -122,6 +122,66 @@ test('Three.js is loaded as a local ES module', () => {
   }
 });
 
+test('Grand Tour uses traceable scientific surface assets', () => {
+  const tour = readFileSync('solar-system.html', 'utf8');
+  const models = readFileSync('planet-models.js', 'utf8');
+  const textures = readFileSync('tour-textures.js', 'utf8');
+  const earthVisuals = readFileSync('earth-visuals.js', 'utf8');
+  const manifest = readFileSync('assets/planet-models/README.md', 'utf8');
+
+  expect(tour).toContain('createPlanetModelLoader');
+  expect(textures).toContain('loadEarthTextureSet');
+  expect(earthVisuals).toContain('assets/earth/day-4k.jpg');
+  expect(earthVisuals).toContain('assets/earth/lights-2k.png');
+  expect(textures).toContain("p.key === 'eris'");
+  for (const key of ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'ceres', 'pluto']) {
+    expect(models).toContain(`assets/planet-models/${key}.glb`);
+    expect(existsSync(`assets/planet-models/${key}.glb`)).toBe(true);
+    expect(manifest).toContain(`${key}.glb`);
+  }
+});
+
+test('Earth visuals have one scientifically shaped asset seam', () => {
+  const earthVisuals = readFileSync('earth-visuals.js', 'utf8');
+  const consumers = ['index.html', 'seasons.html', 'solar-system.html', 'tour-textures.js']
+    .map(file => readFileSync(file, 'utf8'));
+
+  expect(earthVisuals).toContain('EQUATORIAL_RADIUS_KM = 6378.137');
+  expect(earthVisuals).toContain('POLAR_RADIUS_KM = 6356.752314245');
+  expect(earthVisuals).toContain('createEarthGeometry');
+  for (const consumer of consumers) {
+    expect(consumer).toContain('earth-visuals.js');
+    expect(consumer).not.toContain('assets/earth/day-4k.jpg');
+    expect(consumer).not.toContain('assets/earth/lights-2k.png');
+  }
+});
+
+test('planet lighting and radius normalization retain physical meaning', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const seasons = readFileSync('seasons.html', 'utf8');
+  const tour = readFileSync('solar-system.html', 'utf8');
+  const models = readFileSync('planet-models.js', 'utf8');
+
+  for (const scene of [index, seasons, tour]) expect(scene).not.toContain('new THREE.AmbientLight');
+  expect(models).toContain('Math.cbrt(size.x * size.y * size.z)');
+  expect(models).toContain("root.position.copy(center).multiplyScalar(-modelScale)");
+  expect(tour).toContain("w.type === 'earth' ? createEarthGeometry(1, 96, 64) : unitSphere");
+});
+
+test('vendored Three.js retains its original MIT notice', () => {
+  const notice = readFileSync('vendor/three/LICENSE', 'utf8');
+  const projectLicense = readFileSync('LICENSE', 'utf8');
+  expect(notice).toContain('Copyright © 2010-2026 three.js authors');
+  expect(notice).toContain('Permission is hereby granted, free of charge');
+  expect(projectLicense).toContain('vendor/three/LICENSE');
+});
+
+test('asset documentation does not call quantized geometry lossless', () => {
+  const readme = readFileSync('README.md', 'utf8');
+  expect(readme).not.toContain('lossless geometry quantization');
+  expect(readme).toContain('preserve topology while using geometry quantization');
+});
+
 test('Light Study includes a night-side aurora around the magnetic poles', () => {
   const index = readFileSync('index.html', 'utf8');
   const common = readFileSync('common.js', 'utf8');

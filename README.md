@@ -45,10 +45,14 @@ bunx html-validate index.html solar-system.html seasons.html \
 - Three.js 0.185.1
 - WebGL and custom GLSL shaders
 - Vanilla HTML, CSS, and JavaScript
-- Earth day (surface), night-lights, normal, and specular maps from the
+- 4K Earth day, 2K night-lights, normal, and specular maps from the
   [three.js example planet textures](https://github.com/mrdoob/three.js/tree/dev/examples/textures/planets)
   (three.js is MIT-licensed), derived from NASA's
   [Visible Earth "Blue Marble" planet textures](https://visibleearth.nasa.gov/collection/1484/planet-textures)
+- Grand Tour planet models and surface composites from NASA's
+  [3D Resources](https://science.nasa.gov/3d-resources/), prepared by NASA's
+  Visualization Technology Applications and Development team. The bundled
+  copies preserve topology while using geometry quantization and 2K WebP texture compression.
 
 ## Scientific model
 
@@ -57,12 +61,13 @@ Body spacing and the Sun's visible size are not to scale, which keeps the
 complete system legible on one screen. The model uses:
 
 - Earth's 23.4393° obliquity and a 365.256-day year
+- Earth's WGS 84 equatorial and polar radii, normalized to its volumetric mean radius
 - The Moon's 27.321661-day sidereal period, 5.145° orbital inclination,
   0.0549 eccentricity, synchronous rotation, and 18.6-year node precession
 - Angular eclipse tests that are independent of the compressed display scale
 
-Small effects such as lunar libration, Earth's oblateness, nutation, and
-short-period orbital perturbations are intentionally omitted. The Sky Tonight
+Small effects such as lunar libration, nutation, and short-period orbital
+perturbations are intentionally omitted. The Sky Tonight
 page uses circular mean-orbit approximations and is a general guide rather than
 a location-specific observing forecast.
 
@@ -77,6 +82,8 @@ Reference values come from [NASA Solar System facts](https://science.nasa.gov/so
 - 3D rendering: [three.js](https://github.com/mrdoob/three.js) (MIT License)
 - Earth textures: [three.js example planet textures](https://github.com/mrdoob/three.js/tree/dev/examples/textures/planets),
   derived from NASA [Visible Earth — Blue Marble](https://visibleearth.nasa.gov/collection/1484/planet-textures)
+- Grand Tour planet models: NASA Visualization Technology Applications and
+  Development, via NASA [3D Resources](https://science.nasa.gov/3d-resources/)
 - Reference data: NASA [Solar System](https://science.nasa.gov/solar-system/),
   [Earth facts](https://science.nasa.gov/earth/facts/),
   [Moon facts](https://science.nasa.gov/moon/facts/), and

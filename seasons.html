@@ -114,6 +114,7 @@
 import * as THREE from 'three';
 import { SPACE } from './common.js';
 import { SPACE_DATA } from './data.js';
+import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 const clamp = SPACE.clamp;
 const DEG = THREE.MathUtils.degToRad;
 
@@ -139,7 +140,6 @@ const SUN = SPACE.createSun(1.7);
 scene.add(SUN.group);
 const sunLight = new THREE.PointLight(0xfff2e0, 2.4 * Math.PI, 0, 0);
 scene.add(sunLight);
-scene.add(new THREE.AmbientLight(0x223355, 0.22));
 
 // faint orbit ring
 const ringPts = [];
@@ -154,10 +154,9 @@ earthPivot.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), northPole);
 scene.add(earthPivot);
 
 const loadingManager = new THREE.LoadingManager();
-const tex = new THREE.TextureLoader(loadingManager).load('assets/earth/day.jpg');
-tex.colorSpace = THREE.SRGBColorSpace;
-const earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R, 96, 96),
-  new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0 }));
+const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day']);
+const earth = new THREE.Mesh(createEarthGeometry(EARTH_R, 96, 96),
+  new THREE.MeshStandardMaterial({ map: earthTextures.day, roughness: 1, metalness: 0 }));
 earthPivot.add(earth);
 
 // axis line + equator ring drawn in the tilted frame
@@ -167,7 +166,7 @@ const axis = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
 axis.computeLineDistances();
 earthPivot.add(axis);
 const eqPts = [];
-for (let i=0;i<=64;i++){ const a=i/64*Math.PI*2; eqPts.push(new THREE.Vector3(Math.cos(a)*EARTH_R*1.02,0,Math.sin(a)*EARTH_R*1.02)); }
+for (let i=0;i<=64;i++){ const a=i/64*Math.PI*2; eqPts.push(new THREE.Vector3(Math.cos(a)*EARTH_R*EARTH_SHAPE.equatorialScale*1.02,0,Math.sin(a)*EARTH_R*EARTH_SHAPE.equatorialScale*1.02)); }
 const equator = new THREE.Line(new THREE.BufferGeometry().setFromPoints(eqPts),
   new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 }));
 earthPivot.add(equator);

@@ -22,11 +22,19 @@ SOFTWARE.
 
 ---
 
-Third-party assets bundled in this repository are NOT covered by the MIT
-license above and retain the terms of their original sources:
+Third-party code and assets bundled in this repository are NOT covered by the
+MIT license above and retain the terms of their original sources:
 
+- Three.js code under `vendor/three/` is distributed under its original MIT
+  License, including the copyright and permission notice retained in
+  `vendor/three/LICENSE`.
 - Earth textures in `assets/earth/` come from the three.js project's example
   assets (https://github.com/mrdoob/three.js — MIT License) and are derived
   from NASA Visible Earth "Blue Marble" imagery
   (https://visibleearth.nasa.gov/collection/1484/planet-textures). NASA imagery
   is generally free of copyright; acknowledgement is appreciated.
+- Planet models in `assets/planet-models/` are adapted for web delivery from
+  NASA Visualization Technology Applications and Development (VTAD) models
+  published in NASA Science's 3D Resources collection
+  (https://science.nasa.gov/3d-resources/). Geometry and imagery remain
+  credited to NASA and the mission teams identified on each source page.

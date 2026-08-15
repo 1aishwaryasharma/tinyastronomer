@@ -192,6 +192,7 @@
 import * as THREE from 'three';
 import { SPACE } from './common.js';
 import { SPACE_DATA } from './data.js';
+import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 
 // ─────────────────────────────────────────────────────────
 // 1. SCENE SETUP
@@ -257,9 +258,6 @@ sunLight.shadow.bias = -0.0005;
 scene.add(sunLight);
 scene.add(sunLight.target);
 quality.setShadowLight(sunLight);
-
-// faint ambient so dark sides aren't pitch black
-scene.add(new THREE.AmbientLight(0x223355, 0.18));
 
 // ─────────────────────────────────────────────────────────
 // 4. EARTH (photographic day/night maps + procedural moon)
@@ -355,22 +353,11 @@ function createMoonTextures() {
 }
 
 const loadingManager = new THREE.LoadingManager();
-const textureLoader = new THREE.TextureLoader(loadingManager);
-
-function loadEarthTexture(path, colorTexture = false) {
-  const texture = textureLoader.load(path);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  if (colorTexture) texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
-// Lightweight photographic maps replace the illustrative canvas continents.
-const earthTexture = loadEarthTexture('assets/earth/day.jpg', true);
-const earthNormalTexture = loadEarthTexture('assets/earth/normal.jpg');
-const earthSpecularTexture = loadEarthTexture('assets/earth/specular.jpg');
-const nightTexture = loadEarthTexture('assets/earth/lights.jpg', true);
+const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day', 'normal', 'specular', 'lights']);
+const earthTexture = earthTextures.day;
+const earthNormalTexture = earthTextures.normal;
+const earthSpecularTexture = earthTextures.specular;
+const nightTexture = earthTextures.lights;
 const moonTextures = createMoonTextures();
 
 // Earth: phong base (keeps shadow support for eclipses) + injected
@@ -403,7 +390,7 @@ earthMaterial.onBeforeCompile = (shader) => {
 };
 
 const earth = new THREE.Mesh(
-  new THREE.SphereGeometry(EARTH_RADIUS, 96, 96),
+  createEarthGeometry(EARTH_RADIUS, 96, 96),
   earthMaterial
 );
 earth.castShadow = true;
@@ -419,7 +406,7 @@ scene.add(earthGroup);
 
 // Atmosphere — rim glow that brightens toward the sun-facing limb
 const atmosphere = new THREE.Mesh(
-  new THREE.SphereGeometry(EARTH_RADIUS * 1.045, 64, 64),
+  createEarthGeometry(EARTH_RADIUS * 1.045, 64, 64),
   new THREE.ShaderMaterial({
     transparent: true,
     side: THREE.BackSide,
@@ -453,6 +440,7 @@ earthGroup.add(atmosphere);
 // shader is the most expensive thing in the scene and it is the subject of
 // exactly one study.
 const AURORA = SPACE.createAurora(EARTH_RADIUS * 1.028);
+AURORA.mesh.scale.set(EARTH_SHAPE.equatorialScale, EARTH_SHAPE.polarScale, EARTH_SHAPE.equatorialScale);
 AURORA.mesh.visible = false;
 earth.add(AURORA.mesh);
 
@@ -757,7 +745,7 @@ function createOceanTide() {
     uSunDir: { value: new THREE.Vector3(-1, 0, 0) }
   };
   const shell = new THREE.Mesh(
-    new THREE.SphereGeometry(EARTH_RADIUS * 1.02, 96, 96),
+    createEarthGeometry(EARTH_RADIUS * 1.02, 96, 96),
     new THREE.ShaderMaterial({
       uniforms,
       transparent: true,

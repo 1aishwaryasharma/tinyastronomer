@@ -159,7 +159,9 @@
 import * as THREE from 'three';
 import { SPACE } from './common.js';
 import { SPACE_DATA } from './data.js';
-import { createTourTextures } from './tour-textures.js';
+import { createEarthGeometry } from './earth-visuals.js?v=20260815-1';
+import { createTourTextures } from './tour-textures.js?v=20260815-4';
+import { createPlanetModelLoader } from './planet-models.js?v=20260815-4';
 const clamp = SPACE.clamp;
 
 // ─────────────────────────────────────────────────────────
@@ -225,22 +227,23 @@ const sunUniforms = SUN.uniforms;
 
 const sunLight = new THREE.PointLight(0xfff2e0, 2.6 * Math.PI, 0, 0);
 scene.add(sunLight);
-scene.add(new THREE.AmbientLight(0x223355, 0.16));
 
 // ─────────────────────────────────────────────────────────
 // 4. PLANET TEXTURES (tour-textures.js)
 // ─────────────────────────────────────────────────────────
 const tourTextures = createTourTextures(renderer);
 const loadingManager = tourTextures.loadingManager;
-const planetTexture = tourTextures.planetTexture;
+const planetMaterial = tourTextures.planetMaterial;
 const makeRingTexture = tourTextures.makeRingTexture;
+const updateEarthLighting = tourTextures.updateEarthLighting;
+const planetModels = createPlanetModelLoader(renderer, loadingManager);
 const seededRandom = SPACE.seededRandom;
 
 // ─────────────────────────────────────────────────────────
 // 5. BUILD WORLDS (planets + dwarf planets) with orbits & moons
 // ─────────────────────────────────────────────────────────
-const unitSphere = new THREE.SphereGeometry(1, 48, 48);
-const moonSphere = new THREE.SphereGeometry(1, 24, 24);
+const unitSphere = new THREE.SphereGeometry(1, 96, 64);
+const moonSphere = new THREE.SphereGeometry(1, 32, 24);
 const selectable = [{ mesh: sunHit, key: 'sun' }];
 
 function makeOrbitRing(color, opacity) {
@@ -259,8 +262,19 @@ WORLDS.forEach((w, i) => {
   w.tilt.rotation.z = THREE.MathUtils.degToRad(w.tiltDeg);
   w.holder.add(w.tilt);
 
-  const mat = new THREE.MeshStandardMaterial({ map: planetTexture(w), roughness: 1, metalness: 0 });
-  w.mesh = new THREE.Mesh(unitSphere, mat);
+  // Avoid allocating a large procedural texture behind models that normally
+  // replace it moments later. If a model cannot load, its neutral mean-color
+  // globe remains intentionally free of invented surface geography.
+  const hasScientificModel = Boolean(planetModels.paths[w.key]);
+  const mat = hasScientificModel
+    ? new THREE.MeshStandardMaterial({ color: w.dot, roughness: 1, metalness: 0 })
+    : planetMaterial(w);
+  const globeGeometry = w.type === 'earth' ? createEarthGeometry(1, 96, 64) : unitSphere;
+  const fallbackMesh = new THREE.Mesh(globeGeometry, mat);
+  fallbackMesh.castShadow = true;
+  fallbackMesh.receiveShadow = true;
+  w.mesh = new THREE.Group();
+  w.mesh.add(fallbackMesh);
   w.mesh.userData.key = w.key;
   w.tilt.add(w.mesh);
   // Invisible oversized hit sphere — Mercury is only ~0.3 teaching units across,
@@ -270,6 +284,7 @@ WORLDS.forEach((w, i) => {
   w.holder.add(w.hit);
   selectable.push({ mesh: w.hit, key: w.key });
 
+  let fallbackRing = null;
   if (w.rings) {
     const ringGeo = new THREE.RingGeometry(1.35, 2.30, 96);
     const pos = ringGeo.attributes.position, uv = ringGeo.attributes.uv, v3 = new THREE.Vector3();
@@ -281,7 +296,16 @@ WORLDS.forEach((w, i) => {
       map: makeRingTexture(), side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthWrite: false }));
     ringMesh.rotation.x = Math.PI / 2;
     w.tilt.add(ringMesh);
+    fallbackRing = ringMesh;
   }
+
+  // Mission-derived NASA models retain the original globe UVs, proportions,
+  // and observed detail. The neutral globe is a resilient loading fallback.
+  planetModels.load(w.key, model => {
+    w.mesh.add(model);
+    fallbackMesh.visible = false;
+    if (fallbackRing) fallbackRing.visible = false;
+  }, error => console.warn(`NASA model unavailable for ${w.key}; using neutral fallback.`, error));
 
   // moons orbit in a group centred on the planet (kept in the orbital plane)
   w.moonGroup = new THREE.Group();
@@ -634,6 +658,8 @@ renderer.domElement.addEventListener('pointermove', (e) => {
 // ─────────────────────────────────────────────────────────
 let lastT = performance.now();
 const _worldPos = new THREE.Vector3(), _origin = new THREE.Vector3();
+const _earthWorldPos = new THREE.Vector3(), _earthSunDirView = new THREE.Vector3();
+const earthWorld = WORLDS.find(w => w.key === 'earth');
 
 function selectedObject() {
   if (sim.selected === 'comet') return COMET.nucleus;
@@ -682,6 +708,13 @@ function animate() {
   else if (sim.selected === 'sun' || !sim.selected) cam.target.lerp(_origin.set(0, 0, 0), 0.10);
 
   cam.update();
+
+  // The Earth night map follows the actual local direction to the Sun, so
+  // city lights can never appear on the illuminated hemisphere.
+  earthWorld.holder.getWorldPosition(_earthWorldPos);
+  _earthSunDirView.copy(_earthWorldPos).multiplyScalar(-1).normalize()
+    .transformDirection(camera.matrixWorldInverse);
+  updateEarthLighting(_earthSunDirView);
 
   const t = SPACE.prefersReducedMotion ? 0 : sim.visualTime;
   sunUniforms.uOutputScale.value = setup.bloomPass && setup.bloomPass.enabled ? Math.PI : 1;
