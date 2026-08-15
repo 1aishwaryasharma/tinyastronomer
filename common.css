@@ -58,6 +58,30 @@ canvas { display: block; }
   z-index: 10;
   pointer-events: none;
 }
+/* The wordmark sits above every page title — the one fixed point in the
+   journey, and the way back to the first stop. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-family: 'Fragment Mono', monospace;
+  font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--ink-dim); text-decoration: none;
+  pointer-events: auto;
+  transition: color 0.2s;
+}
+.brand em { font-style: normal; color: var(--ink); transition: color 0.2s; }
+.brand:hover, .brand:hover em { color: var(--accent); }
+.brand-mark {
+  flex: none;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 197, 96, 0.16);
+  transition: box-shadow 0.2s;
+}
+.brand:hover .brand-mark { box-shadow: 0 0 0 4px rgba(244, 197, 96, 0.24); }
+
 .title { font-size: 22px; font-weight: 400; letter-spacing: 0.02em; line-height: 1.1; }
 .title em { font-style: italic; color: var(--accent); }
 .subtitle {
@@ -421,6 +445,12 @@ canvas { display: block; }
              16px
              calc(18px + env(safe-area-inset-left, 0px)) !important;
   }
+  .brand {
+    margin-bottom: 6px;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+  }
+  .brand-mark { width: 7px; height: 7px; box-shadow: 0 0 0 2px rgba(244, 197, 96, 0.16); }
   .title {
     font-size: 18px !important;
     max-width: calc(100vw - 164px);
@@ -502,7 +532,7 @@ canvas { display: block; }
      sliding through the scene. */
   .side-rail,
   .side-rail.scroll {
-    top: calc(56px + env(safe-area-inset-top, 0px));
+    top: calc(74px + env(safe-area-inset-top, 0px));
     right: 10px;
     bottom: auto;
     left: 10px;
@@ -735,6 +765,7 @@ canvas { display: block; }
              8px
              calc(12px + env(safe-area-inset-left, 0px)) !important;
   }
+  .brand { margin-bottom: 4px; }
   .title { font-size: 15px !important; }
   .subtitle, .hint, .divider { display: none !important; }
   .header-meta,
@@ -760,7 +791,7 @@ canvas { display: block; }
 
   .side-rail,
   .side-rail.scroll {
-    top: calc(44px + env(safe-area-inset-top, 0px));
+    top: calc(60px + env(safe-area-inset-top, 0px));
     right: 8px;
     left: 8px;
     transform: none;

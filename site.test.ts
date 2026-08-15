@@ -416,6 +416,20 @@ test('mobile drawer scrolls as one box and pins Close', () => {
   );
 });
 
+test('every page carries the wordmark and links it home', () => {
+  const commonCss = readFileSync('common.css', 'utf8');
+  for (const file of pages) {
+    const html = readFileSync(file, 'utf8');
+    const brand = html.match(/<a class="brand"[^>]*>[\s\S]*?<\/a>/);
+    expect(brand, `${file}: missing the brand wordmark`).not.toBeNull();
+    expect(brand![0]).toContain('href="index.html"');
+    expect(brand![0].replace(/<[^>]+>/g, '')).toBe('tinyastronomer');
+    // It sits inside the fixed header, which is pointer-events: none.
+    expect(html.indexOf(brand![0])).toBeGreaterThan(html.indexOf('<header class="header">'));
+  }
+  expect(commonCss).toMatch(/\.brand\s*\{[\s\S]*?pointer-events:\s*auto/);
+});
+
 test('small-screen chrome keeps menus and controls inside the viewport', () => {
   const commonCss = readFileSync('common.css', 'utf8');
   expect(commonCss).toContain('@media (max-width: 1024px)');
