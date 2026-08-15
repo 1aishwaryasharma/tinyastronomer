@@ -1,7 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import {
+  advanceTrackedCoordinate,
+  relaxedPlanetDistance,
+  sunAndPlanetFrame,
+  updatedAutomaticDistance
+} from "./tour-camera.js";
 
 const pages = readdirSync(".").filter((file) => file.endsWith(".html"));
+const teachingRadius = (radiusKm: number) =>
+  Math.max(0.30, Math.min(0.55 * Math.pow(radiusKm / 6371, 0.4), 1.55));
 
 describe.each(pages)("%s", (file) => {
   const html = readFileSync(file, "utf8");
@@ -306,6 +314,58 @@ test('grand tour honours body deep links', () => {
   const tour = readFileSync('solar-system.html', 'utf8');
   expect(tour).toContain('function applyBodyHash');
   expect(tour).toContain("window.addEventListener('hashchange', applyBodyHash)");
+});
+
+test('Grand Tour body framing leaves enough visual breathing room', () => {
+  const fov = 45;
+  const apparentHeight = (radius: number, distance: number) =>
+    (2 * Math.asin(radius / distance)) / (fov * Math.PI / 180);
+
+  const mercuryRadius = teachingRadius(2440);
+  const mercuryOrbit = 6 + 6 * Math.sqrt(0.387);
+  const mercuryFrame = sunAndPlanetFrame({
+    aspect: 1.6,
+    planetRadius: mercuryRadius,
+    separation: mercuryOrbit,
+    sunRadius: 3.4,
+    verticalFovDegrees: fov
+  });
+  const jupiterRadius = teachingRadius(69911);
+  const jupiterDistance = relaxedPlanetDistance({
+    aspect: 1.6,
+    hasRings: false,
+    moonExtent: 3.6 + 0.14,
+    planetRadius: jupiterRadius,
+    verticalFovDegrees: fov
+  });
+  expect({
+    jupiterFits: apparentHeight(jupiterRadius, jupiterDistance) <= 0.17,
+    sunFits: apparentHeight(3.4, mercuryFrame.distance) <= 0.30
+  }).toEqual({ jupiterFits: true, sunFits: true });
+});
+
+test('Grand Tour tracking carries forward a moving body without camera lag', () => {
+  expect(advanceTrackedCoordinate(10, 12, 10, 0.1, false)).toBe(12);
+});
+
+test('Grand Tour automatic framing follows viewport changes but preserves manual zoom', () => {
+  const landscape = sunAndPlanetFrame({
+    aspect: 1.6,
+    planetRadius: teachingRadius(2440),
+    separation: 6 + 6 * Math.sqrt(0.387),
+    sunRadius: 3.4,
+    verticalFovDegrees: 45
+  }).distance;
+  const portrait = sunAndPlanetFrame({
+    aspect: 390 / 844,
+    planetRadius: teachingRadius(2440),
+    separation: 6 + 6 * Math.sqrt(0.387),
+    sunRadius: 3.4,
+    verticalFovDegrees: 45
+  }).distance;
+
+  expect(updatedAutomaticDistance(landscape, landscape, portrait)).toBe(portrait);
+  expect(updatedAutomaticDistance(landscape + 2, landscape, portrait)).toBeNull();
 });
 
 test('Earth night shader uses the current Three.js map UV varying', () => {

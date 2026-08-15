@@ -162,6 +162,7 @@ import { SPACE_DATA } from './data.js';
 import { createEarthGeometry } from './earth-visuals.js?v=20260815-1';
 import { createTourTextures } from './tour-textures.js?v=20260815-4';
 import { createPlanetModelLoader } from './planet-models.js?v=20260815-4';
+import { advanceTrackedCoordinate, relaxedPlanetDistance, sunAndPlanetFrame, updatedAutomaticDistance } from './tour-camera.js?v=20260815-1';
 const clamp = SPACE.clamp;
 
 // ─────────────────────────────────────────────────────────
@@ -601,6 +602,42 @@ function infoByKey(key) {
   if (key === 'comet') return COMET_INFO;
   return WORLDS.find(w => w.key === key);
 }
+
+// Inner-planet visits keep the Sun in the composition, which preserves a
+// useful sense of place and gives fast-moving Mercury room to cross the view.
+// Other worlds get a relaxed system-wide frame instead of a surface close-up.
+const INNER_CONTEXT_LIMIT_AU = SPACE_DATA.BODIES.mars.au;
+function usesInnerContext(w) { return w.au <= INNER_CONTEXT_LIMIT_AU; }
+function innerPlanetFrame(w) {
+  return sunAndPlanetFrame({
+    aspect: camera.aspect,
+    planetRadius: currentRadius(w),
+    separation: currentOrbit(w),
+    sunRadius: SUN_DISPLAY_R,
+    verticalFovDegrees: camera.fov
+  });
+}
+function outerPlanetDistance(w) {
+  const moonExtent = (w.moonList || []).reduce(
+    (extent, moon) => Math.max(extent, moon.orbit + moon.size), 0
+  );
+  return relaxedPlanetDistance({
+    aspect: camera.aspect,
+    hasRings: Boolean(w.rings),
+    moonExtent,
+    planetRadius: currentRadius(w),
+    verticalFovDegrees: camera.fov
+  });
+}
+function planetFocusDistance(w) {
+  return usesInnerContext(w)
+    ? innerPlanetFrame(w).distance
+    : outerPlanetDistance(w);
+}
+function clampedPlanetFocusDistance(w) {
+  return clamp(planetFocusDistance(w), 1.5, cam.maxDistance());
+}
+let automaticPlanetDistance = null;
 function selectBody(key) {
   sim.selected = key;
   sim.follow = !!key;
@@ -609,6 +646,7 @@ function selectBody(key) {
   Object.entries(labels).forEach(([k, el]) => el.classList.toggle('selected', k === key));
 
   if (!key) {
+    automaticPlanetDistance = null;
     renderOverview();
     metaViewing.textContent = 'The whole family';
     cam.target.set(0, 0, 0);
@@ -616,12 +654,14 @@ function selectBody(key) {
     return;
   }
   if (key === 'sun') {
+    automaticPlanetDistance = null;
     renderInfo(SUN_INFO, '— Our star —');
     metaViewing.textContent = SUN_INFO.name;
     cam.distanceTarget = SUN_DISPLAY_R * 4.2;
     return;
   }
   if (key === 'comet') {
+    automaticPlanetDistance = null;
     renderInfo(COMET_INFO, '— A visitor —');
     metaViewing.textContent = COMET_INFO.name;
     cam.distanceTarget = 7;
@@ -630,7 +670,8 @@ function selectBody(key) {
   const w = WORLDS.find(pl => pl.key === key);
   renderInfo(w, w.dwarf ? '— Dwarf planet —' : '— Planet ' + w.num + ' —');
   metaViewing.textContent = w.name;
-  cam.distanceTarget = clamp(currentRadius(w) * 5.5, 2.2, 60);
+  automaticPlanetDistance = clampedPlanetFocusDistance(w);
+  cam.distanceTarget = automaticPlanetDistance;
 }
 renderOverview();
 
@@ -657,9 +698,19 @@ renderer.domElement.addEventListener('pointermove', (e) => {
 // 14. ANIMATION LOOP
 // ─────────────────────────────────────────────────────────
 let lastT = performance.now();
-const _worldPos = new THREE.Vector3(), _origin = new THREE.Vector3();
+const _worldPos = new THREE.Vector3(), _focusTarget = new THREE.Vector3();
+const _previousFocusTarget = new THREE.Vector3(), _origin = new THREE.Vector3();
 const _earthWorldPos = new THREE.Vector3(), _earthSunDirView = new THREE.Vector3();
 const earthWorld = WORLDS.find(w => w.key === 'earth');
+let previousFocusKey = null;
+
+function advanceCameraTarget(desiredTarget, previousDesiredTarget, blend, focusChanged) {
+  cam.target.set(
+    advanceTrackedCoordinate(cam.target.x, desiredTarget.x, previousDesiredTarget.x, blend, focusChanged),
+    advanceTrackedCoordinate(cam.target.y, desiredTarget.y, previousDesiredTarget.y, blend, focusChanged),
+    advanceTrackedCoordinate(cam.target.z, desiredTarget.z, previousDesiredTarget.z, blend, focusChanged)
+  );
+}
 
 function selectedObject() {
   if (sim.selected === 'comet') return COMET.nucleus;
@@ -704,8 +755,30 @@ function animate() {
 
   // follow
   const sel = selectedObject();
-  if (sel) { sel.getWorldPosition(_worldPos); cam.target.lerp(_worldPos, 0.10); }
-  else if (sim.selected === 'sun' || !sim.selected) cam.target.lerp(_origin.set(0, 0, 0), 0.10);
+  const selectedWorld = WORLDS.find(w => w.key === sim.selected);
+  if (selectedWorld) {
+    const desiredDistance = clampedPlanetFocusDistance(selectedWorld);
+    automaticPlanetDistance = updatedAutomaticDistance(
+      cam.distanceTarget,
+      automaticPlanetDistance,
+      desiredDistance
+    );
+    if (automaticPlanetDistance != null) cam.distanceTarget = automaticPlanetDistance;
+  }
+  const followDamping = 1 - Math.exp(-dt * 12);
+  if (sel) {
+    sel.getWorldPosition(_worldPos);
+    const targetFraction = selectedWorld && usesInnerContext(selectedWorld)
+      ? innerPlanetFrame(selectedWorld).targetFraction
+      : 1;
+    _focusTarget.copy(_worldPos).multiplyScalar(targetFraction);
+  }
+  else if (sim.selected === 'sun' || !sim.selected) _focusTarget.copy(_origin.set(0, 0, 0));
+  const focusKey = sim.selected || 'overview';
+  const focusChanged = focusKey !== previousFocusKey;
+  advanceCameraTarget(_focusTarget, _previousFocusTarget, followDamping, focusChanged);
+  _previousFocusTarget.copy(_focusTarget);
+  previousFocusKey = focusKey;
 
   cam.update();
 
