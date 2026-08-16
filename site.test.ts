@@ -341,7 +341,7 @@ test('Polar Lights and Ocean Tides leave the orbit camera under user control', (
   const index = readFileSync('index.html', 'utf8');
   const solarUpdate = index.slice(
     index.indexOf('function updateSolarStorm'),
-    index.indexOf('const _markerDir')
+    index.indexOf('function updateTides')
   );
   const tideUpdate = index.slice(
     index.indexOf('function updateTides'),
@@ -405,11 +405,12 @@ test('Light Study includes an animated ocean-tide model', () => {
   expect(index).toContain('uSunAmp');
 });
 
-test('Tide overlays stay hidden outside their preset', () => {
+test('Tide overlay stays hidden outside its preset', () => {
   const index = readFileSync('index.html', 'utf8');
   expect(index).toContain('TIDE.shell.visible = false');
-  expect(index).toContain('TIDE.marker.visible = false');
   expect(index).toMatch(/if \(sim\.preset !== 'tides'\)/);
+  expect(index).not.toContain('Your beach');
+  expect(index).not.toContain('TIDE.marker');
 });
 
 test('Ocean Tides and Polar Lights do not show guided instruction overlays', () => {
@@ -622,6 +623,14 @@ test('horizontal chip rails scroll the selected stop into view', () => {
   for (const file of ['index.html', 'seasons.html', 'solar-system.html', 'scale-walk.html']) {
     expect(readFileSync(file, 'utf8')).toContain('SPACE.revealRailButton');
   }
+});
+
+test('mobile interaction hint is shown only once across pages', () => {
+  const chromeJs = readFileSync('chrome.js', 'utf8');
+  expect(chromeJs).toContain("MOBILE_HINT_KEY = 'ta-mobile-hint-seen'");
+  expect(chromeJs).toContain('window.localStorage.getItem(MOBILE_HINT_KEY)');
+  expect(chromeJs).toContain("window.localStorage.setItem(MOBILE_HINT_KEY, '1')");
+  expect(chromeJs).toContain("h.classList.add('is-dismissed')");
 });
 
 test('sky tonight uses the shared mobile drawer so the sky stays visible', () => {

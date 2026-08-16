@@ -78,10 +78,8 @@
     <h1 class="title">Sol · Terra · Luna</h1>
   </div>
   <div class="header-meta">
-    <div>Earth Day · <span id="meta-day">0.00</span></div>
-    <div>Moon Phase · <span id="meta-phase">New</span></div>
-    <div>Geometry · <span id="meta-event">Aligned</span></div>
-    <div>Model · <span>Earth-centered · not to scale</span></div>
+    <div>Moon · <span id="meta-phase">New</span></div>
+    <div>Model · <span>Earth-centered · compressed</span></div>
   </div>
 </header>
 
@@ -155,7 +153,6 @@
 <div class="label-3d sun" id="label-sun" aria-hidden="true">Sun</div>
 <div class="label-3d earth" id="label-earth" aria-hidden="true">Earth</div>
 <div class="label-3d moon" id="label-moon" aria-hidden="true">Moon</div>
-<div class="label-3d beach" id="label-beach" aria-hidden="true">Your beach</div>
 
 <script type="importmap">
 {
@@ -167,7 +164,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js';
+import { SPACE } from './common.js?v=20260815-10';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 
@@ -755,24 +752,7 @@ function createOceanTide() {
   shell.visible = false;
   scene.add(shell);
 
-  // A fixed coastal point (near Recife, on Brazil's Atlantic coast) rides
-  // Earth's rotation so the two daily high tides happen to somewhere a kid
-  // can track. Blue Marble mapping puts longitude 0° on +X and 90°W on +Z.
-  const lat = THREE.MathUtils.degToRad(-8.05);
-  const lonW = THREE.MathUtils.degToRad(34.9);
-  const marker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.032, 16, 16),
-    new THREE.MeshBasicMaterial({ color: 0x9fd8ff })
-  );
-  marker.position.set(
-    Math.cos(lat) * Math.cos(lonW),
-    Math.sin(lat),
-    Math.cos(lat) * Math.sin(lonW)
-  ).multiplyScalar(EARTH_RADIUS * 1.012);
-  marker.visible = false;
-  earth.add(marker);
-
-  return { marker, shell, uniforms };
+  return { shell, uniforms };
 }
 const TIDE = createOceanTide();
 
@@ -861,7 +841,7 @@ const sim = {
   preset: 'free'
 };
 const solarWeather = { elapsed: 0 };
-const tideStudy = { elapsed: 0, eventText: '—' };
+const tideStudy = { elapsed: 0 };
 
 function sliderToSpeed(v) {
   // map -3..3 nonlinearly: at 0 = 1×, slider=1 → 2×, slider=2 → ~4×, etc.
@@ -883,10 +863,7 @@ const presetEls    = document.querySelectorAll('.preset-btn');
 const labelSun   = document.getElementById('label-sun');
 const labelEarth = document.getElementById('label-earth');
 const labelMoon  = document.getElementById('label-moon');
-const labelBeach = document.getElementById('label-beach');
-const metaDay    = document.getElementById('meta-day');
 const metaPhase  = document.getElementById('meta-phase');
-const metaEvent  = document.getElementById('meta-event');
 const infoLabel  = document.getElementById('info-label');
 const infoTitle  = document.getElementById('info-title');
 const infoBody   = document.getElementById('info-body');
@@ -954,11 +931,9 @@ function updateSolarStorm(dt) {
   SOLAR_STORM.update(cycle);
 }
 
-const _markerDir = new THREE.Vector3();
 function updateTides(dt) {
   if (sim.preset !== 'tides') {
     TIDE.shell.visible = false;
-    TIDE.marker.visible = false;
     return;
   }
 
@@ -974,22 +949,11 @@ function updateTides(dt) {
   TIDE.uniforms.uMoonDir.value.copy(moon.position).normalize();
   TIDE.uniforms.uSunDir.value.copy(sunGroup.position).normalize();
   TIDE.shell.visible = true;
-  TIDE.marker.visible = true;
 
   // Ease the Moon toward each keyframe position; its natural orbital
   // drift is negligible at study speeds.
   sim.moonPhaseAngle += (keyframe.target - sim.moonPhaseAngle)
     * Math.min(1, dt * 2.0);
-
-  // Live telemetry: is the beach marker inside a bulge right now?
-  TIDE.marker.getWorldPosition(_markerDir).normalize();
-  const moonP2 = 1.5 * TIDE.uniforms.uMoonDir.value.dot(_markerDir) ** 2 - 0.5;
-  const sunP2 = 1.5 * TIDE.uniforms.uSunDir.value.dot(_markerDir) ** 2 - 0.5;
-  const amps = TIDE.uniforms.uMoonAmp.value + TIDE.uniforms.uSunAmp.value;
-  const local = amps > 1e-4
-    ? (TIDE.uniforms.uMoonAmp.value * moonP2 + TIDE.uniforms.uSunAmp.value * sunP2) / amps
-    : 0;
-  tideStudy.eventText = local > 0.55 ? 'High Tide' : (local < -0.2 ? 'Low Tide' : 'Tide Turning');
 }
 
 // ─────────────────────────────────────────────────────────
@@ -1138,7 +1102,6 @@ function applyPreset(name) {
   setAuroraVisible(false);
   SOLAR_STORM.group.visible = false;
   TIDE.shell.visible = false;
-  TIDE.marker.visible = false;
   moon.visible = true;
   moonOrbitFrame.visible = sim.showOrbits;
   const p = presetData[name];
@@ -1187,21 +1150,6 @@ function describePhase(moonPos, sunPos) {
 
 const _sunDirWorld = new THREE.Vector3();
 const _moonDir = new THREE.Vector3();
-
-function detectEvent(moonPos) {
-  _sunDirWorld.copy(sunGroup.position).normalize();
-  _moonDir.copy(moonPos).normalize();
-  const dot = THREE.MathUtils.clamp(_sunDirWorld.dot(_moonDir), -1, 1);
-  const solarSeparation = Math.acos(dot);
-  const lunarSeparation = Math.acos(-dot);
-
-  // Physical angular tolerances, independent of the compressed display scale.
-  if (solarSeparation < THREE.MathUtils.degToRad(0.55)) return 'Solar Eclipse';
-  if (lunarSeparation < THREE.MathUtils.degToRad(1.0)) return 'Lunar Eclipse';
-  if (solarSeparation < THREE.MathUtils.degToRad(2.0)) return 'Near Solar Node';
-  if (lunarSeparation < THREE.MathUtils.degToRad(2.0)) return 'Near Lunar Node';
-  return '—';
-}
 
 // ─────────────────────────────────────────────────────────
 // 12. ANIMATION LOOP
@@ -1324,15 +1272,9 @@ function animate() {
   SPACE.projectToScreen(sunGroup, labelSun, camera, -50, sim.showLabels);
   SPACE.projectToScreen(earthGroup, labelEarth, camera, -38, sim.showLabels);
   SPACE.projectToScreen(moon, labelMoon, camera, -22, sim.showLabels && moon.visible);
-  SPACE.projectToScreen(TIDE.marker, labelBeach, camera, -16,
-    sim.showLabels && TIDE.marker.visible);
 
   // Telemetry
-  const dayFraction = sim.earthRotation / (Math.PI * 2);
-  SPACE.setText(metaDay, (dayFraction % 1).toFixed(2));
   SPACE.setText(metaPhase, describePhase(moon.position, sunGroup.position));
-  SPACE.setText(metaEvent,
-    sim.preset === 'tides' ? tideStudy.eventText : detectEvent(moon.position));
 
   setup.render();
 }

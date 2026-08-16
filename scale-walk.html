@@ -62,8 +62,7 @@
     <h1 class="title">How Far Apart?</h1>
   </div>
   <div class="header-meta">
-    <div>Now visiting · <span id="meta-stop">The Sun</span></div>
-    <div>Distances here · <span id="meta-model">True to scale</span></div>
+    <div>Scale · <span>True distances</span></div>
   </div>
 </header>
 
@@ -95,7 +94,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js';
+import { SPACE } from './common.js?v=20260815-10';
 import { SPACE_DATA } from './data.js';
 import { createTourTextures } from './tour-textures.js';
 const clamp = SPACE.clamp;
@@ -249,7 +248,6 @@ const sTitle = document.getElementById('s-title');
 const sBody = document.getElementById('s-body');
 const sFacts = document.getElementById('s-facts');
 const sAnalogy = document.getElementById('s-analogy');
-const metaStop = document.getElementById('meta-stop');
 const progress = document.getElementById('progress');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
@@ -285,7 +283,6 @@ function render() {
   if (s.sun) {
     sLabel.textContent = '— Start here —';
     sTitle.textContent = 'The Sun';
-    metaStop.textContent = 'The Sun';
     sBody.textContent = 'Almost everything in the solar system is empty space. To feel just how empty, shrink the whole Sun down to a basketball and walk outward. Press “Travel ›” to visit each planet at its real distance.';
     sFacts.innerHTML = row('Diameter', '1,392,000 km — about 109 Earths across.') + row('Holds', 'More than 99% of all the mass in the solar system.');
     sAnalogy.innerHTML = '<span class="fact-tag">✦ Shrink it down</span>Make the Sun a <strong>24&nbsp;cm basketball</strong>. Then Earth is a <strong>peppercorn about 26&nbsp;m away</strong>, and Neptune is a pea nearly <strong>800&nbsp;m away</strong>. That is how empty space really is.';
@@ -293,7 +290,6 @@ function render() {
     const p = s.p;
     sLabel.textContent = '— Planet ' + String(idx).padStart(2, '0') + ' —';
     sTitle.textContent = p.name;
-    metaStop.textContent = p.name;
     sBody.textContent = 'We have travelled out to ' + p.name + '. Look back — the Sun is far behind, and there is a huge amount of empty space between each world.';
     sFacts.innerHTML =
       row('Distance', (p.au * 149.6).toFixed(0) + ' million km (' + p.au.toFixed(2) + ' AU) from the Sun') +

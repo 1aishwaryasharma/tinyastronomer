@@ -6,6 +6,7 @@
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MOBILE_HINT_KEY = 'ta-mobile-hint-seen';
 
 function setText(el, text) {
   if (el.__spaceText !== text) {
@@ -34,10 +35,24 @@ function revealRailButton(btn) {
 function initMobileHints() {
   const hints = document.querySelectorAll('.hint');
   if (!hints.length) return;
-  if (window.matchMedia('(max-width: 820px)').matches) {
+  const isMobile = window.matchMedia('(max-width: 820px)').matches;
+  if (isMobile) {
+    try {
+      if (window.localStorage.getItem(MOBILE_HINT_KEY) === '1') {
+        hints.forEach((h) => h.classList.add('is-dismissed'));
+        return;
+      }
+    } catch (err) {
+      // Storage can be unavailable in private or restricted browsing.
+    }
     hints.forEach((h) => {
       h.innerHTML = '<span class="key">Drag</span> to rotate · <span class="key">Pinch</span> to zoom';
     });
+    try {
+      window.localStorage.setItem(MOBILE_HINT_KEY, '1');
+    } catch (err) {
+      // The hint still works for this visit when persistence is unavailable.
+    }
   }
   let done = false;
   function dismiss() {

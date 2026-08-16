@@ -63,8 +63,8 @@
     <h1 class="title">Why We Have Seasons</h1>
   </div>
   <div class="header-meta">
-    <div>Time of year · <span id="meta-month">—</span></div>
-    <div>Sun overhead at · <span id="meta-sub">Equator</span></div>
+    <div>Time · <span id="meta-month">—</span></div>
+    <div>Direct sun · <span id="meta-sub">Equator</span></div>
   </div>
 </header>
 
@@ -112,7 +112,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js';
+import { SPACE } from './common.js?v=20260815-10';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 const clamp = SPACE.clamp;

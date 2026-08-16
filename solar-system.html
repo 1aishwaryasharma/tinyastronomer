@@ -87,9 +87,7 @@
     <h1 class="title">The Sun &amp; Its Planets</h1>
   </div>
   <div class="header-meta">
-    <div>Elapsed · <span id="meta-elapsed">Year 0</span></div>
-    <div>Viewing · <span id="meta-viewing">The whole family</span></div>
-    <div>Sizes &amp; distances · <span id="meta-scale">Made to fit</span></div>
+    <div>Scale · <span id="meta-scale">Made to fit</span></div>
   </div>
 </header>
 
@@ -157,7 +155,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js';
+import { SPACE } from './common.js?v=20260815-10';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry } from './earth-visuals.js?v=20260815-1';
 import { createTourTextures } from './tour-textures.js?v=20260815-4';
@@ -473,7 +471,7 @@ const playBtn = $('play-btn'), playIcon = $('play-icon');
 const speedSlider = $('speed-slider'), speedValue = $('speed-value');
 const toggleOrbits = $('toggle-orbits'), toggleLabels = $('toggle-labels');
 const toggleBelts = $('toggle-belts'), toggleScale = $('toggle-scale');
-const metaElapsed = $('meta-elapsed'), metaViewing = $('meta-viewing'), metaScale = $('meta-scale');
+const metaScale = $('meta-scale');
 const scaleNote = $('scale-note');
 const infoLabel = $('info-label'), infoTitle = $('info-title'), infoBody = $('info-body');
 const infoFacts = $('info-facts'), infoWow = $('info-wow'), infoWowText = $('info-wow-text');
@@ -649,7 +647,6 @@ function selectBody(key) {
   if (!key) {
     automaticPlanetDistance = null;
     renderOverview();
-    metaViewing.textContent = 'The whole family';
     cam.target.set(0, 0, 0);
     cam.distanceTarget = sim.trueScale ? 640 : 42;
     return;
@@ -657,20 +654,17 @@ function selectBody(key) {
   if (key === 'sun') {
     automaticPlanetDistance = null;
     renderInfo(SUN_INFO, '— Our star —');
-    metaViewing.textContent = SUN_INFO.name;
     cam.distanceTarget = SUN_DISPLAY_R * 4.2;
     return;
   }
   if (key === 'comet') {
     automaticPlanetDistance = null;
     renderInfo(COMET_INFO, '— A visitor —');
-    metaViewing.textContent = COMET_INFO.name;
     cam.distanceTarget = 7;
     return;
   }
   const w = WORLDS.find(pl => pl.key === key);
   renderInfo(w, w.dwarf ? '— Dwarf planet —' : '— Planet ' + w.num + ' —');
-  metaViewing.textContent = w.name;
   automaticPlanetDistance = clampedPlanetFocusDistance(w);
   cam.distanceTarget = automaticPlanetDistance;
 }
@@ -800,8 +794,6 @@ function animate() {
   WORLDS.forEach(w => SPACE.projectToScreen(w.holder, labels[w.key], camera, -currentRadius(w) * 14 - 14, sim.showLabels));
   SPACE.projectToScreen(COMET.nucleus, labels.comet, camera, -18, sim.showLabels);
 
-  const years = sim.timeDays / 365.25;
-  SPACE.setText(metaElapsed, years < 1 ? 'Day ' + Math.floor(sim.timeDays) : 'Year ' + years.toFixed(1));
 
   setup.render();
 }
