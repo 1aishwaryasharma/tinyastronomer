@@ -13,6 +13,8 @@
   --line: rgba(232, 236, 244, 0.08);
   --panel: rgba(8, 12, 22, 0.72);
   --panel-bright: rgba(15, 22, 38, 0.85);
+  --scroll-thumb: rgba(244, 197, 96, 0.24);
+  --scroll-thumb-hover: rgba(244, 197, 96, 0.46);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -125,7 +127,16 @@ canvas { display: block; }
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid var(--line);
   border-radius: 2px; padding: 22px 24px; z-index: 10;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
 }
+.info-panel::-webkit-scrollbar { width: 6px; }
+.info-panel::-webkit-scrollbar-track { background: transparent; }
+.info-panel::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 999px;
+}
+.info-panel::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 .info-label {
   font-family: 'Fragment Mono', monospace;
   font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
