@@ -52,7 +52,7 @@ describe.each(pages)("%s", (file) => {
     for (const match of html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)) {
       const attrs = match[1] || '';
       // import maps are JSON, not JS; skip them.
-      if (/\btype=["']importmap["']/i.test(attrs)) continue;
+      if (/\btype=["'](?:importmap|application\/ld\+json)["']/i.test(attrs)) continue;
       let source = match[2];
       // Module scripts may use import declarations — strip those so the
       // remaining classic body still parses under new Function.
@@ -221,27 +221,156 @@ test('Aurora surface stays temporally stable so it cannot flicker over Earth', (
   expect(aurora).not.toContain('uOutputScale');
   expect(aurora).toContain('uIntensity');
   expect(aurora).toContain('col * glow * 1.1');
+  // The static pattern is baked once into a texture; the fragment shader must
+  // not re-run simplex noise per fragment (it made fragment-heavy views like
+  // the top-down oval too slow for smooth motion).
+  expect(aurora).toContain('texture2D(uPattern');
+  expect(aurora).not.toContain('snoise(p');
+  expect(aurora).not.toContain('fbm3(p');
   // GLSL smoothstep requires edge0 < edge1. Invert the result rather than
   // reversing its edges, which is undefined and varies between GPU drivers.
   expect(aurora).toContain('1.0 - smoothstep(-0.06, 0.18');
   expect(aurora).not.toContain('smoothstep(0.18, -0.06');
 });
 
+test('quality governor backs off after a failed upgrade instead of oscillating', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const governor = common.slice(
+    common.indexOf('function createQualityGovernor'),
+    common.indexOf('// ── Keyboard camera control')
+  );
+  // Every tier change resizes the canvas — a visible flash. A view whose cost
+  // sits between two tiers (the aurora oval seen top-down) must settle rather
+  // than flap up and down every few seconds.
+  expect(governor).toContain('lastUpgradeAt');
+  expect(governor).toContain('FLAP_WINDOW_MS');
+  expect(governor).toContain('upgradeDwellS = Math.min(upgradeDwellS * 4, MAX_DWELL_S)');
+  expect(governor).toContain('headroomTime > upgradeDwellS');
+  expect(governor).not.toContain('headroomTime > 6)');
+});
+
+test('Polar Lights cannot resize the framebuffer during an orbit drag', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const index = readFileSync('index.html', 'utf8');
+  const controls = common.slice(
+    common.indexOf('function createOrbitControls'),
+    common.indexOf('// ── Adaptive quality governor')
+  );
+  const governor = common.slice(
+    common.indexOf('function createQualityGovernor'),
+    common.indexOf('// ── Keyboard camera control')
+  );
+
+  expect(controls).toContain('interacting: false');
+  expect(controls).toContain('cam.interacting = true');
+  expect(controls).toContain('cam.interacting = false');
+  expect(governor).toContain('frame(rawDt, interactionActive = false)');
+  expect(governor).toContain('if (interactionActive || now < warmupUntil)');
+  expect(governor).toContain('downgradeTime += rawDt');
+  expect(governor).toContain('downgradeTime > DOWNGRADE_DWELL_S');
+  expect(index).toContain('quality.frame(rawDt, cam.interacting)');
+
+  // Execute the real governor with renderer/composer spies. A sustained drag
+  // must never call the resize path that produced the visible Polar flash,
+  // while genuinely slow settled frames must still be allowed to adapt.
+  let now = 0;
+  const resizeCalls: string[] = [];
+  const makeSurface = (name: string) => ({
+    setPixelRatio(value: number) { resizeCalls.push(`${name}.pixelRatio:${value}`); },
+    setSize(width: number, height: number) {
+      resizeCalls.push(`${name}.size:${width}x${height}`);
+    },
+  });
+  const createQualityGovernor = new Function(
+    'performance',
+    'window',
+    `${governor}; return createQualityGovernor;`,
+  )(
+    { now: () => now },
+    { innerWidth: 1280, innerHeight: 800 },
+  );
+  const quality = createQualityGovernor({
+    renderer: makeSurface('renderer'),
+    composer: makeSurface('composer'),
+    bloomPass: { enabled: true },
+  });
+
+  for (let frame = 0; frame < 20 * 60; frame++) {
+    now += 1000 / 60;
+    quality.frame(1 / 60, true);
+  }
+  expect(quality.tier).toBe(0);
+  expect(resizeCalls).toEqual([]);
+
+  for (let frame = 0; frame < 30; frame++) {
+    now += 50;
+    quality.frame(0.05, false);
+  }
+  expect(quality.tier).toBe(1);
+  expect(resizeCalls.length).toBeGreaterThan(0);
+});
+
+test('render diagnostics stay opt-in and cost nothing by default', () => {
+  const common = readFileSync('common.js', 'utf8');
+  // The overlay is a debugging aid for glitches that only reproduce on real
+  // hardware. It must never install itself for ordinary visitors.
+  expect(common).toContain('function installDiagnostics');
+  expect(common).toContain("/[?&]diag=1\\b/.test(window.location.search)");
+  const createScene = common.slice(
+    common.indexOf('function createScene'),
+    common.indexOf('function installDiagnostics')
+  );
+  const guard = createScene.match(/if \(\/\[\?&\]diag=1[^\n]*\n/)?.[0] || '';
+  expect(guard).toContain('installDiagnostics(setup)');
+  // Exactly one call site, and it is the guarded one.
+  expect(common.match(/installDiagnostics\(/g)?.length).toBe(2);
+});
+
 test('Polar Lights visualizes the solar-eruption-to-aurora chain', () => {
   const index = readFileSync('index.html', 'utf8');
   expect(index).toContain('function createSolarStorm');
   expect(index).toContain('SOLAR_STORM.update');
-  expect(index).toContain('A CME launches a cloud of charged particles');
-  expect(index).toContain('Earth’s magnetic field funnels energy poleward');
-  expect(index).toContain('The upper atmosphere glows as aurora');
+  expect(index).toContain('start.copy(sunGroup.position)');
+  expect(index).toContain('approachPoint.lerp(arrivalPoint, funnel)');
+  expect(index).toContain('AURORA.uniforms.uIntensity.value = impact');
 });
 
-test('Polar Lights announces each causal stage to assistive technology', () => {
+test('Polar Lights and Ocean Tides leave the orbit camera under user control', () => {
   const index = readFileSync('index.html', 'utf8');
-  const stage = index.match(/<div class="aurora-stage"[^>]*>/)?.[0] || '';
-  expect(stage).toContain('role="status"');
-  expect(stage).toContain('aria-live="polite"');
-  expect(stage).toContain('aria-atomic="true"');
+  const solarUpdate = index.slice(
+    index.indexOf('function updateSolarStorm'),
+    index.indexOf('const _markerDir')
+  );
+  const tideUpdate = index.slice(
+    index.indexOf('function updateTides'),
+    index.indexOf('// 10. PRESETS')
+  );
+  for (const update of [solarUpdate, tideUpdate]) {
+    expect(update).not.toContain('cam.azimuthTarget');
+    expect(update).not.toContain('cam.elevationTarget');
+    expect(update).not.toContain('cam.distanceTarget');
+    expect(update).not.toContain('cam.target.set');
+  }
+});
+
+test('Polar Lights suppresses the outer solar corona that flashes at the viewport edge', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const applyPreset = index.slice(
+    index.indexOf('function applyPreset'),
+    index.indexOf('presetEls.forEach')
+  );
+  expect(applyPreset).toContain("sunCorona.visible = name !== 'aurora'");
+});
+
+test('Polar Lights holds Earth steady to avoid top-down texture flicker', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const animate = index.slice(
+    index.indexOf('function animate'),
+    index.indexOf('SPACE.createLoader')
+  );
+  expect(animate).toContain("sim.preset === 'aurora' ? 0 : sim.earthSpinSpeed");
+  expect(animate).toContain('sim.earthRotation += dt * sim.speed * earthSpinRate');
+  expect(animate).toContain('earth.rotation.y = sim.earthRotation');
 });
 
 test('Solar-storm particles meet the rotating aurora oval above Earth', () => {
@@ -260,11 +389,11 @@ test('Solar-storm particles meet the rotating aurora oval above Earth', () => {
   expect(storm).not.toContain('THREE.MathUtils.lerp(positions[o], -0.08');
 });
 
-test('Light Study teaches ocean tides as a guided study', () => {
+test('Light Study includes an animated ocean-tide model', () => {
   const index = readFileSync('index.html', 'utf8');
   expect(index).toContain('data-preset="tides"');
   expect(index).toContain('function createOceanTide');
-  expect(index).toContain('two high tides a day');
+  expect(index).toContain('two high tides and two low tides a day');
   expect(index).toContain('spring tides');
   expect(index).toContain('neap tides');
   // The bulge is the P2 (quadrupole) stretch of each pull, so spring and
@@ -281,12 +410,11 @@ test('Tide overlays stay hidden outside their preset', () => {
   expect(index).toMatch(/if \(sim\.preset !== 'tides'\)/);
 });
 
-test('Ocean Tides announces each stage to assistive technology', () => {
+test('Ocean Tides and Polar Lights do not show guided instruction overlays', () => {
   const index = readFileSync('index.html', 'utf8');
-  const stage = index.match(/<div class="aurora-stage tide-stage"[^>]*>/)?.[0] || '';
-  expect(stage).toContain('role="status"');
-  expect(stage).toContain('aria-live="polite"');
-  expect(stage).toContain('aria-atomic="true"');
+  expect(index).not.toContain('id="aurora-stage"');
+  expect(index).not.toContain('id="tide-stage"');
+  expect(index).not.toContain('1 / 4');
 });
 
 test('scene navigation is one journey with progress and a next stop', () => {
@@ -424,10 +552,48 @@ test('every page carries the wordmark and links it home', () => {
     expect(brand, `${file}: missing the brand wordmark`).not.toBeNull();
     expect(brand![0]).toContain('href="index.html"');
     expect(brand![0].replace(/<[^>]+>/g, '')).toBe('tinyastronomer');
+    // Keep the visible name as one token; <em> can split it for crawlers.
+    expect(brand![0]).not.toMatch(/<em>/i);
     // It sits inside the fixed header, which is pointer-events: none.
     expect(html.indexOf(brand![0])).toBeGreaterThan(html.indexOf('<header class="header">'));
   }
   expect(commonCss).toMatch(/\.brand\s*\{[\s\S]*?pointer-events:\s*auto/);
+});
+
+test('pages name tinyastronomer in the signals Google uses for brand search', () => {
+  for (const file of pages) {
+    const html = readFileSync(file, 'utf8');
+    expect(html, `${file}: title`).toMatch(/<title>[^<]*tinyastronomer[^<]*<\/title>/);
+    expect(html, `${file}: description`).toMatch(
+      /<meta\s+name=["']description["']\s+content=["']tinyastronomer /i
+    );
+    expect(html, `${file}: og:site_name`).toMatch(
+      /<meta\s+property=["']og:site_name["']\s+content=["']tinyastronomer["']/
+    );
+    expect(html, `${file}: og:title`).toMatch(
+      /<meta\s+property=["']og:title["']\s+content="[^"]*tinyastronomer[^"]*"/
+    );
+    expect(html, `${file}: twitter:title`).toMatch(
+      /<meta\s+name=["']twitter:title["']\s+content="[^"]*tinyastronomer[^"]*"/
+    );
+  }
+
+  const home = readFileSync('index.html', 'utf8');
+  const jsonLd = home.match(
+    /<script type=["']application\/ld\+json["']>\s*([\s\S]*?)<\/script>/
+  );
+  expect(jsonLd, 'homepage WebSite JSON-LD').not.toBeNull();
+  const site = JSON.parse(jsonLd![1]);
+  expect(site['@context']).toBe('https://schema.org');
+  expect(site['@type']).toBe('WebSite');
+  expect(site.name).toBe('tinyastronomer');
+  expect(site.url).toBe('https://tinyastronomer.com/');
+  expect(site.alternateName).toEqual(['tiny astronomer', 'tinyastronomer.com']);
+  expect(home).toContain('tinyastronomer is free, ad-free astronomy for curious kids.');
+
+  const sitemap = readFileSync('sitemap.xml', 'utf8');
+  expect(sitemap).toContain('<lastmod>2026-08-15</lastmod>');
+  expect(sitemap).not.toContain('2026-07-27');
 });
 
 test('small-screen chrome keeps menus and controls inside the viewport', () => {
@@ -480,8 +646,9 @@ test('Earth and planet spin stay eastward (+Y in Three.js)', () => {
   const seasons = readFileSync('seasons.html', 'utf8');
   const tour = readFileSync('solar-system.html', 'utf8');
 
-  expect(index).toMatch(/earth\.rotation\.y\s*=\s*sim\.time\s*\*\s*sim\.earthSpinSpeed\s*;/);
-  expect(index).not.toMatch(/earth\.rotation\.y\s*=\s*-\s*sim\.time/);
+  expect(index).toMatch(/sim\.earthRotation\s*\+=\s*dt\s*\*\s*sim\.speed\s*\*\s*earthSpinRate\s*;/);
+  expect(index).toMatch(/earth\.rotation\.y\s*=\s*sim\.earthRotation\s*;/);
+  expect(index).not.toMatch(/sim\.earthRotation\s*-=|earth\.rotation\.y\s*=\s*-\s*sim\.earthRotation/);
 
   expect(seasons).toMatch(/earth\.rotation\.y\s*=\s*motionTime\s*\*\s*0\.6\s*;/);
   expect(seasons).not.toMatch(/earth\.rotation\.y\s*=\s*-\s*motionTime/);

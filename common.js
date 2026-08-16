@@ -91,6 +91,50 @@ float fbm(vec3 p) {
 }
 `;
 
+  // ── JS twin of the GLSL simplex noise above ──
+  // Same Ashima permutation math, so patterns baked on the CPU keep the
+  // character of the shader-generated ones they replace.
+  function snoiseJS(vx, vy, vz) {
+    const mod289 = (x) => x - Math.floor(x / 289) * 289;
+    const permute = (x) => mod289((x * 34 + 1) * x);
+    const s = (vx + vy + vz) / 3;
+    const ix = Math.floor(vx + s), iy = Math.floor(vy + s), iz = Math.floor(vz + s);
+    const t = (ix + iy + iz) / 6;
+    const x0x = vx - ix + t, x0y = vy - iy + t, x0z = vz - iz + t;
+    const gx = x0x >= x0y ? 1 : 0, gy = x0y >= x0z ? 1 : 0, gz = x0z >= x0x ? 1 : 0;
+    const i1x = Math.min(gx, 1 - gz), i1y = Math.min(gy, 1 - gx), i1z = Math.min(gz, 1 - gy);
+    const i2x = Math.max(gx, 1 - gz), i2y = Math.max(gy, 1 - gx), i2z = Math.max(gz, 1 - gy);
+    const corners = [
+      [x0x, x0y, x0z],
+      [x0x - i1x + 1 / 6, x0y - i1y + 1 / 6, x0z - i1z + 1 / 6],
+      [x0x - i2x + 1 / 3, x0y - i2y + 1 / 3, x0z - i2z + 1 / 3],
+      [x0x - 0.5, x0y - 0.5, x0z - 0.5]
+    ];
+    const mx = mod289(ix), my = mod289(iy), mz = mod289(iz);
+    const ox = [0, i1x, i2x, 1], oy = [0, i1y, i2y, 1], oz = [0, i1z, i2z, 1];
+    const n_ = 0.142857142857;
+    const nsx = 2 * n_, nsy = 0.5 * n_ - 1, nsz = n_;
+    let n = 0;
+    for (let k = 0; k < 4; k++) {
+      const perm = permute(permute(permute(mz + oz[k]) + my + oy[k]) + mx + ox[k]);
+      const j = perm - 49 * Math.floor(perm * nsz * nsz);
+      const gxk = Math.floor(j * nsz) * nsx + nsy;
+      const gyk = Math.floor(j - 7 * Math.floor(j * nsz)) * nsx + nsy;
+      const hk = 1 - Math.abs(gxk) - Math.abs(gyk);
+      const shk = hk <= 0 ? -1 : 0;
+      let px = gxk + (Math.floor(gxk) * 2 + 1) * shk;
+      let py = gyk + (Math.floor(gyk) * 2 + 1) * shk;
+      let pz = hk;
+      const norm = 1.79284291400159 - 0.85373472095314 * (px * px + py * py + pz * pz);
+      px *= norm; py *= norm; pz *= norm;
+      const [cx, cy, cz] = corners[k];
+      let m = Math.max(0.6 - (cx * cx + cy * cy + cz * cz), 0);
+      m *= m;
+      n += m * m * (px * cx + py * cy + pz * cz);
+    }
+    return 42 * n;
+  }
+
   // ── Twinkling starfield ──
   function createStarfield(opts) {
     opts = opts || {};
@@ -229,6 +273,60 @@ float fbm(vec3 p) {
       ).normalize()
     };
 
+    // The oval's wobble, curtains, and patches are deliberately static in
+    // Earth's frame, so the whole pattern is baked once here — in magnetic
+    // (longitude, colatitude) space — instead of costing seven simplex
+    // evaluations per fragment per frame. That per-frame cost was enough to
+    // drop heavy views (the oval seen top-down) below a smooth frame rate.
+    // sqrt-encoded so 8 bits spend their precision on the dim outer glow.
+    const OVAL_COLAT = 0.40;
+    const OVAL_WIDTH = 0.072;
+    const WOBBLE = 0.028;
+    const PATCH_MAX = 1.2;
+    const COLAT_MIN = 0.21;
+    const COLAT_MAX = 0.59;
+    const PATTERN_W = 512;
+    const PATTERN_H = 96;
+    const magN = uniforms.uMagNorth.value;
+    const magRef = new THREE.Vector3().crossVectors(magN, new THREE.Vector3(0, 0, 1)).normalize();
+    const magE = new THREE.Vector3().crossVectors(magN, magRef).normalize();
+    const fbm3 = (x, y, z) => {
+      let f = 0, a = 0.5;
+      for (let i = 0; i < 3; i++) {
+        f += a * snoiseJS(x, y, z);
+        x *= 2.02; y *= 2.02; z *= 2.02; a *= 0.5;
+      }
+      return f;
+    };
+    const data = new Uint8Array(PATTERN_W * PATTERN_H);
+    const bakeP = new THREE.Vector3();
+    for (let row = 0; row < PATTERN_H; row++) {
+      const colat = COLAT_MIN + ((row + 0.5) / PATTERN_H) * (COLAT_MAX - COLAT_MIN);
+      for (let col = 0; col < PATTERN_W; col++) {
+        const lon = ((col + 0.5) / PATTERN_W) * Math.PI * 2 - Math.PI;
+        bakeP.copy(magN).multiplyScalar(Math.cos(colat))
+          .addScaledVector(magRef, Math.sin(colat) * Math.cos(lon))
+          .addScaledVector(magE, Math.sin(colat) * Math.sin(lon));
+        const wobble = WOBBLE * snoiseJS(bakeP.x * 3.2, bakeP.y * 3.2, bakeP.z * 3.2);
+        const band = Math.exp(-(((colat - OVAL_COLAT - wobble) / OVAL_WIDTH) ** 2));
+        let curtains = 0.5 + 0.5 * Math.sin(
+          lon * 16 + fbm3(bakeP.x * 4.6, bakeP.y * 4.6, bakeP.z * 4.6) * 3
+        );
+        curtains = Math.max(curtains, 0) ** 1.8;
+        const patches = 0.62 + 0.38 * fbm3(bakeP.x * 6.2, bakeP.y * 6.2, bakeP.z * 6.2);
+        const shape = band * (0.32 + 0.68 * curtains) * patches;
+        data[row * PATTERN_W + col] =
+          Math.round(Math.sqrt(Math.min(Math.max(shape / PATCH_MAX, 0), 1)) * 255);
+      }
+    }
+    const pattern = new THREE.DataTexture(data, PATTERN_W, PATTERN_H, THREE.RedFormat);
+    pattern.wrapS = THREE.RepeatWrapping;
+    pattern.wrapT = THREE.ClampToEdgeWrapping;
+    pattern.magFilter = THREE.LinearFilter;
+    pattern.minFilter = THREE.LinearFilter;
+    pattern.needsUpdate = true;
+    uniforms.uPattern = { value: pattern };
+
     // The shader is entirely per-fragment, so the tessellation only has to
     // keep the silhouette smooth — it matches the atmosphere shell's.
     const mesh = new THREE.Mesh(
@@ -249,61 +347,48 @@ float fbm(vec3 p) {
             vWorldN = normalize(mat3(modelMatrix) * position);
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
           }`,
-        fragmentShader: GLSL_NOISE + `
+        fragmentShader: `
           varying vec3 vPos;
           varying vec3 vViewN;
           varying vec3 vWorldN;
           uniform vec3 uMagNorth;
           uniform vec3 uSunDir;
           uniform float uIntensity;
+          uniform sampler2D uPattern;
 
           // Quiet oval ~23° from each magnetic pole and ~8° thick. Its small
-          // irregularities are fixed to Earth; a single slow intensity
-          // envelope supplies the storm response without per-pixel shimmer.
-          const float OVAL_COLAT = 0.40;
-          const float OVAL_WIDTH = 0.072;
-          const float WOBBLE = 0.028;
+          // irregularities are fixed to Earth and pre-baked into uPattern;
+          // a single slow intensity envelope supplies the storm response
+          // without per-pixel shimmer.
+          const float COLAT_MIN = 0.21;
+          const float COLAT_MAX = 0.59;
           const float CUTOFF = 0.008;
           // patches peaks a little above 1 because fbm3 is not normalised.
           const float PATCH_MAX = 1.2;
-
-          // Three octaves. The glow is soft enough that the two extra ones
-          // fbm() carries cost far more than they show.
-          float fbm3(vec3 p) {
-            float f = 0.0; float a = 0.5;
-            for (int i = 0; i < 3; i++) { f += a * snoise(p); p *= 2.02; a *= 0.5; }
-            return f;
-          }
 
           void main() {
             vec3 p = normalize(vPos);
             vec3 magN = normalize(uMagNorth);
             float magColat = acos(clamp(abs(dot(p, magN)), 0.0, 1.0));
+            // Everything the baked pattern can light sits inside this
+            // colatitude ring; the rest of the shell pays nothing.
+            if (magColat <= COLAT_MIN || magColat >= COLAT_MAX) discard;
             float night = 1.0 - smoothstep(-0.06, 0.18, dot(normalize(vWorldN), normalize(uSunDir)));
             float limb = 0.4 + 0.6 * pow(1.0 - abs(dot(normalize(vViewN), vec3(0.0, 0.0, 1.0))), 1.35);
-
-            // Noise-free upper bound on glow: how bright this fragment could
-            // get if the wobble pushed the oval as far onto it as it can go.
-            // Only the thin night-side ring that survives this pays for the
-            // noise below, instead of every lit fragment of the shell.
-            float reach = max(abs(magColat - OVAL_COLAT) - WOBBLE, 0.0);
-            float bandMax = exp(-pow(reach / OVAL_WIDTH, 2.0));
-            if (bandMax * night * limb * uIntensity * PATCH_MAX < CUTOFF) discard;
+            float envelope = night * limb * uIntensity;
+            if (envelope * PATCH_MAX < CUTOFF) discard;
 
             vec3 magRef = normalize(cross(magN, vec3(0.0, 0.0, 1.0)));
             vec3 magE = normalize(cross(magN, magRef));
             float magLon = atan(dot(p, magE), dot(p, magRef));
 
-            float wobble = WOBBLE * snoise(p * 3.2);
-            float band = exp(-pow((magColat - OVAL_COLAT - wobble) / OVAL_WIDTH, 2.0));
+            float shape = texture2D(uPattern, vec2(
+              magLon / 6.28318530718 + 0.5,
+              (magColat - COLAT_MIN) / (COLAT_MAX - COLAT_MIN)
+            )).r;
+            shape = shape * shape * PATCH_MAX;
 
-            float curtains = 0.5 + 0.5 * sin(
-              magLon * 16.0 + fbm3(p * 4.6) * 3.0
-            );
-            curtains = pow(max(curtains, 0.0), 1.8);
-            float patches = 0.62 + 0.38 * fbm3(p * 6.2);
-
-            float glow = band * mix(0.32, 1.0, curtains) * patches * night * limb * uIntensity;
+            float glow = shape * envelope;
 
             float hue = clamp((magColat - 0.30) / 0.18, 0.0, 1.0);
             vec3 red = vec3(0.95, 0.20, 0.28);
@@ -329,7 +414,8 @@ float fbm(vec3 p) {
       target: opts.target ? opts.target.clone() : new THREE.Vector3(0, 0, 0),
       azimuth: opts.azimuth != null ? opts.azimuth : 0.3,
       elevation: opts.elevation != null ? opts.elevation : 0.2,
-      distance: opts.distance != null ? opts.distance : 11
+      distance: opts.distance != null ? opts.distance : 11,
+      interacting: false
     };
     cam.azimuthTarget = cam.azimuth;
     cam.elevationTarget = cam.elevation;
@@ -357,7 +443,13 @@ float fbm(vec3 p) {
     applyCamera();
 
     let dragging = false, dragDist = 0, lastX = 0, lastY = 0;
-    dom.addEventListener('mousedown', (e) => { dragging = true; dragDist = 0; lastX = e.clientX; lastY = e.clientY; });
+    dom.addEventListener('mousedown', (e) => {
+      dragging = true;
+      cam.interacting = true;
+      dragDist = 0;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
     window.addEventListener('mousemove', (e) => {
       if (!dragging) return;
       const dx = e.clientX - lastX, dy = e.clientY - lastY;
@@ -370,8 +462,12 @@ float fbm(vec3 p) {
     window.addEventListener('mouseup', (e) => {
       if (dragging && onPick && dragDist < pickThresh) onPick(e.clientX, e.clientY);
       dragging = false;
+      cam.interacting = false;
     });
-    window.addEventListener('mouseleave', () => dragging = false);
+    window.addEventListener('mouseleave', () => {
+      dragging = false;
+      cam.interacting = false;
+    });
     dom.addEventListener('wheel', (e) => {
       cam.distanceTarget += e.deltaY * zoomSpeed * (1 + cam.distance * zoomScale);
       cam.distanceTarget = clamp(cam.distanceTarget, minD, maxDFn());
@@ -380,6 +476,7 @@ float fbm(vec3 p) {
 
     let touchPrev = null, pinchPrev = null, touchStart = null, touchMoved = 0;
     dom.addEventListener('touchstart', (e) => {
+      cam.interacting = e.touches.length > 0;
       if (e.touches.length === 1) {
         touchPrev = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -418,9 +515,11 @@ float fbm(vec3 p) {
         : null;
       pinchPrev = null;
       touchStart = null;
+      cam.interacting = e.touches.length > 0;
     });
     dom.addEventListener('touchcancel', () => {
       touchPrev = null; pinchPrev = null; touchStart = null; touchMoved = 0;
+      cam.interacting = false;
     });
 
     cam.maxDistance = maxDFn;
@@ -464,7 +563,17 @@ float fbm(vec3 p) {
     // Upgrade needs to be reachable on 60 Hz displays (~16.7 ms vsync).
     const UPGRADE_MS = 18;
     const DOWNGRADE_MS = 24;
-    let tier = 0, ema = 16, cooldownUntil = 0, headroomTime = 0;
+    const WARMUP_MS = 1500;
+    const DOWNGRADE_DWELL_S = 0.75;
+    const warmupUntil = performance.now() + WARMUP_MS;
+    let tier = 0, ema = 16, cooldownUntil = 0, headroomTime = 0, downgradeTime = 0;
+    // Every tier change resizes the canvas, which reads as a visible flash.
+    // If a downgrade lands soon after an upgrade, that upgrade was
+    // unsustainable — demand exponentially more headroom before retrying,
+    // so expensive views settle at a stable tier instead of oscillating.
+    let upgradeDwellS = 6, lastUpgradeAt = -Infinity;
+    const FLAP_WINDOW_MS = 12000;
+    const MAX_DWELL_S = 600;
 
     function apply() {
       const pr = PR_STEPS[tier];
@@ -491,17 +600,37 @@ float fbm(vec3 p) {
     }
 
     return {
-      frame(rawDt) {
+      frame(rawDt, interactionActive = false) {
         if (!(rawDt > 0) || rawDt > MAX_SAMPLE_S) return;
-        ema = ema * 0.95 + rawDt * 1000 * 0.05;
         const now = performance.now();
+        // Shader compilation and active orbiting are both transient work.
+        // Resizing the drawing buffer during either one looks like a flash,
+        // so measure only settled, non-interactive frames.
+        if (interactionActive || now < warmupUntil) {
+          ema = 16;
+          downgradeTime = 0;
+          headroomTime = 0;
+          return;
+        }
+        ema = ema * 0.95 + rawDt * 1000 * 0.05;
         if (now < cooldownUntil) return;
         if (ema > DOWNGRADE_MS && tier < 3) {
-          tier++; apply(); cooldownUntil = now + 4000; headroomTime = 0;
-        } else if (ema < UPGRADE_MS && tier > 0) {
+          downgradeTime += rawDt;
+          headroomTime = 0;
+          if (downgradeTime > DOWNGRADE_DWELL_S) {
+            if (now - lastUpgradeAt < FLAP_WINDOW_MS) {
+              upgradeDwellS = Math.min(upgradeDwellS * 4, MAX_DWELL_S);
+            }
+            tier++; apply(); cooldownUntil = now + 4000; downgradeTime = 0;
+          }
+          return;
+        }
+        downgradeTime = 0;
+        if (ema < UPGRADE_MS && tier > 0) {
           headroomTime += rawDt;
-          if (headroomTime > 6) {
-            tier--; apply(); cooldownUntil = now + 4000; headroomTime = 0;
+          if (headroomTime > upgradeDwellS) {
+            tier--; apply(); lastUpgradeAt = now;
+            cooldownUntil = now + 4000; headroomTime = 0;
           }
         } else headroomTime = 0;
       },
@@ -697,7 +826,118 @@ float fbm(vec3 p) {
       else renderer.render(scene, camera);
     }
 
-    return { bloomPass, camera, composer, fxaaPass, quality, render, renderer, resize, scene };
+    const setup = { bloomPass, camera, composer, fxaaPass, quality, render, renderer, resize, scene };
+    if (/[?&]diag=1\b/.test(window.location.search)) installDiagnostics(setup);
+    return setup;
+  }
+
+  // ── Opt-in render diagnostics (?diag=1) ──
+  // Visual glitches that only appear on real hardware are hard to chase from a
+  // description. This records the events that actually make a frame look wrong
+  // — drawing-buffer reallocation, quality-tier steps, dropped frames — and
+  // shows them live, so a glitch can be matched to what happened at that
+  // instant instead of guessed at. Off unless the URL asks for it.
+  function installDiagnostics(setup) {
+    const renderer = setup.renderer;
+    const canvas = renderer.domElement;
+    const events = [];
+    const t0 = performance.now();
+    const stamp = () => +((performance.now() - t0) / 1000).toFixed(2);
+
+    const panel = document.createElement('div');
+    panel.style.cssText =
+      'position:fixed;z-index:9999;left:8px;bottom:8px;max-width:min(460px,calc(100vw - 16px));' +
+      'max-height:42vh;overflow:auto;padding:8px 10px;background:rgba(3,6,12,0.92);' +
+      'border:1px solid rgba(120,220,255,0.35);color:#cfe9ff;' +
+      "font:10px/1.45 'Fragment Mono',monospace;white-space:pre;pointer-events:auto";
+    document.body.appendChild(panel);
+
+    let worstDt = 0, frames = 0, tier = setup.quality.tier;
+    let lastW = canvas.width, lastH = canvas.height;
+
+    function log(kind, detail) {
+      events.push({ t: stamp(), kind, ...detail });
+      // Newest first: the interesting event is the one that just happened.
+      panel.textContent =
+        'RENDER DIAG · ' + events.length + ' events · D dumps JSON · C clears\n' +
+        events.slice(-14).reverse()
+          .map(e => e.t.toFixed(2) + 's  ' + e.kind + '  ' +
+            Object.entries(e).filter(([k]) => k !== 't' && k !== 'kind')
+              .map(([k, v]) => k + '=' + v).join(' '))
+          .join('\n');
+    }
+
+    // A drawing-buffer reallocation is the classic one-frame "whole scene
+    // flashed" artifact, so record every one with its cause.
+    const realSetSize = renderer.setSize.bind(renderer);
+    renderer.setSize = function (w, h, updateStyle) {
+      log('renderer.setSize', { w, h, pr: +renderer.getPixelRatio().toFixed(2) });
+      return realSetSize(w, h, updateStyle);
+    };
+    const realSetPR = renderer.setPixelRatio.bind(renderer);
+    renderer.setPixelRatio = function (pr) {
+      log('setPixelRatio', { pr: +pr.toFixed(2) });
+      return realSetPR(pr);
+    };
+    if (setup.composer) {
+      const realComposerSetSize = setup.composer.setSize.bind(setup.composer);
+      setup.composer.setSize = function (w, h) {
+        log('composer.setSize', { w, h });
+        return realComposerSetSize(w, h);
+      };
+    }
+
+    log('start', {
+      dpr: window.devicePixelRatio || 1,
+      canvas: canvas.width + 'x' + canvas.height,
+      bloom: setup.bloomPass ? setup.bloomPass.enabled : 'none'
+    });
+
+    let last = performance.now();
+    (function watch() {
+      requestAnimationFrame(watch);
+      const now = performance.now();
+      const dt = now - last;
+      last = now;
+      frames++;
+      // Ignore tab-suspension gaps; they are not rendering glitches.
+      if (dt > 45 && dt < 1000) {
+        log('long frame', { ms: +dt.toFixed(1), tier: setup.quality.tier });
+      }
+      if (dt > worstDt && dt < 1000) worstDt = dt;
+      if (setup.quality.tier !== tier) {
+        log('QUALITY TIER', {
+          from: tier, to: setup.quality.tier,
+          bloom: setup.bloomPass ? setup.bloomPass.enabled : 'none'
+        });
+        tier = setup.quality.tier;
+      }
+      if (canvas.width !== lastW || canvas.height !== lastH) {
+        log('CANVAS RESIZED', {
+          from: lastW + 'x' + lastH, to: canvas.width + 'x' + canvas.height
+        });
+        lastW = canvas.width; lastH = canvas.height;
+      }
+    })();
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'd' || e.key === 'D') {
+        const dump = JSON.stringify({
+          userAgent: navigator.userAgent,
+          dpr: window.devicePixelRatio,
+          viewport: window.innerWidth + 'x' + window.innerHeight,
+          canvas: canvas.width + 'x' + canvas.height,
+          frames, worstFrameMs: +worstDt.toFixed(1), tier: setup.quality.tier,
+          events
+        }, null, 1);
+        console.log(dump);
+        if (navigator.clipboard) navigator.clipboard.writeText(dump);
+        log('dumped', { events: events.length, toClipboard: !!navigator.clipboard });
+      }
+      if (e.key === 'c' || e.key === 'C') { events.length = 0; worstDt = 0; log('cleared', {}); }
+    });
+
+    window.__diag = { events, setup };
   }
 
   // ── Shared play / pause button wiring ──

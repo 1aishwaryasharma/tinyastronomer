@@ -71,8 +71,15 @@ canvas { display: block; }
   pointer-events: auto;
   transition: color 0.2s;
 }
-.brand em { font-style: normal; color: var(--ink); transition: color 0.2s; }
-.brand:hover, .brand:hover em { color: var(--accent); }
+.brand-name { color: var(--ink); transition: color 0.2s; }
+.brand:hover, .brand:hover .brand-name { color: var(--accent); }
+.site-blurb {
+  margin: 8px 0 0;
+  max-width: 22rem;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-dim);
+}
 .brand-mark {
   flex: none;
   width: 9px; height: 9px; border-radius: 50%;
@@ -455,7 +462,7 @@ canvas { display: block; }
     font-size: 18px !important;
     max-width: calc(100vw - 164px);
   }
-  .subtitle {
+  .subtitle, .site-blurb {
     display: none !important;
   }
   body:has(.controls) .header-meta,
@@ -767,7 +774,7 @@ canvas { display: block; }
   }
   .brand { margin-bottom: 4px; }
   .title { font-size: 15px !important; }
-  .subtitle, .hint, .divider { display: none !important; }
+  .subtitle, .site-blurb, .hint, .divider { display: none !important; }
   .header-meta,
   body:has(.controls) .header-meta,
   body:has(.date-controls) .header-meta,
