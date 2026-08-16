@@ -63,10 +63,10 @@ canvas { display: block; }
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 8px;
   font-family: 'Fragment Mono', monospace;
-  font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+  font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--ink-dim); text-decoration: none;
   pointer-events: auto;
   transition: color 0.2s;
@@ -82,14 +82,14 @@ canvas { display: block; }
 }
 .brand-mark {
   flex: none;
-  width: 9px; height: 9px; border-radius: 50%;
+  width: 10px; height: 10px; border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 3px rgba(244, 197, 96, 0.16);
   transition: box-shadow 0.2s;
 }
 .brand:hover .brand-mark { box-shadow: 0 0 0 4px rgba(244, 197, 96, 0.24); }
 
-.title { font-size: 22px; font-weight: 400; letter-spacing: 0.02em; line-height: 1.1; }
+.title { font-size: 18px; font-weight: 400; letter-spacing: 0.02em; line-height: 1.15; }
 .title em { font-style: italic; color: var(--accent); }
 .subtitle {
   font-family: 'Fragment Mono', monospace;
@@ -454,12 +454,12 @@ canvas { display: block; }
   }
   .brand {
     margin-bottom: 6px;
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.18em;
   }
   .brand-mark { width: 7px; height: 7px; box-shadow: 0 0 0 2px rgba(244, 197, 96, 0.16); }
   .title {
-    font-size: 18px !important;
+    font-size: 16px !important;
     max-width: calc(100vw - 164px);
   }
   .subtitle, .site-blurb {

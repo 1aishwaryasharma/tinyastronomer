@@ -114,6 +114,8 @@ test('Three.js is loaded as a local ES module', () => {
   const commonJs = readFileSync('common.js', 'utf8');
   expect(commonJs).toMatch(/from\s+['"]three['"]/);
   expect(commonJs).toContain('three/addons/postprocessing/');
+  expect(commonJs).toContain('renderer.shadowMap.type = THREE.PCFShadowMap');
+  expect(commonJs).not.toContain('THREE.PCFSoftShadowMap');
   expect(existsSync('vendor/three/three.module.min.js')).toBe(true);
   expect(existsSync('vendor/three/three.core.min.js')).toBe(true);
   for (const page of ['index.html', 'solar-system.html', 'seasons.html', 'scale-walk.html']) {
