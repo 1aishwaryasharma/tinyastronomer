@@ -1,15 +1,60 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   advanceTrackedCoordinate,
   relaxedPlanetDistance,
   sunAndPlanetFrame,
   updatedAutomaticDistance
-} from "./tour-camera.js";
+} from "./public/tour-camera.js";
+
+process.chdir(fileURLToPath(new URL("./public", import.meta.url)));
 
 const pages = readdirSync(".").filter((file) => file.endsWith(".html"));
 const teachingRadius = (radiusKm: number) =>
   Math.max(0.30, Math.min(0.55 * Math.pow(radiusKm / 6371, 0.4), 1.55));
+
+test("only the public directory is deployable", () => {
+  const wrangler = JSON.parse(readFileSync("../wrangler.jsonc", "utf8"));
+  expect(wrangler.assets.directory).toBe("./public");
+  for (const privatePath of [".git", "site.test.ts", "wrangler.jsonc", "README.md"]) {
+    expect(existsSync(privatePath), `${privatePath} must not be a public asset`).toBe(false);
+  }
+});
+
+test("security headers cover every static response and authorize current inline scripts", () => {
+  const headers = readFileSync("_headers", "utf8");
+  expect(headers).toMatch(/^\/\*$/m);
+  for (const name of [
+    "Content-Security-Policy",
+    "Cross-Origin-Opener-Policy",
+    "Permissions-Policy",
+    "Referrer-Policy",
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "X-Frame-Options",
+  ]) {
+    expect(headers).toContain(`${name}:`);
+  }
+
+  const scriptPolicy = headers.match(/^\s*Content-Security-Policy:\s*(.+)$/m)?.[1] || "";
+  expect(scriptPolicy).toContain("script-src 'self'");
+  expect(scriptPolicy.match(/script-src[^;]*/)?.[0]).not.toContain("'unsafe-inline'");
+  expect(scriptPolicy).toContain("frame-ancestors 'none'");
+  expect(scriptPolicy).toContain("object-src 'none'");
+
+  for (const page of pages) {
+    const html = readFileSync(page, "utf8");
+    for (const match of html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)) {
+      if (/\bsrc=["']/i.test(match[1] || "")) continue;
+      const digest = createHash("sha256").update(match[2]).digest("base64");
+      expect(scriptPolicy, `${page}: CSP is missing its inline-script hash`).toContain(
+        `'sha256-${digest}'`,
+      );
+    }
+  }
+});
 
 describe.each(pages)("%s", (file) => {
   const html = readFileSync(file, "utf8");
@@ -180,14 +225,14 @@ test('planet lighting and radius normalization retain physical meaning', () => {
 
 test('vendored Three.js retains its original MIT notice', () => {
   const notice = readFileSync('vendor/three/LICENSE', 'utf8');
-  const projectLicense = readFileSync('LICENSE', 'utf8');
+  const projectLicense = readFileSync('../LICENSE', 'utf8');
   expect(notice).toContain('Copyright © 2010-2026 three.js authors');
   expect(notice).toContain('Permission is hereby granted, free of charge');
   expect(projectLicense).toContain('vendor/three/LICENSE');
 });
 
 test('asset documentation does not call quantized geometry lossless', () => {
-  const readme = readFileSync('README.md', 'utf8');
+  const readme = readFileSync('../README.md', 'utf8');
   expect(readme).not.toContain('lossless geometry quantization');
   expect(readme).toContain('preserve topology while using geometry quantization');
 });

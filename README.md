@@ -11,11 +11,11 @@ An accessible, responsive collection of interactive solar-system experiences:
 
 ## Run locally
 
-Serve the directory with any static web server (ES modules will not load
-from `file://`):
+Serve the deployable `public/` directory with any static web server (ES
+modules will not load from `file://`):
 
 ```sh
-python3 -m http.server 8000
+python3 -m http.server 8000 --directory public
 ```
 
 Then visit <http://localhost:8000>.
@@ -36,8 +36,9 @@ bun test site.test.ts
 For an additional HTML conformance check:
 
 ```sh
-bunx html-validate index.html solar-system.html seasons.html \
-  scale-walk.html sky-tonight.html missions.html
+bunx html-validate public/index.html public/solar-system.html \
+  public/seasons.html public/scale-walk.html public/sky-tonight.html \
+  public/missions.html
 ```
 
 ## Technology
