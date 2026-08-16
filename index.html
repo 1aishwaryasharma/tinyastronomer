@@ -33,8 +33,10 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260815-9">
+<link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css?v=20260815-2">
+<link rel="stylesheet" href="common.css?v=20260816-11">
+<link rel="stylesheet" href="home-hallmark.css?v=20260815-2">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -61,18 +63,97 @@
 </head>
 <body>
 
+<div class="launch-deck" id="launch-deck">
+  <header class="observatory-nav" aria-label="Observatory orientation">
+    <a class="observatory-wordmark" href="index.html" aria-label="tinyastronomer home">
+      <span class="observatory-mark" aria-hidden="true"></span>
+      tinyastronomer
+    </a>
+    <a class="observatory-enter" href="#light-study" data-launch-study>
+      Enter light study <span aria-hidden="true">↗</span>
+    </a>
+  </header>
+
+  <div class="observatory-map">
+    <section class="observatory-intro" aria-labelledby="launch-title">
+      <p class="observatory-kicker">Interactive solar system · six studies</p>
+      <h1 id="launch-title">A small observatory for our neighbourhood in space.</h1>
+      <p class="observatory-lede">Turn the model. Pause time. Watch day and night, phases, tides, eclipses, and more unfold.</p>
+      <p class="observatory-hint"><span aria-hidden="true">↔</span> Drag anywhere in the sky to look around</p>
+    </section>
+
+    <nav class="study-index" aria-label="Interactive astronomy studies">
+      <p class="study-index-label">Choose an observation</p>
+      <ol>
+        <li class="is-current">
+          <a href="#light-study" data-launch-study>
+            <span class="study-number">01</span>
+            <span class="study-name"><strong>Light Study</strong><small>Sun · Earth · Moon</small></span>
+            <span class="study-arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+        <li>
+          <a href="seasons.html">
+            <span class="study-number">02</span>
+            <span class="study-name"><strong>Seasons</strong><small>Tilt · sunlight · year</small></span>
+            <span class="study-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+        <li>
+          <a href="solar-system.html">
+            <span class="study-number">03</span>
+            <span class="study-name"><strong>Grand Tour</strong><small>Planets · moons · belts</small></span>
+            <span class="study-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+        <li>
+          <a href="scale-walk.html">
+            <span class="study-number">04</span>
+            <span class="study-name"><strong>Scale Walk</strong><small>Distance · size · analogy</small></span>
+            <span class="study-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+        <li>
+          <a href="missions.html">
+            <span class="study-number">05</span>
+            <span class="study-name"><strong>Missions</strong><small>Spacecraft · routes · discoveries</small></span>
+            <span class="study-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+        <li>
+          <a href="sky-tonight.html">
+            <span class="study-number">06</span>
+            <span class="study-name"><strong>Sky Tonight</strong><small>Evening · morning · horizon</small></span>
+            <span class="study-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+      </ol>
+    </nav>
+
+    <div class="map-legend" aria-hidden="true">
+      <span><i class="legend-sun"></i>Sol</span>
+      <span><i class="legend-earth"></i>Terra</span>
+      <span><i class="legend-moon"></i>Luna</span>
+    </div>
+  </div>
+
+  <footer class="observatory-footer">
+    <p>Free, ad-free astronomy for curious kids.</p>
+  </footer>
+</div>
+
 <main id="canvas-container" aria-label="3D model of the Sun, Earth, and Moon"></main>
 
 <div class="loader" id="loader" role="status" aria-live="polite">
   <div class="loader-text">Igniting the sun…</div>
 </div>
 <noscript>
-  <div class="loader" role="alert" style="z-index:101">
-    <div class="loader-text" style="animation:none">JavaScript is required to explore this page.</div>
+  <div class="loader noscript-loader" role="alert">
+    <div class="loader-text">JavaScript is required to explore this page.</div>
   </div>
 </noscript>
 
-<header class="header">
+<header class="header" aria-label="Light Study controls">
   <div>
     <a class="brand" href="index.html" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
     <h1 class="title">Sol · Terra · Luna</h1>
@@ -162,6 +243,7 @@
   }
 }
 </script>
+<script type="module" src="home-launch.js?v=20260815-2"></script>
 <script type="module">
 import * as THREE from 'three';
 import { SPACE } from './common.js?v=20260815-10';
