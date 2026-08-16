@@ -543,8 +543,39 @@ test('mobile drawer scrolls as one box and pins Close', () => {
     /\.info-panel\.mobile-info-panel\s*\{[\s\S]*?overflow:\s*auto/
   );
   expect(commonCss).toMatch(
-    /\.info-panel\.mobile-info-panel\.is-expanded \.mobile-info-toggle\s*\{[\s\S]*?position:\s*sticky/
+    /\.mobile-info-toggle\s*\{[\s\S]*?position:\s*sticky/
   );
+});
+
+test('mobile drawer opens without relayout or a native tap flash', () => {
+  const commonCss = readFileSync('common.css', 'utf8');
+  const drawerRule = commonCss.match(
+    /\.info-panel\.mobile-info-panel\s*\{([\s\S]*?)\n\s*\}/
+  );
+  expect(drawerRule).not.toBeNull();
+  expect(drawerRule![1]).toMatch(/padding:\s*12px 16px/);
+  expect(drawerRule![1]).toMatch(/transition:[^;]*transform[^;]*clip-path/);
+  expect(drawerRule![1]).not.toMatch(/transition:[^;]*max-height/);
+  expect(drawerRule![1]).toMatch(/backdrop-filter:\s*none/);
+  expect(commonCss).toMatch(
+    /\.info-panel\.mobile-info-panel:not\(\.is-expanded\)\s*\{[^}]*transform:\s*translate3d\(0,\s*calc\(100% - 64px\),\s*0\)[^}]*clip-path:/
+  );
+  expect(commonCss).not.toMatch(
+    /\.info-panel\.mobile-info-panel:not\(\.is-expanded\)\s*>[^\{]+\{[^}]*display:\s*none/
+  );
+  expect(commonCss).toMatch(
+    /\.info-panel\.mobile-info-panel:not\(\.is-expanded\)\s*>[^\{]+\{[^}]*visibility:\s*hidden[^}]*transition-delay:\s*0\.32s/
+  );
+  expect(commonCss).not.toMatch(
+    /\.info-panel\.mobile-info-panel\.is-expanded\s*\{[^}]*padding-right/
+  );
+  const toggleRule = commonCss.match(
+    /\.mobile-info-toggle\s*\{\s*display:\s*inline-flex;([\s\S]*?)\n\s*\}/
+  );
+  expect(toggleRule).not.toBeNull();
+  expect(toggleRule![1]).toMatch(/appearance:\s*none/);
+  expect(toggleRule![1]).toMatch(/-webkit-tap-highlight-color:\s*transparent/);
+  expect(toggleRule![1]).toMatch(/width:\s*52px/);
 });
 
 test('every page carries the wordmark and links it home', () => {
