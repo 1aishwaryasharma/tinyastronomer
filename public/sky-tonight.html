@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>What's in the Sky Tonight? | tinyastronomer</title>
-<meta name="description" content="tinyastronomer is a free, ad-free sky guide showing which planets are visible in the evening or morning, for any date.">
+<meta name="description" content="tinyastronomer is a free, ad-free guide to approximate evening and morning planet geometry for any date.">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/sky-tonight.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -12,19 +12,19 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="tinyastronomer">
 <meta property="og:title" content="What's in the Sky Tonight? | tinyastronomer">
-<meta property="og:description" content="tinyastronomer is a free, ad-free sky guide showing which planets are visible in the evening or morning, for any date.">
+<meta property="og:description" content="tinyastronomer is a free, ad-free guide to approximate evening and morning planet geometry for any date.">
 <meta property="og:url" content="https://tinyastronomer.com/sky-tonight.html">
 <meta property="og:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="What's in the Sky Tonight? | tinyastronomer">
-<meta name="twitter:description" content="tinyastronomer is a free, ad-free sky guide showing which planets are visible in the evening or morning, for any date.">
+<meta name="twitter:description" content="tinyastronomer is a free, ad-free guide to approximate evening and morning planet geometry for any date.">
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-11">
+<link rel="stylesheet" href="common.css?v=20260816-12">
 <style>
   #sky { position: fixed; inset: 0; z-index: 0; display: block; }
   .info-panel { top: 128px; width: 340px; max-height: calc(100dvh - 244px); overflow: auto; }
@@ -77,17 +77,26 @@
 <main>
 <aside class="info-panel">
   <div class="info-label">— Tonight's planets —</div>
-  <h2 class="info-title">Which ones can I see?</h2>
-  <p class="info-body">Planets shine by reflecting sunlight. Whether one shows up in the evening, the morning, or all night depends mostly on its <strong>angle from the Sun</strong>. Here's a rough guide for each planet, worked out from its real orbit:</p>
+  <h2 class="info-title">Which side of the Sun?</h2>
+  <p class="info-body">Planets shine by reflecting sunlight. Their <strong>angle from the Sun</strong> helps indicate whether to look in the evening or morning. This model gives a rough geometry guide, not a local visibility forecast:</p>
   <div class="sky-list" id="sky-list"></div>
   <div class="fact-callout">
     <span class="fact-tag">✦ Try it</span>
-    On a clear night, a bright planet shines with a steady light — it doesn't twinkle the way stars do. Slide the date forward to watch the fast inner planets race around the Sun.
+    On a clear night, planets usually shine more steadily than stars, though they can twinkle when they are low on the horizon or the air is turbulent. Slide the date forward to watch the fast inner planets race around the Sun.
   </div>
   <div class="fact-callout">
     <span class="fact-tag">About this guide</span>
-    This is worked out from each planet's <strong>angle from the Sun</strong> (its elongation). It's a good rough guide, but the exact time and spot a planet appears also depend on <strong>where you live</strong> and the time of night — so treat it as a starting point, then go look!
+    This uses simplified circular mean orbits to estimate each planet's <strong>elongation</strong>: its angle from the Sun in our sky. It does not calculate your horizon, latitude, twilight, weather, or the planet's brightness, so verify the result with a location-aware sky chart before planning an observation.
   </div>
+  <details class="science-note">
+    <summary><span class="science-kind">Rough guide</span><span>Accuracy &amp; sources</span></summary>
+    <p>The date changes approximate Sun–Earth–planet geometry in two dimensions. “Evening” and “morning” describe which side of the Sun a planet occupies in this model, not predicted rise and set times. Uranus and Neptune generally require optical aid; all results depend on observing conditions.</p>
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">JPL Approximate positions</a>
+      <a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a>
+      <span>Reviewed Aug 16, 2026</span>
+    </p>
+  </details>
   <div class="fact-callout framed">
     <span class="fact-tag">✦ End of the journey</span>
     You've watched Earth spin, toured every planet, walked the distances, and met the robot explorers. This last stop is the real one: <strong>go outside tonight and look up</strong>. Everything you explored is really there.
@@ -137,12 +146,13 @@ function skyInfo(pos){
     const diff = norm180(planetLon - sunLon); // + = east of Sun (evening), − = west (morning)
     const elong = Math.abs(diff);
     let cls, tag, where;
-    if (elong < 12) { cls='hidden'; tag='Hidden'; where='Too close to the Sun to see right now.'; }
-    else if (elong > 150) { cls='allnight'; tag='All night'; where='Nearly opposite the Sun — up most of the night.'; }
-    else if (diff > 0) { cls='evening'; tag='Evening sky'; where='In the west after sunset.'; }
-    else { cls='morning'; tag='Morning sky'; where='In the east before dawn.'; }
-    if (!b.naked && cls!=='hidden') { cls='scope'; tag='Telescope'; where='Needs a telescope — ' + where.toLowerCase(); }
-    list.push({ name:b.name, dot:b.dot, cls, tag, where, elong: Math.round(elong) });
+    if (elong < 12) { cls='hidden'; tag='Near the Sun'; where='Hard to observe in bright twilight.'; }
+    else if (elong > 150) { cls='allnight'; tag='Much of night'; where='Nearly opposite the Sun in this model.'; }
+    else if (diff > 0) { cls='evening'; tag='Evening side'; where='East of the Sun in this model.'; }
+    else { cls='morning'; tag='Morning side'; where='West of the Sun in this model.'; }
+    if (b.key === 'uranus' && cls!=='hidden') { cls='scope'; tag='Optical aid'; where='Binoculars or a telescope recommended — ' + where.toLowerCase(); }
+    if (b.key === 'neptune' && cls!=='hidden') { cls='scope'; tag='Telescope'; where='A telescope is needed — ' + where.toLowerCase(); }
+    list.push({ name:b.name, dot:b.dot, cls, tag, where, elong: Math.round(elong / 5) * 5 });
   });
   return list;
 }
@@ -225,7 +235,7 @@ function renderList(dOffset){
     <div class="sky-item">
       <span class="sky-dot" style="background:${i.dot};color:${i.dot}"></span>
       <span class="sky-name">${i.name}</span>
-      <span class="sky-where ${i.cls}"><span class="tag">${i.tag} · ${i.elong}° from Sun</span>${i.where}</span>
+      <span class="sky-where ${i.cls}"><span class="tag">${i.tag} · about ${i.elong}° from Sun</span>${i.where}</span>
     </div>`).join('');
 }
 function update(){

@@ -136,8 +136,13 @@ describe.each(pages)("%s", (file) => {
 test("shared scene navigation points to every live page", () => {
   const chrome = readFileSync("chrome.js", "utf8");
   for (const page of pages.filter((file) => !file.includes(" (1)"))) {
-    expect(chrome, `navigation does not include ${page}`).toContain(`href: '${page}'`);
+    expect(chrome, `navigation does not include ${page}`).toContain(`href: '${page}`);
   }
+});
+
+test("shared navigation opens the Light Study instead of the home deck", () => {
+  const chrome = readFileSync("chrome.js", "utf8");
+  expect(chrome).toContain("href: 'index.html#light-study', key: 'light'");
 });
 
 test("the obsolete duplicate page is not shipped", () => {
@@ -440,7 +445,7 @@ test('Light Study includes an animated ocean-tide model', () => {
   const index = readFileSync('index.html', 'utf8');
   expect(index).toContain('data-preset="tides"');
   expect(index).toContain('function createOceanTide');
-  expect(index).toContain('two high tides and two low tides a day');
+  expect(index).toContain('Most coasts experience about two high and two low tides each lunar day');
   expect(index).toContain('spring tides');
   expect(index).toContain('neap tides');
   // The bulge is the P2 (quadrupole) stretch of each pull, so spring and
@@ -671,7 +676,7 @@ test('pages name tinyastronomer in the signals Google uses for brand search', ()
   expect(home).toContain('tinyastronomer is free, ad-free astronomy for curious kids.');
 
   const sitemap = readFileSync('sitemap.xml', 'utf8');
-  expect(sitemap).toContain('<lastmod>2026-08-15</lastmod>');
+  expect(sitemap).toContain('<lastmod>2026-08-16</lastmod>');
   expect(sitemap).not.toContain('2026-07-27');
 });
 
@@ -722,8 +727,41 @@ test('sky tonight uses the shared mobile drawer so the sky stays visible', () =>
 
 test("current mission figures remain current", () => {
   const missions = readFileSync("missions.html", "utf8");
-  expect(missions).toContain("about <b>24 hours</b>");
+  expect(missions).toContain("<b>nearly 24 hours</b>");
   expect(missions).toContain("more than <b>1.7 million observations</b>");
+});
+
+test("volatile moon counts are dated to their current NASA review", () => {
+  const data = readFileSync("data.js", "utf8");
+  expect(data).toContain("<strong>115 moons</strong>");
+  expect(data).toContain("<strong>293 moons</strong>");
+  expect(data).toContain("<strong>29 known moons</strong>");
+  expect(data).toContain("<strong>16 known moons</strong>");
+  expect(data.match(/August 2026/g)?.length).toBeGreaterThanOrEqual(4);
+});
+
+test('every study explains its scientific fidelity and cites primary sources', () => {
+  for (const file of pages) {
+    const html = readFileSync(file, 'utf8');
+    expect(html, `${file}: fidelity disclosure`).toContain('class="science-note"');
+    expect(html, `${file}: fidelity classification`).toContain('class="science-kind"');
+    expect(html, `${file}: primary source`).toMatch(/href="https:\/\/(?:science\.nasa\.gov|www\.nasa\.gov|ssd\.jpl\.nasa\.gov|oceanservice\.noaa\.gov)\//);
+  }
+});
+
+test('model labels do not overclaim simulation fidelity', () => {
+  const tour = readFileSync('solar-system.html', 'utf8');
+  const scale = readFileSync('scale-walk.html', 'utf8');
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  const data = readFileSync('data.js', 'utf8');
+
+  expect(tour).not.toContain('True&nbsp;Scale');
+  expect(tour).not.toContain("'True scale'");
+  expect(tour).toContain('Distance&nbsp;View');
+  expect(scale).toContain('average distance');
+  expect(sky).toContain('not a local visibility forecast');
+  expect(data).not.toContain('30&nbsp;kg kid would weigh');
+  expect(tour).toContain("row('Gravity', f.gravity)");
 });
 
 test('Earth and planet spin stay eastward (+Y in Three.js)', () => {

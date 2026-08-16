@@ -57,9 +57,11 @@ bunx html-validate public/index.html public/solar-system.html \
 
 ## Scientific model
 
-This is an Earth-centered reference view with compressed display distances.
-Body spacing and the Sun's visible size are not to scale, which keeps the
-complete system legible on one screen. The model uses:
+Each study now carries a visible fidelity label that states what its model
+preserves, what it changes, and which primary sources support it. The Light
+Study is an Earth-centered reference view with compressed display distances;
+body spacing and the Sun's visible size are not to scale, which keeps the
+complete system legible on one screen. That model uses:
 
 - Earth's 23.4393° obliquity and a 365.256-day year
 - Earth's WGS 84 equatorial and polar radii, normalized to its volumetric mean radius
@@ -77,6 +79,9 @@ Reference values come from [NASA Solar System facts](https://science.nasa.gov/so
 [NASA Moon facts](https://science.nasa.gov/moon/facts/), and
 [NASA eclipse orbital data](https://eclipse.gsfc.nasa.gov/SEhelp/moonorbit.html)
 (Fred Espenak, NASA Goddard Space Flight Center).
+
+The claim-by-claim review, source matrix, volatile-data policy, and maintenance
+checklist are recorded in [the scientific audit](docs/scientific-audit.md).
 
 ## Credits
 

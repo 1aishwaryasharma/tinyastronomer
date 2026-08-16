@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>How Far Apart? — A Space Walk | tinyastronomer</title>
-<meta name="description" content="tinyastronomer is a free, ad-free walk of the true distances of the solar system, with the Sun shrunk to a basketball.">
+<meta name="description" content="tinyastronomer is a free, ad-free walk of average solar-system distances, with the Sun shrunk to a basketball.">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/scale-walk.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -12,19 +12,19 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="tinyastronomer">
 <meta property="og:title" content="How Far Apart? — A Space Walk | tinyastronomer">
-<meta property="og:description" content="tinyastronomer is a free, ad-free walk of the true distances of the solar system, with the Sun shrunk to a basketball.">
+<meta property="og:description" content="tinyastronomer is a free, ad-free walk of average solar-system distances, with the Sun shrunk to a basketball.">
 <meta property="og:url" content="https://tinyastronomer.com/scale-walk.html">
 <meta property="og:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="How Far Apart? — A Space Walk | tinyastronomer">
-<meta name="twitter:description" content="tinyastronomer is a free, ad-free walk of the true distances of the solar system, with the Sun shrunk to a basketball.">
+<meta name="twitter:description" content="tinyastronomer is a free, ad-free walk of average solar-system distances, with the Sun shrunk to a basketball.">
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-11">
+<link rel="stylesheet" href="common.css?v=20260816-12">
 <style>
   .info-panel { top: 128px; width: 350px; }
   .info-title { font-size: 26px; line-height: 1.1; }
@@ -62,7 +62,7 @@
     <h1 class="title">How Far Apart?</h1>
   </div>
   <div class="header-meta">
-    <div>Scale · <span>True distances</span></div>
+    <div>Scale · <span>Mean orbit distances</span></div>
   </div>
 </header>
 
@@ -72,6 +72,15 @@
   <p class="info-body" id="s-body"></p>
   <div class="facts" id="s-facts"></div>
   <div class="fact-callout framed" id="s-analogy"></div>
+  <details class="science-note">
+    <summary><span class="science-kind">Scale analogy</span><span>Accuracy &amp; sources</span></summary>
+    <p>The basketball calculation uses proportional diameters and each planet’s average distance from the Sun. Planets do not line up this way in space, and their real Sun distances change as they travel along elliptical orbits. On-screen planet markers are enlarged so they remain visible.</p>
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://science.nasa.gov/solar-system/">NASA Solar System</a>
+      <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">JPL Planet positions</a>
+      <span>Reviewed Aug 16, 2026</span>
+    </p>
+  </details>
 </aside>
 
 <div class="side-rail scroll" id="stops" role="group" aria-label="Scale walk stops"></div>
@@ -283,7 +292,7 @@ function render() {
   if (s.sun) {
     sLabel.textContent = '— Start here —';
     sTitle.textContent = 'The Sun';
-    sBody.textContent = 'Almost everything in the solar system is empty space. To feel just how empty, shrink the whole Sun down to a basketball and walk outward. Press “Travel ›” to visit each planet at its real distance.';
+    sBody.textContent = 'Almost everything in the solar system is empty space. To feel just how empty, shrink the whole Sun down to a basketball and walk outward. Press “Travel ›” to visit each planet at its average distance.';
     sFacts.innerHTML = row('Diameter', '1,392,000 km — about 109 Earths across.') + row('Holds', 'More than 99% of all the mass in the solar system.');
     sAnalogy.innerHTML = '<span class="fact-tag">✦ Shrink it down</span>Make the Sun a <strong>24&nbsp;cm basketball</strong>. Then Earth is a <strong>peppercorn about 26&nbsp;m away</strong>, and Neptune is a pea nearly <strong>800&nbsp;m away</strong>. That is how empty space really is.';
   } else {
@@ -292,9 +301,9 @@ function render() {
     sTitle.textContent = p.name;
     sBody.textContent = 'We have travelled out to ' + p.name + '. Look back — the Sun is far behind, and there is a huge amount of empty space between each world.';
     sFacts.innerHTML =
-      row('Distance', (p.au * 149.6).toFixed(0) + ' million km (' + p.au.toFixed(2) + ' AU) from the Sun') +
-      row('Light time', 'Sunlight takes ' + lightTime(p.au) + ' to reach here') +
-      row('Diameter', p.dia.toLocaleString() + ' km');
+      row('Mean distance', (p.au * 149.6).toFixed(0) + ' million km (' + p.au.toFixed(2) + ' AU) from the Sun') +
+      row('Approx. light time', 'At the mean distance, sunlight takes ' + lightTime(p.au) + ' to reach here') +
+      row('Mean diameter', p.dia.toLocaleString() + ' km');
     sAnalogy.innerHTML = '<span class="fact-tag">✦ Basketball Sun</span>' + analogyFor(p);
   }
 }

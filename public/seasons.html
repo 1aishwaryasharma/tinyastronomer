@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-11">
+<link rel="stylesheet" href="common.css?v=20260816-12">
 <style>
   .info-panel { top: 128px; width: 340px; }
   .info-title { font-size: 26px; line-height: 1.1; }
@@ -81,6 +81,16 @@
     Seasons are <strong>not</strong> because Earth gets closer to the Sun. They happen because Earth is
     tilted, so each half leans toward the Sun for part of the year and away for the rest.
   </div>
+  <details class="science-note">
+    <summary><span class="science-kind">Teaching model</span><span>Accuracy &amp; sources</span></summary>
+    <p>Earth’s 23.4° tilt and its fixed direction in space are represented. The orbit is drawn as a circle, sizes and distances are compressed, and the four season markers divide the year evenly. This shows astronomical seasons and immediate sunlight geometry, not local weather or delayed heating. Actual equinox and solstice times vary by year and time zone.</p>
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://science.nasa.gov/helio-and-you-seasons-on-earth-mars-and-beyond/">NASA Seasons</a>
+      <a href="https://science.nasa.gov/science-research/earth-science/milankovitch-orbital-cycles-and-their-role-in-earths-climate/">NASA Earth tilt</a>
+      <a href="https://aa.usno.navy.mil/data/Earth_Seasons">USNO Season times</a>
+      <span>Reviewed Aug 16, 2026</span>
+    </p>
+  </details>
 </aside>
 
 <div class="side-rail" id="picker" role="group" aria-label="Seasons"></div>
@@ -251,7 +261,7 @@ MARKERS.forEach(m=>{
   picker.appendChild(b); m.btn=b;
 });
 
-const monthAt = t => ['Mar 21','Apr','May','Jun 21','Jul','Aug','Sep 23','Oct','Nov','Dec 21','Jan','Feb'][Math.floor(((t%360)/360)*12)];
+const monthAt = t => ['March equinox','Apr','May','June solstice','Jul','Aug','September equinox','Oct','Nov','December solstice','Jan','Feb'][Math.floor(((t%360)/360)*12)];
 const sTitle=document.getElementById('s-title'), sBody=document.getElementById('s-body');
 const northSeason=document.getElementById('north-season'), southSeason=document.getElementById('south-season');
 const metaMonth=document.getElementById('meta-month'), metaSub=document.getElementById('meta-sub');
@@ -265,10 +275,10 @@ function seasonName(theta){ // northern hemisphere season
 }
 const OPPOSITE = { Spring:'Autumn', Summer:'Winter', Autumn:'Spring', Winter:'Summer' };
 const BODY = {
-  Spring: 'The Sun is climbing back over the northern half of Earth. Days grow longer and warmer in the north, while the south cools toward autumn.',
-  Summer: 'The northern half leans toward the Sun. Sunlight strikes it straight-on, days are long, and it feels warm. The southern half is having winter.',
-  Autumn: 'The Sun slips back toward the equator. Northern days shorten and cool, while the south warms toward summer.',
-  Winter: 'The northern half leans away from the Sun. Sunlight arrives at a low, slanted angle, days are short, and it feels cold. The southern half is having summer.'
+  Spring: 'The Sun is climbing back over the Northern Hemisphere. Days grow longer in the north, while the south moves toward autumn.',
+  Summer: 'The Northern Hemisphere leans toward the Sun. The Sun climbs higher in the sky, its energy is more concentrated, and daylight lasts longer. The Southern Hemisphere is having winter.',
+  Autumn: 'The Sun slips back toward the equator. Northern days shorten, while the south moves toward summer.',
+  Winter: 'The Northern Hemisphere leans away from the Sun. Sunlight arrives at a lower angle and daylight is shorter. The Southern Hemisphere is having summer.'
 };
 
 const _p=new THREE.Vector3(), _sunDir=new THREE.Vector3(), _v=new THREE.Vector3();

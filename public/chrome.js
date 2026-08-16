@@ -73,7 +73,7 @@ function initMobileHints() {
 // meet the neighbourhood, feel the distances, see who we sent — and end
 // by going outside to look up.
 const SCENES = [
-  { href: 'index.html', key: 'light', label: 'Light Study' },
+  { href: 'index.html#light-study', key: 'light', label: 'Light Study' },
   { href: 'seasons.html', key: 'seasons', label: 'Seasons' },
   { href: 'solar-system.html', key: 'tour', label: 'Grand Tour' },
   { href: 'scale-walk.html', key: 'scale', label: 'Scale Walk' },

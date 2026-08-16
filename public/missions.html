@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-11">
+<link rel="stylesheet" href="common.css?v=20260816-12">
 <style>
   /* this page scrolls, unlike the fixed 3D scenes */
   html, body { overflow-x: hidden; overflow-y: auto; }
@@ -70,6 +70,13 @@
     transition: color 0.2s, border-color 0.2s;
   }
   .card .go:hover { color: var(--accent); border-color: rgba(244, 197, 96, 0.4); }
+  .card .source {
+    display: inline-block; margin-top: 12px; font-family: 'Fragment Mono', monospace;
+    font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faint); text-underline-offset: 3px;
+  }
+  .card .source:hover { color: var(--accent); }
+  .lede .science-note { max-width: 560px; margin: 22px auto 0; text-align: left; }
   .foot { text-align: center; margin-top: 44px; font-family: 'Fragment Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); line-height: 2.2; }
   .foot-next { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; padding-bottom: 2px; transition: color 0.2s, border-color 0.2s; }
   .foot-next:hover { color: #ffd47a; border-color: rgba(244, 197, 96, 0.4); }
@@ -82,6 +89,12 @@
     }
     .lede h2 { font-size: 30px; }
     .card .go {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 10px 0;
+    }
+    .card .source {
       display: inline-flex;
       align-items: center;
       min-height: 44px;
@@ -116,9 +129,14 @@
     <div class="info-label">— We didn't just look —</div>
     <h2>We sent explorers</h2>
     <p>People have built robots, telescopes, and spaceships and sent them out to visit the worlds you've been exploring. Here are some of the most amazing real missions — every one of them actually happened.</p>
+    <details class="science-note">
+      <summary><span class="science-kind">Reference record</span><span>Accuracy &amp; sources</span></summary>
+      <p>Mission histories come from NASA mission records and were reviewed in August 2026. Changing values are identified as estimates; follow each card’s NASA source for current status and imagery.</p>
+      <p class="science-sources"><span>Source index</span><a href="https://science.nasa.gov/missions/">NASA Missions</a><span>Reviewed Aug 16, 2026</span></p>
+    </details>
   </div>
   <div class="grid" id="grid"></div>
-  <div class="foot">Every mission here is real · Ask a grown-up to help you look up their latest pictures<br>
+  <div class="foot">Every mission here is real · Each card links to its NASA mission record<br>
     <a class="foot-next" href="sky-tonight.html">Next stop · See tonight&rsquo;s sky yourself →</a></div>
 </main>
 
@@ -126,37 +144,45 @@
 import { SPACE } from './chrome.js?v=20260815-10';
 const MISSIONS = [
   { icon:'🛰️', name:'Voyager 1 & 2', tag:'The farthest travellers', year:'1977', color:'#6ab0ff',
-    blurb:'Two probes that flew past the giant planets and kept going. They are now beyond every planet, drifting in the space between the stars. Each carries a golden record of sounds and pictures from Earth.',
-    wow:'Voyager 1 is so far away that its faint radio whisper takes about <b>24 hours</b> to reach us.',
+    blurb:'Two probes that flew past the giant planets and kept going. Both have crossed the heliopause — the edge of the Sun\'s protective bubble — into interstellar space. Each carries a Golden Record of sounds and pictures from Earth.',
+    wow:'Voyager 1 is so far away that its faint radio whisper takes <b>nearly 24 hours</b> to reach Earth.',
     live:true,
+    source:'https://science.nasa.gov/mission/voyager/where-are-voyager-1-and-voyager-2-now/',
     go:{ href:'solar-system.html#neptune', label:'Visit Neptune, its last flyby' } },
   { icon:'🤖', name:'Perseverance', tag:'A robot geologist on Mars', year:'2020', color:'#d0674a',
-    blurb:'A car-sized rover driving across an ancient dried-up lake on Mars, collecting rocks that might hold clues to tiny life long ago. It even brought a little helicopter called Ingenuity.',
-    wow:'Ingenuity was the <b>first machine ever to fly</b> in the sky of another planet.',
-    go:{ href:'solar-system.html#mars', label:'Visit Mars, where it drives today' } },
-  { icon:'🔭', name:'James Webb Telescope', tag:'A time machine for light', year:'2021', color:'#f4c560',
-    blurb:'A giant telescope with a golden mirror, parked far from Earth. It sees heat (infrared) light, letting it peer through dust and spot galaxies from when the universe was very young.',
+    blurb:'A car-sized rover exploring Jezero Crater, the site of an ancient lake and river delta. It searches for signs of ancient microbial life and caches rock and soil samples for possible return to Earth.',
+    wow:'The Ingenuity helicopter it carried made the <b>first powered, controlled flight</b> on another planet.',
+    source:'https://science.nasa.gov/mission/mars-2020-perseverance/',
+    go:{ href:'solar-system.html#mars', label:'Visit Mars, where it explores' } },
+  { icon:'🔭', name:'James Webb Space Telescope', tag:'A time machine for light', year:'2021', color:'#f4c560',
+    blurb:'A giant telescope with a golden mirror, orbiting the Sun near the Sun–Earth L2 point about 1.5 million kilometres from Earth. It sees infrared light, letting it peer through dust and spot galaxies from when the universe was very young.',
     wow:'Webb can catch light that left its stars <b>over 13 billion years ago</b>.',
+    source:'https://science.nasa.gov/mission/webb/',
     go:{ href:'solar-system.html', label:'Tour the neighbourhood Webb looks beyond' } },
   { icon:'🪐', name:'Cassini', tag:"Saturn's explorer", year:'1997', color:'#e6d3a0',
-    blurb:'A spacecraft that circled Saturn for 13 years, studying its rings and many moons, and dropped a little probe onto the cloudy moon Titan. It finished by diving into Saturn itself.',
-    wow:'It discovered that Saturn\'s icy moon Enceladus shoots <b>giant fountains of water</b> into space.',
+    blurb:'A spacecraft that orbited Saturn for 13 years, studying its rings and moons. It carried ESA\'s Huygens probe, which parachuted through Titan\'s hazy atmosphere and landed on its surface.',
+    wow:'Cassini found plumes of <b>water vapour and ice grains</b> spraying from fractures near Enceladus\'s south pole.',
+    source:'https://science.nasa.gov/mission/cassini/',
     go:{ href:'solar-system.html#saturn', label:'Visit Saturn and its rings' } },
   { icon:'🚀', name:'New Horizons', tag:'The Pluto flyby', year:'2006', color:'#c9b8a0',
     blurb:'A fast little probe about the size of a piano. After nine years of travel it zoomed past Pluto in 2015 and gave us our very first close-up photographs of that faraway world.',
-    wow:'It flew past Pluto at over 50,000 km/h and spotted a huge <b>heart-shaped patch of ice</b>.',
+    wow:'It passed Pluto at about 49,600 km/h and revealed <b>Tombaugh Regio</b>, a vast heart-shaped region containing a nitrogen-ice plain.',
+    source:'https://science.nasa.gov/mission/new-horizons/',
     go:{ href:'solar-system.html#pluto', label:'Visit Pluto in the Grand Tour' } },
   { icon:'☀️', name:'Parker Solar Probe', tag:'The Sun-toucher', year:'2018', color:'#e89248',
-    blurb:'A spacecraft that flies closer to the Sun than anything before it, hiding behind a special heat shield so it does not melt. It studies the Sun\'s scorching outer air.',
-    wow:'It flew through the Sun\'s outer atmosphere — the first craft ever to <b>"touch" the Sun</b>.',
+    blurb:'A spacecraft that flies closer to the Sun than anything before it. A carbon-composite heat shield protects its instruments while it studies the corona, the Sun\'s hot outer atmosphere.',
+    wow:'In 2021 it became the first spacecraft to fly through the corona — the first to <b>"touch" the Sun</b>.',
+    source:'https://science.nasa.gov/mission/parker-solar-probe/',
     go:{ href:'index.html', label:'Meet the Sun in the Light Study' } },
   { icon:'🌕', name:'Apollo 11', tag:'First footsteps on the Moon', year:'1969', color:'#c9c5b8',
     blurb:'The mission that carried the first people to walk on the Moon. Two astronauts stepped onto the dusty grey surface while a third orbited above in the spacecraft.',
-    wow:'Their footprints have no wind or rain to erase them — they could last <b>millions of years</b>.',
+    wow:'With no wind or rain to erase them, their footprints could last <b>millions of years</b> unless impacts or future visitors disturb them.',
+    source:'https://www.nasa.gov/mission/apollo-11/',
     go:{ href:'index.html', label:'Watch the Moon\'s phases in the Light Study' } },
   { icon:'✨', name:'Hubble Telescope', tag:'Our eye in the sky', year:'1990', color:'#a9e0e2',
-    blurb:'A school-bus-sized telescope orbiting high above Earth for more than 30 years. It has taken some of the most beautiful and famous pictures of stars and galaxies ever made.',
-    wow:'Hubble has made more than <b>1.7 million observations</b> of the universe.',
+    blurb:'A school-bus-sized telescope that has orbited high above Earth since 1990. It has taken some of the most beautiful and famous pictures of stars and galaxies ever made.',
+    wow:'Hubble had made more than <b>1.7 million observations</b> of the universe as of 2026.',
+    source:'https://science.nasa.gov/mission/hubble/',
     go:{ href:'sky-tonight.html', label:'See what\'s in your sky tonight' } }
 ];
 
@@ -167,12 +193,17 @@ MISSIONS.forEach(m => {
   c.style.setProperty('--accent-edge', m.color + '66');
   c.innerHTML = `
     <div class="glow" style="background:${m.color}"></div>
-    <span class="icon" aria-hidden="true">${m.icon}</span><span class="yr">${m.year}</span>
+    <span class="icon" aria-hidden="true">${m.icon}</span><span class="yr">Launched ${m.year}</span>
     <h3>${m.name}</h3>
     <div class="tag">${m.tag}</div>
     <p class="blurb">${m.blurb}</p>
     <div class="wow"><span class="lbl">✦ Wow</span>${m.wow}</div>
-    ${m.live ? '<div class="live"><span class="lbl">⟡ Right now</span>Voyager 1 is about <b><span id="voyager-dist">…</span> km</b> from the Sun — and gets about 17 km farther every second. Watch it go!</div>' : ''}`;
+    ${m.live ? '<div class="live"><span class="lbl">⟡ Live estimate</span>Voyager 1 is about <b><span id="voyager-dist">…</span> km</b> from the Sun. This linear estimate starts from a January 2026 reference and adds about 16.9 km each second.</div>' : ''}`;
+  const source = document.createElement('a');
+  source.className = 'source';
+  source.href = m.source;
+  source.textContent = 'NASA mission source ↗';
+  c.appendChild(source);
   if (m.go) {
     const go = document.createElement('a');
     go.className = 'go';
@@ -188,8 +219,10 @@ MISSIONS.forEach(m => {
 const voyagerDist = document.getElementById('voyager-dist');
 if (voyagerDist) {
   const EPOCH = Date.UTC(2026, 0, 1);
-  const KM_AT_EPOCH = 25.4e9;
-  const KM_PER_SEC = 16.9;
+  // JPL Horizons heliocentric vector for Voyager 1 on 2026-01-01,
+  // rounded radial speed. This remains an explicitly labelled estimate.
+  const KM_AT_EPOCH = 25320225956;
+  const KM_PER_SEC = 16.8825;
   const tick = () => {
     const km = KM_AT_EPOCH + ((Date.now() - EPOCH) / 1000) * KM_PER_SEC;
     voyagerDist.textContent = Math.round(km).toLocaleString('en-US');

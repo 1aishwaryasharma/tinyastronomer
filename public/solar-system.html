@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Sun &amp; Its Planets — A Grand Tour | tinyastronomer</title>
-<meta name="description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — real orbits, moons, comets, and kid-friendly facts.">
+<meta name="description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — orbital relationships, moons, comets, and kid-friendly facts.">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/solar-system.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -12,19 +12,19 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="tinyastronomer">
 <meta property="og:title" content="The Sun &amp; Its Planets — A Grand Tour | tinyastronomer">
-<meta property="og:description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — real orbits, moons, comets, and kid-friendly facts.">
+<meta property="og:description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — orbital relationships, moons, comets, and kid-friendly facts.">
 <meta property="og:url" content="https://tinyastronomer.com/solar-system.html">
 <meta property="og:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="The Sun &amp; Its Planets — A Grand Tour | tinyastronomer">
-<meta name="twitter:description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — real orbits, moons, comets, and kid-friendly facts.">
+<meta name="twitter:description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — orbital relationships, moons, comets, and kid-friendly facts.">
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-11">
+<link rel="stylesheet" href="common.css?v=20260816-12">
 <style>
   /* ── Page-specific styling for the grand tour; shared .facts / .fact-row /
      .fact-callout / .side-rail / .rail-btn live in common.css ── */
@@ -100,6 +100,17 @@
     <span class="fact-tag">✦ Wow!</span>
     <span id="info-wow-text"></span>
   </div>
+  <details class="science-note">
+    <summary><span class="science-kind">Teaching model</span><span>Accuracy &amp; sources</span></summary>
+    <p>Planet facts use published reference values. The animation uses simplified circular mean orbits; starting positions are illustrative, spin is not time-scaled, and moon sizes and distances are visual aids. The default view compresses sizes and distances. In Distance View, planet sizes are proportional to one another and mean orbital spacing is proportional, but size and distance still use different scales.</p>
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://science.nasa.gov/solar-system/">NASA Solar System</a>
+      <a href="https://science.nasa.gov/solar-system/moons/facts/">NASA Moon counts</a>
+      <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">JPL Planet positions</a>
+      <a href="https://ssd.jpl.nasa.gov/planets/phys_par.html">JPL Physical values</a>
+      <span>Reviewed Aug 16, 2026</span>
+    </p>
+  </details>
 </aside>
 
 <div class="side-rail scroll" id="bodies" role="group" aria-label="Bodies"></div>
@@ -118,7 +129,7 @@
     <button type="button" class="toggle-btn active" id="toggle-orbits" aria-pressed="true">Orbits</button>
     <button type="button" class="toggle-btn active" id="toggle-labels" aria-pressed="true">Labels</button>
     <button type="button" class="toggle-btn active" id="toggle-belts" aria-pressed="true">Belts</button>
-    <button type="button" class="toggle-btn" id="toggle-scale" aria-pressed="false">True&nbsp;Scale</button>
+    <button type="button" class="toggle-btn" id="toggle-scale" aria-pressed="false">Distance&nbsp;View</button>
   </div>
   <div class="divider"></div>
   <div class="toggle-group">
@@ -136,9 +147,9 @@
 </div>
 
 <div class="scale-note" id="scale-note" aria-hidden="true">
-  <strong>True scale.</strong> Now the planets are the right sizes next to each other, and their
-  orbits are spaced the way they really are — see how tiny the worlds are and how much empty space
-  lies between them. (The planets are still drawn a little bigger than real life, or you couldn't see them at all!)
+  <strong>Proportional mean distances.</strong> Orbital spacing now follows each world’s average
+  distance from the Sun. Planet sizes are proportional to one another but enlarged relative to
+  those distances — otherwise the worlds would be too small to see.
 </div>
 
 <div class="hint">
@@ -204,7 +215,7 @@ WORLDS.forEach(w => {
   w.teachO = teachOrbit(w.au);        w.trueO = trueOrbit(w.au);
 });
 
-let scaleMix = 0; // 0 = teaching, 1 = true scale (animated)
+let scaleMix = 0; // 0 = teaching, 1 = relative-size and relative-distance view
 function currentOrbit(w) { return THREE.MathUtils.lerp(w.teachO, w.trueO, scaleMix); }
 function currentRadius(w) { return THREE.MathUtils.lerp(w.teachR, w.trueR, scaleMix); }
 function scaledOrbitFromAU(au) { return THREE.MathUtils.lerp(teachOrbit(au), trueOrbit(au), scaleMix); }
@@ -508,7 +519,7 @@ toggleScale.addEventListener('click', () => {
   document.body.classList.toggle('scale-active', sim.trueScale);
   scaleNote.classList.toggle('show', sim.trueScale);
   scaleNote.setAttribute('aria-hidden', String(!sim.trueScale));
-  metaScale.textContent = sim.trueScale ? 'True scale' : 'Made to fit';
+  metaScale.textContent = sim.trueScale ? 'Mean distances' : 'Made to fit';
   if (!sim.follow) cam.distanceTarget = sim.trueScale ? 640 : 42;
 });
 
@@ -566,7 +577,7 @@ function renderInfo(info, label) {
   infoTitle.textContent = info.name;
   infoBody.textContent = info.blurb;
   const f = info.facts;
-  infoFacts.innerHTML = row('Size', f.size) + row('Spin', f.day) + row('Year', f.year) + row('Moons', f.moons) + row('Weight', f.weight);
+  infoFacts.innerHTML = row('Size', f.size) + row('Spin', f.day) + row('Year', f.year) + row('Moons', f.moons) + row('Gravity', f.gravity);
   infoWow.style.display = ''; infoWowText.innerHTML = info.wow;
 }
 function renderOverview() {
@@ -577,7 +588,7 @@ function renderOverview() {
     row('Rocky', '<strong>Mercury, Venus, Earth, Mars</strong> — small, solid worlds.') +
     row('Giant', '<strong>Jupiter, Saturn, Uranus, Neptune</strong> — huge gas &amp; ice worlds.') +
     row('Belts', 'Rubble rings: the <strong>asteroid belt</strong> and the <strong>Kuiper belt</strong>.') +
-    row('Tip', 'Turn on <strong>True Scale</strong> to see how big and far apart they really are.');
+    row('Tip', 'Turn on <strong>Distance View</strong> to compare the planets at proportional mean orbital spacing.');
   infoWow.style.display = 'none';
 }
 
@@ -808,7 +819,7 @@ const stageEl = $('stage'), stageText = $('stage-text'), stageNext = $('stage-ne
 const btnTour = $('btn-tour'), btnQuiz = $('btn-quiz');
 
 const TOUR = [
-  { key: 'sun',     text: "Welcome aboard! Let's begin at the <b>Sun</b> — our star, and the centre of everything." },
+  { key: 'sun',     text: "Welcome aboard! Let's begin at the <b>Sun</b> — the star at the centre of our planetary system." },
   { key: 'mercury', text: "First stop: little <b>Mercury</b>, the speedy planet closest to the Sun." },
   { key: 'venus',   text: "Next is <b>Venus</b>, the hottest planet, hidden under thick yellow clouds." },
   { key: 'earth',   text: "Here's <b>Earth</b> — our home, the blue planet with oceans and air." },
@@ -816,7 +827,7 @@ const TOUR = [
   { key: 'jupiter', text: "Giant <b>Jupiter</b> — the biggest planet, with a storm bigger than Earth." },
   { key: 'saturn',  text: "Beautiful <b>Saturn</b> and its rings of ice and rock." },
   { key: 'uranus',  text: "<b>Uranus</b>, the tipped-over world that rolls around the Sun on its side." },
-  { key: 'neptune', text: "Far-off <b>Neptune</b>, the deep-blue planet with the wildest winds." },
+  { key: 'neptune', text: "Far-off <b>Neptune</b>, a pale-blue planet with the wildest winds." },
   { key: 'pluto',   text: "Beyond the planets floats <b>Pluto</b>, a small icy dwarf planet." },
   { key: 'comet',   text: "And a visitor: a <b>comet</b>, trailing a glowing tail that points away from the Sun." },
   { key: null,      text: "That's the tour! Explore on your own, or try the <b>Quiz</b> to test what you spotted." }

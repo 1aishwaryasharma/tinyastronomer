@@ -5,7 +5,7 @@
    load this file. Missions does not.
    ───────────────────────────────────────────────────────── */
 export const SPACE_DATA = (function () {
-  const F = (size, day, year, moons, weight) => ({ day, moons, size, weight, year });
+  const F = (size, day, year, moons, gravity) => ({ day, gravity, moons, size, year });
 
   const BODIES = {
     ceres: {
@@ -13,8 +13,8 @@ export const SPACE_DATA = (function () {
       blurb: 'The biggest object in the asteroid belt, and the closest dwarf planet to the Sun. It is round, like a tiny planet.',
       dot: '#9a9088',
       dwarf: true,
-      facts: F('Tiny — you could fit thousands of Ceres inside Earth.', 'One spin takes just <strong>9 hours</strong>.',
-        'One trip around the Sun takes about <strong>4.6 Earth years</strong>.', '<strong>No moons.</strong>', 'A 30&nbsp;kg kid would weigh less than <strong>1&nbsp;kg</strong> here.'),
+      facts: F('Its volume is about <strong>1/2,500 of Earth\'s</strong>.', 'One spin takes just <strong>9 hours</strong>.',
+        'One trip around the Sun takes about <strong>4.6 Earth years</strong>.', '<strong>No known moons.</strong>', 'Surface gravity is about <strong>3% of Earth\'s</strong>.'),
       g: 0.029,
       key: 'ceres',
       moons: 0,
@@ -34,7 +34,7 @@ export const SPACE_DATA = (function () {
       blurb: 'Our home — the only place we know of with oceans, air to breathe, and living things.',
       dot: '#6ab0ff',
       facts: F('<strong>This is home!</strong> Everything you know lives here.', 'One spin takes <strong>24 hours</strong> — one day and night.',
-        'One trip around the Sun takes <strong>365 days</strong>.', '<strong>1 moon</strong> — the one you see at night.', 'This is where your weight starts: <strong>30&nbsp;kg</strong>.'),
+        'One trip around the Sun takes about <strong>365.25 days</strong>.', '<strong>1 moon</strong> — the one you see at night.', 'Surface gravity is the <strong>Earth reference: 1×</strong>.'),
       g: 1.0,
       key: 'earth',
       moonList: [{ color: '#cfcabd', name: 'Moon', orbit: 2.6, period: 27.3, size: 0.27 }],
@@ -53,11 +53,11 @@ export const SPACE_DATA = (function () {
     },
     eris: {
       au: 67.78,
-      blurb: 'A faraway, icy dwarf planet about the same size as Pluto. Discovering it is what led scientists to invent the word "dwarf planet"!',
+      blurb: 'A faraway, icy dwarf planet about the same size as Pluto. Its discovery helped prompt astronomers to define the modern category "dwarf planet."',
       dot: '#d8d2c4',
       dwarf: true,
       facts: F('About the same size as Pluto.', 'One spin takes about <strong>26 hours</strong>.',
-        'One trip around the Sun takes about <strong>558 Earth years</strong>!', '<strong>1 moon</strong>, called Dysnomia.', 'A 30&nbsp;kg kid would weigh only about <strong>2&nbsp;kg</strong> here.'),
+        'One trip around the Sun takes about <strong>558 Earth years</strong>!', '<strong>1 known moon</strong>, called Dysnomia.', 'Surface gravity is about <strong>8% of Earth\'s</strong>.'),
       g: 0.084,
       key: 'eris',
       moons: 1,
@@ -67,7 +67,9 @@ export const SPACE_DATA = (function () {
       radiusKm: 1163,
       retro: false,
       rotationHours: 25.9,
-      tiltDeg: 44,
+      // Eris's spin-axis tilt has not been established; keep the teaching
+      // globe upright instead of confusing orbital inclination with axial tilt.
+      tiltDeg: 0,
       type: 'rock',
       wow: 'Eris is so far away that from its surface, the Sun would look like just a very bright star.'
     },
@@ -77,8 +79,8 @@ export const SPACE_DATA = (function () {
       bands: ['#c9a06b', '#ddc196', '#a9713f', '#e8d6b0', '#93613c', '#d0aa78'],
       blurb: 'The biggest planet of all — a giant ball of gas with colourful stripes and a storm bigger than Earth.',
       dot: '#d9b48a',
-      facts: F('More than <strong>1,300 Earths</strong> could fit inside!', 'It spins the fastest — one spin takes only <strong>10 hours</strong>.',
-        'A year is almost <strong>12 Earth years</strong> long.', '<strong>101 moons</strong> are officially recognized!', 'At the cloud tops a 30&nbsp;kg kid would weigh about <strong>76&nbsp;kg</strong>.'),
+      facts: F('Its volume is about <strong>1,321 Earth volumes</strong>.', 'It spins the fastest — one spin takes only <strong>10 hours</strong>.',
+        'A year is almost <strong>12 Earth years</strong> long.', '<strong>115 moons</strong> were officially recognized as of August 2026.', 'Near the cloud tops, gravity is about <strong>2.5× Earth\'s</strong>; there is no solid surface.'),
       g: 2.53,
       key: 'jupiter',
       moonList: [
@@ -87,7 +89,7 @@ export const SPACE_DATA = (function () {
         { color: '#a89a86', name: 'Ganymede', orbit: 2.9, period: 7.15, size: 0.14 },
         { color: '#7d7266', name: 'Callisto', orbit: 3.6, period: 16.7, size: 0.13 }
       ],
-      moons: 101,
+      moons: 115,
       n: 0.08308676,
       naked: true,
       name: 'Jupiter',
@@ -104,10 +106,10 @@ export const SPACE_DATA = (function () {
     mars: {
       L0: 355.45332,
       au: 1.524,
-      blurb: 'The red planet — a cold, dusty desert world. Robots from Earth are rolling across it right now!',
+      blurb: 'The red planet — a cold, dusty desert world. NASA\'s Curiosity and Perseverance rovers were operating there as of August 2026.',
       dot: '#d0674a',
-      facts: F('Earth could hold about <strong>6 Mars-sized worlds</strong>.', 'A day is 24.6 hours — <strong>almost like Earth\'s</strong>.',
-        'A year is 687 Earth days — nearly <strong>2 Earth years</strong>.', '<strong>2 tiny moons</strong>, Phobos and Deimos.', 'A 30&nbsp;kg kid would weigh about <strong>11&nbsp;kg</strong> here.'),
+      facts: F('Its volume is about <strong>15% of Earth\'s</strong>.', 'A day is 24.6 hours — <strong>almost like Earth\'s</strong>.',
+        'A year is 687 Earth days — nearly <strong>2 Earth years</strong>.', '<strong>2 tiny moons</strong>, Phobos and Deimos.', 'Surface gravity is about <strong>38% of Earth\'s</strong>.'),
       g: 0.38,
       key: 'mars',
       moonList: [
@@ -133,8 +135,8 @@ export const SPACE_DATA = (function () {
       au: 0.387,
       blurb: 'The smallest planet and the closest to the Sun. It races around the Sun faster than any other world.',
       dot: '#b9b2a6',
-      facts: F('Earth could swallow about <strong>18 Mercurys</strong>.', 'One slow spin takes <strong>59 Earth days</strong>.',
-        'A whole year is just <strong>88 Earth days</strong>.', '<strong>No moons.</strong>', 'A 30&nbsp;kg kid would weigh about <strong>11&nbsp;kg</strong> here.'),
+      facts: F('Its volume is about <strong>5.6% of Earth\'s</strong>.', 'One slow spin takes <strong>59 Earth days</strong>.',
+        'A whole year is just <strong>88 Earth days</strong>.', '<strong>No known moons.</strong>', 'Surface gravity is about <strong>38% of Earth\'s</strong>.'),
       g: 0.38,
       key: 'mercury',
       moons: 0,
@@ -154,10 +156,10 @@ export const SPACE_DATA = (function () {
       L0: 304.88003,
       au: 30.07,
       bands: ['#3b6fd0', '#4f80dc', '#3160b8', '#5a8ae0'],
-      blurb: 'The farthest planet — a deep blue world with the fastest, wildest winds in the whole solar system.',
+      blurb: 'The farthest planet — a pale blue ice giant with the fastest winds in the solar system.',
       dot: '#3f6fd8',
-      facts: F('About <strong>57 Earths</strong> could fit inside.', 'A day is about <strong>16 hours</strong> long.',
-        'A year is <strong>165 Earth years</strong> — it completed its first post-discovery orbit in 2011!', 'At least <strong>16 moons</strong>.', 'At the cloud tops a 30&nbsp;kg kid would weigh about <strong>34&nbsp;kg</strong>.'),
+      facts: F('Its volume is about <strong>58 Earth volumes</strong>.', 'A day is about <strong>16 hours</strong> long.',
+        'A year is <strong>165 Earth years</strong> — it completed its first post-discovery orbit in 2011!', '<strong>16 known moons</strong> as reviewed in August 2026.', 'Near the cloud tops, gravity is about <strong>1.1× Earth\'s</strong>; there is no solid surface.'),
       g: 1.14,
       key: 'neptune',
       moonList: [{ color: '#cdd6d8', name: 'Triton', orbit: 2.4, period: -5.9, size: 0.10 }],
@@ -173,7 +175,7 @@ export const SPACE_DATA = (function () {
       spot: { color: '#20407e', rx: 0.06, ry: 0.045, x: 0.40, y: 0.44 },
       tiltDeg: 28.32,
       type: 'ice',
-      wow: 'Its winds scream faster than 2,000 km/h — faster than any jet plane on Earth.'
+      wow: 'Its winds can exceed 2,000 km/h — the fastest measured anywhere in the solar system.'
     },
     pluto: {
       au: 39.48,
@@ -181,7 +183,7 @@ export const SPACE_DATA = (function () {
       dot: '#c9b8a0',
       dwarf: true,
       facts: F('Smaller than our own Moon!', 'One spin takes about <strong>6.4 Earth days</strong>.',
-        'One trip around the Sun takes <strong>248 Earth years</strong>.', '<strong>5 moons</strong> — the biggest is Charon.', 'A 30&nbsp;kg kid would weigh only about <strong>2&nbsp;kg</strong> here.'),
+        'One trip around the Sun takes <strong>248 Earth years</strong>.', '<strong>5 known moons</strong> — the biggest is Charon.', 'Surface gravity is about <strong>6% of Earth\'s</strong>.'),
       g: 0.063,
       key: 'pluto',
       moons: 5,
@@ -201,15 +203,15 @@ export const SPACE_DATA = (function () {
       bands: ['#d8c69a', '#e9dbb8', '#c9b184', '#efe3c6', '#cbb98d', '#e2d3aa'],
       blurb: 'Famous for its dazzling rings, made of billions of chunks of ice and rock all circling the planet.',
       dot: '#e6d3a0',
-      facts: F('About <strong>760 Earths</strong> could fit inside.', 'A day is only about <strong>11 hours</strong> long.',
-        'A year is about <strong>29 Earth years</strong>.', '<strong>274 moons</strong> are confirmed!', 'At the cloud tops a 30&nbsp;kg kid would weigh about <strong>32&nbsp;kg</strong>.'),
+      facts: F('Its volume is about <strong>764 Earth volumes</strong>.', 'A day is only about <strong>11 hours</strong> long.',
+        'A year is about <strong>29 Earth years</strong>.', '<strong>293 moons</strong> were confirmed as of August 2026.', 'Near the cloud tops, gravity is about <strong>1.1× Earth\'s</strong>; there is no solid surface.'),
       g: 1.07,
       key: 'saturn',
       moonList: [
         { color: '#c9a24b', name: 'Titan', orbit: 3.2, period: 15.9, size: 0.13 },
         { color: '#b7b2a6', name: 'Rhea', orbit: 2.5, period: 4.5, size: 0.07 }
       ],
-      moons: 274,
+      moons: 293,
       n: 0.03344414,
       naked: true,
       name: 'Saturn',
@@ -229,15 +231,15 @@ export const SPACE_DATA = (function () {
       bands: ['#a9d8e0', '#bfe4ea', '#98cdd6', '#b6e0e6'],
       blurb: 'A cold, blue-green world that is tipped right over — it spins on its side, like a ball rolling around the Sun.',
       dot: '#a9e0e2',
-      facts: F('About <strong>63 Earths</strong> could fit inside.', 'A day is about <strong>17 hours</strong> long.',
-        'A year is <strong>84 Earth years</strong>!', 'At least <strong>28 moons</strong>.', 'At the cloud tops a 30&nbsp;kg kid would weigh about <strong>27&nbsp;kg</strong>.'),
+      facts: F('Its volume is about <strong>63 Earth volumes</strong>.', 'A day is about <strong>17 hours</strong> long.',
+        'A year is <strong>84 Earth years</strong>!', '<strong>29 known moons</strong> as of August 2026.', 'Near the cloud tops, gravity is about <strong>0.9× Earth\'s</strong>; there is no solid surface.'),
       g: 0.90,
       key: 'uranus',
       moonList: [
         { color: '#b9c7c9', name: 'Titania', orbit: 2.2, period: 8.7, size: 0.07 },
         { color: '#a9b6b8', name: 'Oberon', orbit: 2.8, period: 13.5, size: 0.06 }
       ],
-      moons: 28,
+      moons: 29,
       n: 0.01172834,
       naked: false,
       name: 'Uranus',
@@ -255,8 +257,8 @@ export const SPACE_DATA = (function () {
       au: 0.723,
       blurb: 'The hottest planet of all, wrapped in thick, swirling yellow clouds. It is almost exactly the same size as Earth.',
       dot: '#e8cd8a',
-      facts: F('Almost the same size as Earth — like a <strong>twin</strong>.', 'It spins <strong>backwards</strong>! One spin takes 243 Earth days.',
-        'A year is 225 Earth days — <strong>shorter than its day</strong>!', '<strong>No moons.</strong>', 'A 30&nbsp;kg kid would weigh about <strong>27&nbsp;kg</strong> here.'),
+      facts: F('Its volume is about <strong>86% of Earth\'s</strong>.', 'It rotates <strong>backwards</strong>: one spin relative to the stars takes 243 Earth days; sunrise to sunrise takes about 117.',
+        'A year is 225 Earth days — <strong>shorter than its day</strong>!', '<strong>No known moons.</strong>', 'Surface gravity is about <strong>91% of Earth\'s</strong>.'),
       g: 0.91,
       key: 'venus',
       moons: 0,
@@ -279,25 +281,25 @@ export const SPACE_DATA = (function () {
 
   const OTHER = {
     comet: {
-      blurb: 'A giant dirty snowball from the edge of the solar system. When it swoops near the Sun, its ice turns to gas and streams out into a bright, glowing tail.',
+      blurb: 'A small icy body on a Halley-like orbit. When it swoops near the Sun, some of its ice turns to gas and dust streams out into a bright coma and tails.',
       dot: '#9fd8ff',
-      facts: F('A small, icy ball — only a few kilometres across.', 'It tumbles as it flies — no steady day.',
-        'One long loop around the Sun takes about <strong>75 years</strong>.', '<strong>No moons</strong> — just a glowing tail.', 'Far too small and icy to ever stand on.'),
+      facts: F('A small, icy nucleus — shown much larger than scale.', 'It tumbles as it flies; this model does not simulate its rotation.',
+        'This example takes about <strong>75 years</strong> per orbit.', '<strong>No moons are modeled.</strong>', 'Its gravity is <strong>far weaker than Earth\'s</strong>.'),
       key: 'comet',
-      name: 'The Comet',
+      name: 'Halley-like Comet',
       num: '☄',
-      wow: 'A comet\'s tail always points away from the Sun — even when the comet is flying back out into space, the tail leads the way!'
+      wow: 'A comet\'s ion tail points almost directly away from the Sun. Its dust tail also extends generally away but can curve.'
     },
     sun: {
-      blurb: 'Our star — a giant, glowing ball of hot gas that gives every planet its light and warmth.',
+      blurb: 'Our star — a giant, glowing ball of superheated plasma that gives every planet its light and warmth.',
       dot: '#f4c560',
-      facts: F('About <strong>1.3 million Earths</strong> could fit inside!', 'It spins around about once every <strong>25 Earth days</strong>.',
-        'It circles the Milky Way about once every <strong>230 million Earth years</strong>.', '<strong>8 planets</strong> circle it, plus moons, dwarf planets and comets.',
-        'You could never stand on it — it\'s all glowing gas and far too hot!'),
+      facts: F('Its volume is about <strong>1.3 million Earth volumes</strong>.', 'It rotates at different speeds: about <strong>25 days at the equator</strong> and 36 near the poles.',
+        'It circles the Milky Way roughly once every <strong>230 million Earth years</strong>.', '<strong>8 planets</strong> circle it, plus moons, dwarf planets and comets.',
+        'The Sun has no solid surface; gravity at its visible photosphere is about <strong>28× Earth\'s</strong>.'),
       key: 'sun',
       name: 'The Sun',
       num: '☀',
-      wow: 'The Sun holds more than 99 out of every 100 bits of stuff in the whole solar system.'
+      wow: 'The Sun contains about 99.8% of the solar system\'s mass.'
     }
   };
 
