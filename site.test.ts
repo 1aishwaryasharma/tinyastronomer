@@ -626,14 +626,19 @@ test('mobile drawer restores its heading after it closes', () => {
   );
 });
 
-test('Apple WebKit can hit-test the narrow launch-deck scroller', () => {
+test('every browser can hit-test the narrow launch-deck scroller', () => {
   const launchJs = readFileSync('home-launch.js', 'utf8');
   const homeCss = readFileSync('home-hallmark.css', 'utf8');
 
-  expect(launchJs).toContain("navigator.vendor === 'Apple Computer, Inc.'");
-  expect(launchJs).toContain("classList.add('is-apple-webkit')");
+  expect(launchJs).not.toContain('navigator.vendor');
+  expect(launchJs).not.toContain('is-apple-webkit');
   expect(homeCss).toMatch(
-    /@media not all and \(min-width: 60rem\)\s*\{[\s\S]*?html\.is-apple-webkit \.launch-deck\s*\{[\s\S]*?pointer-events:\s*auto/
+    /@media not all and \(min-width: 60rem\)\s*\{[\s\S]*?\.launch-deck\s*\{[\s\S]*?pointer-events:\s*auto/
+  );
+  expect(homeCss).not.toContain('is-apple-webkit');
+  const narrowRule = homeCss.indexOf('@media not all and (min-width: 60rem)');
+  expect(homeCss.indexOf('pointer-events: auto', narrowRule)).toBeGreaterThan(
+    homeCss.indexOf('pointer-events: none', homeCss.indexOf('.launch-deck {'))
   );
 });
 

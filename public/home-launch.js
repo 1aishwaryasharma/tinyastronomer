@@ -1,7 +1,3 @@
-if (navigator.vendor === 'Apple Computer, Inc.') {
-  document.documentElement.classList.add('is-apple-webkit');
-}
-
 const deck = document.querySelector('#launch-deck');
 const launchStudies = document.querySelectorAll('[data-launch-study]');
 const canvasContainer = document.querySelector('#canvas-container');
