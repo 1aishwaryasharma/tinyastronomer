@@ -1,9 +1,0 @@
-{
-  "scanned_at": "2026-08-15",
-  "framework": "vanilla HTML, CSS, and JavaScript with Three.js",
-  "font_stack": ["Newsreader", "Fragment Mono"],
-  "palette": "dark navy with warm gold and cool blue accents",
-  "motion": "hand-authored CSS and requestAnimationFrame; no motion library",
-  "spacing": "shared hand-authored scale, predominantly 4px and 8px multiples",
-  "sources": ["index.html", "common.css", "common.js", "chrome.js"]
-}
