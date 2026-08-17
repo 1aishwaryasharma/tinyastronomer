@@ -619,6 +619,13 @@ test('mobile drawer scrolls as one box and pins Close', () => {
   );
 });
 
+test('mobile drawer restores its heading after it closes', () => {
+  const chromeJs = readFileSync('chrome.js', 'utf8');
+  expect(chromeJs).toMatch(
+    /if\s*\(!expanded\)\s*\{\s*panel\.scrollTop\s*=\s*0;\s*\}/
+  );
+});
+
 test('mobile drawer opens without relayout or a native tap flash', () => {
   const commonCss = readFileSync('common.css', 'utf8');
   const drawerRule = commonCss.match(

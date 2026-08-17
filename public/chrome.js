@@ -199,6 +199,9 @@ function initMobileInfoPanels() {
 
     toggle.addEventListener('click', () => {
       const expanded = panel.classList.toggle('is-expanded');
+      if (!expanded) {
+        panel.scrollTop = 0;
+      }
       toggle.textContent = expanded ? 'Close' : 'Read';
       toggle.setAttribute('aria-expanded', String(expanded));
       toggle.setAttribute(
