@@ -236,6 +236,28 @@ test('vendored Three.js retains its original MIT notice', () => {
   expect(projectLicense).toContain('vendor/three/LICENSE');
 });
 
+test('project credits appear only on the home screen', () => {
+  const home = readFileSync('index.html', 'utf8');
+  const chrome = readFileSync('chrome.js', 'utf8');
+  const sources = [
+    'https://science.nasa.gov/',
+    'https://www.jpl.nasa.gov/',
+    'https://www.noaa.gov/',
+    'https://aa.usno.navy.mil/'
+  ];
+
+  expect(home).toContain('aria-label="Project credits"');
+  expect(home).toContain('https://threejs.org/');
+  expect(home).not.toContain('https://github.com/1aishwaryasharma/tinyastronomer');
+  expect(chrome).not.toContain('scene-menu-credits');
+  expect(chrome).not.toContain('https://threejs.org/');
+  expect(chrome).not.toContain('github.com');
+  for (const source of sources) {
+    expect(home).toContain(source);
+    expect(chrome).not.toContain(source);
+  }
+});
+
 test('asset documentation does not call quantized geometry lossless', () => {
   const readme = readFileSync('../README.md', 'utf8');
   expect(readme).not.toContain('lossless geometry quantization');

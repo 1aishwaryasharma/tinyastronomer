@@ -79,12 +79,41 @@ body {
 
 .observatory-mark {
   position: relative;
-  width: 0.65rem;
-  height: 0.65rem;
+  width: 1.125rem;
+  height: 0.75rem;
   flex: none;
+  border: var(--rule-hair) solid color-mix(in oklch, var(--color-accent-2), transparent 42%);
+  border-radius: 50%;
+  transform: rotate(-34deg);
+  transition: border-color var(--dur-short) var(--ease-out);
+}
+
+.observatory-mark::before {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 0.25rem;
+  width: 0.32rem;
+  height: 0.32rem;
   border-radius: var(--radius-pill);
   background: var(--color-accent);
-  box-shadow: 0 0 0 var(--space-2xs) var(--color-accent-soft);
+  box-shadow: 0 0 0 var(--space-3xs) var(--color-accent-soft);
+  transform: translateY(-50%);
+}
+
+.observatory-mark::after {
+  content: "";
+  position: absolute;
+  inset: -0.13rem 0.05rem auto auto;
+  width: 0.23rem;
+  height: 0.23rem;
+  border: var(--rule-hair) solid var(--color-paper);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-2);
+}
+
+.observatory-wordmark:hover .observatory-mark,
+.observatory-wordmark:focus-visible .observatory-mark {
+  border-color: var(--color-accent);
 }
 
 .observatory-enter {
@@ -282,7 +311,7 @@ body {
 }
 
 .observatory-footer {
-  padding: var(--space-md) var(--page-gutter) max(var(--space-md), env(safe-area-inset-bottom));
+  padding: 0 var(--page-gutter) max(var(--space-md), env(safe-area-inset-bottom));
   color: var(--color-muted);
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -294,6 +323,66 @@ body {
 
 .observatory-footer p {
   margin: 0;
+}
+
+.observatory-credit-band {
+  display: grid;
+  grid-template-columns: minmax(13rem, 1.3fr) minmax(7rem, 0.7fr);
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-sm) 0;
+  border-top: var(--rule-hair) solid var(--color-rule);
+}
+
+.observatory-credit-group {
+  display: grid;
+  gap: var(--space-3xs);
+}
+
+.observatory-credit-label {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.observatory-credit-links,
+.observatory-credit-note {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 300;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: none;
+}
+
+.observatory-credit-label {
+  color: var(--color-muted);
+}
+
+.observatory-credit-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-xs);
+  color: var(--color-muted);
+}
+
+.observatory-credit-links a {
+  text-decoration-color: var(--color-rule);
+  text-underline-offset: 0.2em;
+}
+
+.observatory-credit-links a:hover,
+.observatory-credit-links a:focus-visible {
+  color: var(--color-accent);
+  text-decoration-color: currentColor;
+}
+
+.observatory-credit-note {
+  padding-top: var(--space-xs);
+  border-top: var(--rule-hair) solid var(--color-rule);
+  color: var(--color-muted);
 }
 
 .launch-deck :focus-visible {
@@ -370,6 +459,26 @@ body:not(.is-study-open) > .loader {
   }
 }
 
+@media (max-width: 59.999rem) {
+  .observatory-credit-band {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 34rem) {
+  .observatory-credit-band {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-sm);
+    padding-block: var(--space-xs);
+  }
+
+  .observatory-credit-group {
+    gap: 0;
+  }
+}
+
 @media (min-width: 60rem) {
   .launch-deck {
     overflow: hidden;
@@ -395,7 +504,7 @@ body:not(.is-study-open) > .loader {
   .observatory-intro {
     position: absolute;
     inset-inline-start: var(--page-gutter);
-    inset-block-end: clamp(4.75rem, 8dvh, 7rem);
+    inset-block-end: clamp(7.5rem, 12dvh, 9.5rem);
     width: min(42vw, 37rem);
     padding: 0;
   }
@@ -425,7 +534,7 @@ body:not(.is-study-open) > .loader {
   .map-legend {
     position: absolute;
     inset-inline-start: 52%;
-    inset-block-end: var(--space-xl);
+    inset-block-end: 6.5rem;
     margin: 0;
     transform: translateX(-50%);
   }
@@ -433,7 +542,8 @@ body:not(.is-study-open) > .loader {
   .observatory-footer {
     position: fixed;
     inset: auto 0 0;
-    padding-block-start: var(--space-sm);
+    padding-block-start: 0;
+    background: linear-gradient(180deg, var(--color-transparent), var(--color-overlay-soft) 18%);
   }
 }
 

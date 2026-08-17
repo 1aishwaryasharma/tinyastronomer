@@ -7,8 +7,8 @@
 <meta name="description" content="tinyastronomer is a free, ad-free 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, ocean tides, and eclipses unfold.">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="favicon.svg?v=20260816-20" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260816-20">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="tinyastronomer">
 <meta property="og:title" content="tinyastronomer — Sol · Terra · Luna">
@@ -35,8 +35,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=20260815-2">
-<link rel="stylesheet" href="common.css?v=20260816-13">
-<link rel="stylesheet" href="home-hallmark.css?v=20260815-2">
+<link rel="stylesheet" href="common.css?v=20260816-20">
+<link rel="stylesheet" href="home-hallmark.css?v=20260816-20">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -137,8 +137,30 @@
     </div>
   </div>
 
-  <footer class="observatory-footer">
-    <p>Free, ad-free astronomy for curious kids.</p>
+  <footer class="observatory-footer" aria-label="Project credits">
+    <div class="observatory-credit-band">
+      <div class="observatory-credit-group">
+        <span class="observatory-credit-label">Science &amp; model sources</span>
+        <span class="observatory-credit-links">
+          <a href="https://science.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA</a>
+          <span aria-hidden="true">·</span>
+          <a href="https://www.jpl.nasa.gov/" target="_blank" rel="noopener noreferrer">JPL</a>
+          <span aria-hidden="true">·</span>
+          <a href="https://www.noaa.gov/" target="_blank" rel="noopener noreferrer">NOAA</a>
+          <span aria-hidden="true">·</span>
+          <a href="https://aa.usno.navy.mil/" target="_blank" rel="noopener noreferrer">USNO</a>
+        </span>
+      </div>
+
+      <div class="observatory-credit-group">
+        <span class="observatory-credit-label">Built with</span>
+        <span class="observatory-credit-links">
+          <a href="https://threejs.org/" target="_blank" rel="noopener noreferrer">Three.js</a>
+        </span>
+      </div>
+
+    </div>
+    <p class="observatory-credit-note">Free, ad-free astronomy for curious kids.</p>
   </footer>
 </div>
 
@@ -257,7 +279,7 @@
 <script type="module" src="home-launch.js?v=20260815-2"></script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260815-10';
+import { SPACE } from './common.js?v=20260816-16';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 
