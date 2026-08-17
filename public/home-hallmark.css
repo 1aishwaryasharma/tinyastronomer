@@ -6,6 +6,15 @@ body {
   overflow-x: clip;
 }
 
+/* WebKit cannot pan an overflow box that is excluded from hit-testing. Limit
+   the override to Apple browsers and the narrow, scrolling composition so
+   Chromium keeps the existing pass-through interaction with the sky. */
+@media not all and (min-width: 60rem) {
+  html.is-apple-webkit .launch-deck {
+    pointer-events: auto;
+  }
+}
+
 .launch-deck,
 .launch-deck * {
   box-sizing: border-box;

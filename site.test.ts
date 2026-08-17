@@ -626,6 +626,17 @@ test('mobile drawer restores its heading after it closes', () => {
   );
 });
 
+test('Apple WebKit can hit-test the narrow launch-deck scroller', () => {
+  const launchJs = readFileSync('home-launch.js', 'utf8');
+  const homeCss = readFileSync('home-hallmark.css', 'utf8');
+
+  expect(launchJs).toContain("navigator.vendor === 'Apple Computer, Inc.'");
+  expect(launchJs).toContain("classList.add('is-apple-webkit')");
+  expect(homeCss).toMatch(
+    /@media not all and \(min-width: 60rem\)\s*\{[\s\S]*?html\.is-apple-webkit \.launch-deck\s*\{[\s\S]*?pointer-events:\s*auto/
+  );
+});
+
 test('mobile drawer opens without relayout or a native tap flash', () => {
   const commonCss = readFileSync('common.css', 'utf8');
   const drawerRule = commonCss.match(
