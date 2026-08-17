@@ -6,16 +6,28 @@ body {
   overflow-x: clip;
 }
 
+/* Below the 60rem composition the deck is a scrolling column, but it must not own
+   that scroll: it is pointer-events: none so drags fall through to the sky, and
+   WebKit will not touch-scroll a box it cannot hit-test. Scroll the document
+   instead — the root scroller takes the gesture without being hit-tested.
+   overscroll-behavior stays none (common.css) so this cannot arm pull-to-refresh. */
+@media not all and (min-width: 60rem) {
+  html,
+  body {
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+  }
+}
+
 .launch-deck,
 .launch-deck * {
   box-sizing: border-box;
 }
 
 .launch-deck {
-  position: fixed;
-  inset: 0;
+  position: relative;
   z-index: var(--z-modal);
-  overflow-y: auto;
   overflow-x: clip;
   color: var(--color-ink);
   font-family: var(--font-body);
@@ -481,6 +493,8 @@ body:not(.is-study-open) > .loader {
 
 @media (min-width: 60rem) {
   .launch-deck {
+    position: fixed;
+    inset: 0;
     overflow: hidden;
   }
 
