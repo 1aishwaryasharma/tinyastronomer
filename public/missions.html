@@ -6,14 +6,14 @@
 <title>Spacecraft &amp; Missions | tinyastronomer</title>
 <meta name="description" content="tinyastronomer is a free, ad-free gallery of great space missions — Voyager, Perseverance, JWST, Cassini, Apollo, and more.">
 <meta name="theme-color" content="#050810">
-<link rel="canonical" href="https://tinyastronomer.com/missions.html">
+<link rel="canonical" href="https://tinyastronomer.com/missions">
 <link rel="icon" href="favicon.svg?v=20260816-20" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260816-20">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="tinyastronomer">
 <meta property="og:title" content="Spacecraft &amp; Missions | tinyastronomer">
 <meta property="og:description" content="tinyastronomer is a free, ad-free gallery of great space missions — Voyager, Perseverance, JWST, Cassini, Apollo, and more.">
-<meta property="og:url" content="https://tinyastronomer.com/missions.html">
+<meta property="og:url" content="https://tinyastronomer.com/missions">
 <meta property="og:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -119,7 +119,7 @@
 
 <header class="header">
   <div>
-    <a class="brand" href="index.html" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
+    <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
     <h1 class="title">Spacecraft &amp; Missions</h1>
   </div>
 </header>
@@ -137,7 +137,7 @@
   </div>
   <div class="grid" id="grid"></div>
   <div class="foot">Every mission here is real · Each card links to its NASA mission record<br>
-    <a class="foot-next" href="sky-tonight.html">Next stop · See tonight&rsquo;s sky yourself →</a></div>
+    <a class="foot-next" href="/sky-tonight">Next stop · See tonight&rsquo;s sky yourself →</a></div>
 </main>
 
 <script type="module">
@@ -148,42 +148,42 @@ const MISSIONS = [
     wow:'Voyager 1 is so far away that its faint radio whisper takes <b>nearly 24 hours</b> to reach Earth.',
     live:true,
     source:'https://science.nasa.gov/mission/voyager/where-are-voyager-1-and-voyager-2-now/',
-    go:{ href:'solar-system.html#neptune', label:'Visit Neptune, its last flyby' } },
+    go:{ href:'/solar-system#neptune', label:'Visit Neptune, its last flyby' } },
   { icon:'🤖', name:'Perseverance', tag:'A robot geologist on Mars', year:'2020', color:'#d0674a',
     blurb:'A car-sized rover exploring Jezero Crater, the site of an ancient lake and river delta. It searches for signs of ancient microbial life and caches rock and soil samples for possible return to Earth.',
     wow:'The Ingenuity helicopter it carried made the <b>first powered, controlled flight</b> on another planet.',
     source:'https://science.nasa.gov/mission/mars-2020-perseverance/',
-    go:{ href:'solar-system.html#mars', label:'Visit Mars, where it explores' } },
+    go:{ href:'/solar-system#mars', label:'Visit Mars, where it explores' } },
   { icon:'🔭', name:'James Webb Space Telescope', tag:'A time machine for light', year:'2021', color:'#f4c560',
     blurb:'A giant telescope with a golden mirror, orbiting the Sun near the Sun–Earth L2 point about 1.5 million kilometres from Earth. It sees infrared light, letting it peer through dust and spot galaxies from when the universe was very young.',
     wow:'Webb can catch light that left its stars <b>over 13 billion years ago</b>.',
     source:'https://science.nasa.gov/mission/webb/',
-    go:{ href:'solar-system.html', label:'Tour the neighbourhood Webb looks beyond' } },
+    go:{ href:'/solar-system', label:'Tour the neighbourhood Webb looks beyond' } },
   { icon:'🪐', name:'Cassini', tag:"Saturn's explorer", year:'1997', color:'#e6d3a0',
     blurb:'A spacecraft that orbited Saturn for 13 years, studying its rings and moons. It carried ESA\'s Huygens probe, which parachuted through Titan\'s hazy atmosphere and landed on its surface.',
     wow:'Cassini found plumes of <b>water vapour and ice grains</b> spraying from fractures near Enceladus\'s south pole.',
     source:'https://science.nasa.gov/mission/cassini/',
-    go:{ href:'solar-system.html#saturn', label:'Visit Saturn and its rings' } },
+    go:{ href:'/solar-system#saturn', label:'Visit Saturn and its rings' } },
   { icon:'🚀', name:'New Horizons', tag:'The Pluto flyby', year:'2006', color:'#c9b8a0',
     blurb:'A fast little probe about the size of a piano. After nine years of travel it zoomed past Pluto in 2015 and gave us our very first close-up photographs of that faraway world.',
     wow:'It passed Pluto at about 49,600 km/h and revealed <b>Tombaugh Regio</b>, a vast heart-shaped region containing a nitrogen-ice plain.',
     source:'https://science.nasa.gov/mission/new-horizons/',
-    go:{ href:'solar-system.html#pluto', label:'Visit Pluto in the Grand Tour' } },
+    go:{ href:'/solar-system#pluto', label:'Visit Pluto in the Grand Tour' } },
   { icon:'☀️', name:'Parker Solar Probe', tag:'The Sun-toucher', year:'2018', color:'#e89248',
     blurb:'A spacecraft that flies closer to the Sun than anything before it. A carbon-composite heat shield protects its instruments while it studies the corona, the Sun\'s hot outer atmosphere.',
     wow:'In 2021 it became the first spacecraft to fly through the corona — the first to <b>"touch" the Sun</b>.',
     source:'https://science.nasa.gov/mission/parker-solar-probe/',
-    go:{ href:'index.html', label:'Meet the Sun in the Light Study' } },
+    go:{ href:'/', label:'Meet the Sun in the Light Study' } },
   { icon:'🌕', name:'Apollo 11', tag:'First footsteps on the Moon', year:'1969', color:'#c9c5b8',
     blurb:'The mission that carried the first people to walk on the Moon. Two astronauts stepped onto the dusty grey surface while a third orbited above in the spacecraft.',
     wow:'With no wind or rain to erase them, their footprints could last <b>millions of years</b> unless impacts or future visitors disturb them.',
     source:'https://www.nasa.gov/mission/apollo-11/',
-    go:{ href:'index.html', label:'Watch the Moon\'s phases in the Light Study' } },
+    go:{ href:'/', label:'Watch the Moon\'s phases in the Light Study' } },
   { icon:'✨', name:'Hubble Telescope', tag:'Our eye in the sky', year:'1990', color:'#a9e0e2',
     blurb:'A school-bus-sized telescope that has orbited high above Earth since 1990. It has taken some of the most beautiful and famous pictures of stars and galaxies ever made.',
     wow:'Hubble had made more than <b>1.7 million observations</b> of the universe as of 2026.',
     source:'https://science.nasa.gov/mission/hubble/',
-    go:{ href:'sky-tonight.html', label:'See what\'s in your sky tonight' } }
+    go:{ href:'/sky-tonight', label:'See what\'s in your sky tonight' } }
 ];
 
 const grid = document.getElementById('grid');

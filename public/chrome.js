@@ -73,12 +73,12 @@ function initMobileHints() {
 // meet the neighbourhood, feel the distances, see who we sent — and end
 // by going outside to look up.
 const SCENES = [
-  { href: 'index.html#light-study', key: 'light', label: 'Light Study' },
-  { href: 'seasons.html', key: 'seasons', label: 'Seasons' },
-  { href: 'solar-system.html', key: 'tour', label: 'Grand Tour' },
-  { href: 'scale-walk.html', key: 'scale', label: 'Scale Walk' },
-  { href: 'missions.html', key: 'missions', label: 'Missions' },
-  { href: 'sky-tonight.html', key: 'sky', label: 'Sky Tonight' }
+  { href: '/#light-study', key: 'light', label: 'Light Study' },
+  { href: '/seasons', key: 'seasons', label: 'Seasons' },
+  { href: '/solar-system', key: 'tour', label: 'Grand Tour' },
+  { href: '/scale-walk', key: 'scale', label: 'Scale Walk' },
+  { href: '/missions', key: 'missions', label: 'Missions' },
+  { href: '/sky-tonight', key: 'sky', label: 'Sky Tonight' }
 ];
 
 // A tiny logbook: which stops the visitor has already explored. localStorage

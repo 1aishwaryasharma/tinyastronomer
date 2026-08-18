@@ -11,14 +11,20 @@ An accessible, responsive collection of interactive solar-system experiences:
 
 ## Run locally
 
-Serve the deployable `public/` directory with any static web server (ES
-modules will not load from `file://`):
-
 ```sh
-python3 -m http.server 8000 --directory public
+bun dev-server.ts        # http://localhost:8765
 ```
 
-Then visit <http://localhost:8000>.
+`dev-server.ts` serves the deployable `public/` directory the way Cloudflare
+does, reading the same `wrangler.jsonc`, `_redirects`, and `_headers`. That
+matters because the site's URLs are extensionless — a plain static file server
+cannot resolve `/seasons` to `seasons.html`, so every cross-page link 404s. It
+also applies the production `Content-Security-Policy`, so a missing
+inline-script hash shows up locally instead of on the live site.
+
+Pass a port to override the default: `bun dev-server.ts 3000`.
+
+For full fidelity — Workers runtime included — use `bunx wrangler dev` instead.
 
 Three.js (r185, ES modules) is vendored under `vendor/three/`, so the 3D
 scenes work fully offline once the site is served. WebGL pages load it
@@ -40,6 +46,25 @@ bunx html-validate public/index.html public/solar-system.html \
   public/seasons.html public/scale-walk.html public/sky-tonight.html \
   public/missions.html
 ```
+
+## URLs
+
+Every page is served extensionless and without a trailing slash — `/seasons`,
+not `/seasons.html` or `/seasons/`. One URL per page, and `<link rel=canonical>`,
+`og:url`, and `sitemap.xml` all name that one. Three pieces hold it together:
+
+- `wrangler.jsonc` pins `html_handling: "drop-trailing-slash"`, which is what
+  serves `seasons.html` at `/seasons`. Trailing slashes matter beyond tidiness:
+  pages import `./chrome.js`, which resolves to `/chrome.js` from `/seasons` but
+  to `/seasons/chrome.js` — a 404 — from `/seasons/`.
+- `public/_redirects` sends each `.html` URL to its canonical with a **301**.
+  Cloudflare would redirect them anyway, but only temporarily, which leaves the
+  old URLs sitting in Google's index rather than folding them into the canonical.
+- `not_found_handling: "none"` keeps unknown paths a real 404 instead of a
+  soft 404 serving `index.html` with a 200.
+
+Adding a page means adding it to `sitemap.xml` and `_redirects` too; the checks
+in `site.test.ts` fail if you skip either.
 
 ## Technology
 

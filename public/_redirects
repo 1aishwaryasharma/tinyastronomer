@@ -1,0 +1,11 @@
+# The .html URLs were indexed before the site moved to extensionless
+# canonicals. Cloudflare's html_handling would redirect them on its own, but
+# only temporarily, which leaves the old URLs sitting in Google's index. These
+# explicit 301s are evaluated before html_handling and make the consolidation
+# permanent.
+/index.html        /               301
+/missions.html     /missions       301
+/scale-walk.html   /scale-walk     301
+/seasons.html      /seasons        301
+/sky-tonight.html  /sky-tonight    301
+/solar-system.html /solar-system   301

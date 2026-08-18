@@ -18,9 +18,31 @@ const teachingRadius = (radiusKm: number) =>
 test("only the public directory is deployable", () => {
   const wrangler = JSON.parse(readFileSync("../wrangler.jsonc", "utf8"));
   expect(wrangler.assets.directory).toBe("./public");
-  for (const privatePath of [".git", "site.test.ts", "wrangler.jsonc", "README.md"]) {
+  for (const privatePath of [
+    ".git",
+    "site.test.ts",
+    "wrangler.jsonc",
+    "README.md",
+    "dev-server.ts",
+  ]) {
     expect(existsSync(privatePath), `${privatePath} must not be a public asset`).toBe(false);
   }
+});
+
+test("asset routing is pinned rather than inherited from platform defaults", () => {
+  const wrangler = JSON.parse(readFileSync("../wrangler.jsonc", "utf8"));
+
+  // Every canonical URL is extensionless AND slashless. "drop-trailing-slash" is
+  // what makes `/missions` (not `/missions/`) the served form, which also keeps
+  // the pages' relative `./chrome.js` imports resolving to /chrome.js.
+  expect(
+    wrangler.assets.html_handling,
+    "canonical URLs must not depend on a Cloudflare default",
+  ).toBe("drop-trailing-slash");
+
+  // Anything else — notably "single-page-application" — would answer unknown
+  // paths with index.html and a 200, which Google files as a soft 404.
+  expect(wrangler.assets.not_found_handling, "unknown paths must be a real 404").toBe("none");
 });
 
 test("security headers cover every static response and authorize current inline scripts", () => {
@@ -44,6 +66,7 @@ test("security headers cover every static response and authorize current inline 
   expect(scriptPolicy).toContain("frame-ancestors 'none'");
   expect(scriptPolicy).toContain("object-src 'none'");
 
+  const liveHashes = new Set<string>();
   for (const page of pages) {
     const html = readFileSync(page, "utf8");
     for (const match of html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)) {
@@ -52,7 +75,19 @@ test("security headers cover every static response and authorize current inline 
       expect(scriptPolicy, `${page}: CSP is missing its inline-script hash`).toContain(
         `'sha256-${digest}'`,
       );
+      liveHashes.add(`sha256-${digest}`);
     }
+  }
+
+  // Editing an inline script changes its hash, so the old one has to go with it.
+  // Without this the policy silently accumulates hashes for scripts that no
+  // longer exist, widening script-src for bodies nobody can review.
+  const declaredHashes =
+    scriptPolicy.match(/script-src[^;]*/)?.[0].match(/sha256-[A-Za-z0-9+/=]+/g) ?? [];
+  for (const declared of declaredHashes) {
+    expect(liveHashes.has(declared), `CSP lists ${declared}, which no inline script matches`).toBe(
+      true,
+    );
   }
 });
 
@@ -77,7 +112,13 @@ describe.each(pages)("%s", (file) => {
       .map((value) => value.split(/[?#]/)[0]);
 
     for (const reference of references) {
-      expect(existsSync(reference), `${file}: missing ${reference}`).toBe(true);
+      const localPath = reference === "/"
+        ? "index.html"
+        : reference.startsWith("/")
+          ? reference.slice(1)
+          : reference;
+      const deployablePath = existsSync(localPath) ? localPath : `${localPath}.html`;
+      expect(existsSync(deployablePath), `${file}: missing ${reference}`).toBe(true);
     }
   });
 
@@ -135,14 +176,15 @@ describe.each(pages)("%s", (file) => {
 
 test("shared scene navigation points to every live page", () => {
   const chrome = readFileSync("chrome.js", "utf8");
-  for (const page of pages.filter((file) => !file.includes(" (1)"))) {
-    expect(chrome, `navigation does not include ${page}`).toContain(`href: '${page}`);
+  for (const page of pages) {
+    const route = page === "index.html" ? "/" : `/${page.replace(/\.html$/, "")}`;
+    expect(chrome, `navigation does not include ${route}`).toContain(`href: '${route}`);
   }
 });
 
 test("shared navigation opens the Light Study instead of the home deck", () => {
   const chrome = readFileSync("chrome.js", "utf8");
-  expect(chrome).toContain("href: 'index.html#light-study', key: 'light'");
+  expect(chrome).toContain("href: '/#light-study', key: 'light'");
 });
 
 test("the obsolete duplicate page is not shipped", () => {
@@ -507,7 +549,7 @@ test('scene navigation is one journey with progress and a next stop', () => {
 test('missions link to the worlds they explored', () => {
   const missions = readFileSync('missions.html', 'utf8');
   for (const target of ['#neptune', '#mars', '#saturn', '#pluto']) {
-    expect(missions).toContain(`solar-system.html${target}`);
+    expect(missions).toContain(`/solar-system${target}`);
   }
   expect(missions).toContain('id="voyager-dist"');
   expect(missions).toContain('KM_PER_SEC');
@@ -679,7 +721,7 @@ test('every page carries the wordmark and links it home', () => {
     const html = readFileSync(file, 'utf8');
     const brand = html.match(/<a class="brand"[^>]*>[\s\S]*?<\/a>/);
     expect(brand, `${file}: missing the brand wordmark`).not.toBeNull();
-    expect(brand![0]).toContain('href="index.html"');
+    expect(brand![0]).toContain('href="/"');
     expect(brand![0].replace(/<[^>]+>/g, '')).toBe('tinyastronomer');
     // Keep the visible name as one token; <em> can split it for crawlers.
     expect(brand![0]).not.toMatch(/<em>/i);
@@ -721,8 +763,73 @@ test('pages name tinyastronomer in the signals Google uses for brand search', ()
   expect(home).toContain('tinyastronomer is free, ad-free astronomy for curious kids.');
 
   const sitemap = readFileSync('sitemap.xml', 'utf8');
-  expect(sitemap).toContain('<lastmod>2026-08-16</lastmod>');
+  expect(sitemap).toContain('<lastmod>2026-08-17</lastmod>');
   expect(sitemap).not.toContain('2026-07-27');
+});
+
+test('indexing signals use directly served canonical URLs', () => {
+  const canonicalUrls: Record<string, string> = {
+    'index.html': 'https://tinyastronomer.com/',
+    'solar-system.html': 'https://tinyastronomer.com/solar-system',
+    'seasons.html': 'https://tinyastronomer.com/seasons',
+    'scale-walk.html': 'https://tinyastronomer.com/scale-walk',
+    'sky-tonight.html': 'https://tinyastronomer.com/sky-tonight',
+    'missions.html': 'https://tinyastronomer.com/missions',
+  };
+
+  for (const [file, canonicalUrl] of Object.entries(canonicalUrls)) {
+    const html = readFileSync(file, 'utf8');
+    expect(html, `${file}: canonical URL`).toContain(
+      `<link rel="canonical" href="${canonicalUrl}">`,
+    );
+    expect(html, `${file}: Open Graph URL`).toContain(
+      `<meta property="og:url" content="${canonicalUrl}">`,
+    );
+    // Any path shape, not just a single leading slash: `./missions.html` and
+    // `../missions.html` redirect exactly like `/missions.html` does, so they
+    // reintroduce the same split indexing signal.
+    expect(html, `${file}: navigation must not advertise redirecting .html URLs`).not.toMatch(
+      /href=["'][^"']*(?:index|missions|scale-walk|seasons|sky-tonight|solar-system)\.html(?:[?#][^"']*)?["']/i,
+    );
+  }
+
+  const sitemap = readFileSync('sitemap.xml', 'utf8');
+  const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+  expect(sitemapUrls).toEqual(Object.values(canonicalUrls));
+
+  const chrome = readFileSync('chrome.js', 'utf8');
+  expect(chrome, 'shared navigation must not advertise redirecting .html URLs').not.toMatch(
+    /href:\s*["'][^"']*\.html(?:[?#][^"']*)?["']/i,
+  );
+});
+
+test('every .html URL permanently redirects to its canonical', () => {
+  // Cloudflare's own html_handling redirect is temporary, so Google keeps the
+  // .html URL in the index instead of folding it into the canonical. These
+  // explicit 301s are what actually consolidate the two.
+  const rules = new Map(
+    readFileSync('_redirects', 'utf8')
+      .split('\n')
+      .map((line) => line.replace(/#.*$/, '').trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [from, to, status] = line.split(/\s+/);
+        return [from, { to, status }] as const;
+      }),
+  );
+
+  for (const page of pages) {
+    const rule = rules.get(`/${page}`);
+    expect(rule, `/${page} has no redirect rule`).toBeDefined();
+    expect(rule!.to, `/${page} must redirect to its canonical path`).toBe(
+      page === 'index.html' ? '/' : `/${page.slice(0, -'.html'.length)}`,
+    );
+    expect(rule!.status, `/${page} must redirect permanently, not temporarily`).toBe('301');
+  }
+
+  for (const from of rules.keys()) {
+    expect(pages, `${from} redirects from a page that no longer exists`).toContain(from.slice(1));
+  }
 });
 
 test('small-screen chrome keeps menus and controls inside the viewport', () => {
