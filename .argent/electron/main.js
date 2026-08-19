@@ -20,6 +20,13 @@ const isAllowedSiteUrl = (rawUrl) => {
     && ALLOWED_SITE_HOSTS.has(parsed.hostname.toLowerCase());
 };
 
+if (!isAllowedSiteUrl(SITE_URL)) {
+  console.error(
+    `SITE_URL must be http://127.0.0.1 or http://localhost, got ${SITE_URL}`,
+  );
+  process.exit(1);
+}
+
 // Must run before ready. GPU and SwiftShader need separate userData so a
 // software-GL run cannot poison Metal (and the reverse).
 app.setPath(
@@ -57,6 +64,7 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
       partition: 'argent-qa',
+      preload: path.join(__dirname, 'preload.js'),
       sandbox: true,
       webgl: true,
     },
@@ -66,20 +74,8 @@ const createWindow = () => {
   win.loadURL(SITE_URL);
 };
 
-if (!isAllowedSiteUrl(SITE_URL)) {
-  console.error(
-    `SITE_URL must be http://127.0.0.1 or http://localhost, got ${SITE_URL}`,
-  );
-  app.exit(1);
-} else {
-  app.on('web-contents-created', (_event, contents) => {
-    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
-    contents.on('will-navigate', (event, url) => {
-      if (!isAllowedSiteUrl(url)) {
-        event.preventDefault();
-      }
-    });
-  });
-  app.whenReady().then(createWindow);
-  app.on('window-all-closed', () => app.quit());
-}
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+});
+app.whenReady().then(createWindow);
+app.on('window-all-closed', () => app.quit());

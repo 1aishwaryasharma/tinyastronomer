@@ -501,11 +501,17 @@ body:not(.is-study-open) > .loader {
   .study-index {
     position: absolute;
     inset-inline-end: var(--page-gutter);
-    inset-block-start: 50%;
+    inset-block-start: 5rem;
+    inset-block-end: 6.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    justify-content: safe center;
     width: min(31vw, 27rem);
     max-width: none;
     margin: 0;
-    transform: translateY(-50%);
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .study-index ol {

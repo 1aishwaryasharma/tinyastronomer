@@ -544,10 +544,9 @@ float fbm(vec3 p) {
     const composer = opts.composer || null;
     const bloomPass = opts.bloomPass || null;
     const fxaaPass = opts.fxaaPass || null;
-    // Electron's compositor reports jumpy frame times even on a real GPU, and
-    // every tier change reallocates the drawing buffer — a visible flash.
-    const freezeTiers = typeof navigator !== 'undefined'
-      && /Electron/i.test(navigator.userAgent);
+    // QA shells set globalThis.taQa so compositor jitter cannot flash the
+    // drawing buffer. Production never sets this.
+    const freezeTiers = Boolean(globalThis.taQa);
     // Late-bound: scenes often create lights after the governor. Call
     // setShadowLight(light) once the light exists.
     let shadowLight = opts.shadowLight || null;
@@ -722,12 +721,10 @@ float fbm(vec3 p) {
   function createRenderer(opts) {
     let renderer = null;
     try {
-      const isElectron = typeof navigator !== 'undefined'
-        && /Electron/i.test(navigator.userAgent);
       renderer = new THREE.WebGLRenderer({
         failIfMajorPerformanceCaveat: false,
         powerPreference: 'high-performance',
-        preserveDrawingBuffer: isElectron,
+        preserveDrawingBuffer: Boolean(globalThis.taQa),
         ...(opts || {}),
       });
     } catch (err) {

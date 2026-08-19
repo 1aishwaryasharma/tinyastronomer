@@ -26,10 +26,14 @@ const requiredIds: Record<string, string[]> = {
 };
 
 test('every observatory path keeps its QA ids', () => {
+  expect(
+    [...pages].sort(),
+    'requiredIds must name every HTML page',
+  ).toEqual(Object.keys(requiredIds).sort());
   for (const file of pages) {
     const html = readFileSync(file, 'utf8');
     const ids = [...html.matchAll(/\bid=["']([^"']+)["']/gi)].map((match) => match[1]);
-    for (const id of requiredIds[file] ?? []) {
+    for (const id of requiredIds[file]) {
       expect(ids, `${file} is missing ${id}`).toContain(id);
     }
   }
@@ -37,6 +41,11 @@ test('every observatory path keeps its QA ids', () => {
   expect(chrome).toContain("btn.id = 'scene-nav-btn'");
   expect(chrome).toContain("a.id = 'scene-link-' + s.key");
   expect(chrome).toContain("nextLink.id = 'scene-next'");
+});
+
+test('SPACE does not special-case the Electron QA shell by user-agent', () => {
+  const common = readFileSync('common.js', 'utf8');
+  expect(common).not.toMatch(/Electron/i);
 });
 
 test('Light Study opens from the #light-study hash', () => {
