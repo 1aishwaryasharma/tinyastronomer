@@ -33,7 +33,7 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y --no-install-recommends \
-            xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2
+            xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
 
       - name: Start Xvfb
         run: |
@@ -45,7 +45,7 @@ jobs:
         working-directory: .argent/electron
 
       - name: Install Argent
-        run: npm install -g @swmansion/argent
+        run: npm install -g @swmansion/argent@0.21.0
 
       - name: Start the site
         run: |

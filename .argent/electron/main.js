@@ -2,11 +2,23 @@ const { app, BrowserWindow } = require('electron');
 const os = require('os');
 const path = require('path');
 
+const ALLOWED_SITE_HOSTS = new Set(['127.0.0.1', 'localhost']);
 const HEIGHT = 800;
 const SITE_URL = process.env.SITE_URL || 'http://127.0.0.1:8765/';
 const WIDTH = 1280;
 const useSwiftShader = process.env.ARGENT_ELECTRON_SWIFTSHADER === '1'
   || process.platform === 'linux';
+
+const isAllowedSiteUrl = (rawUrl) => {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  return parsed.protocol === 'http:'
+    && ALLOWED_SITE_HOSTS.has(parsed.hostname.toLowerCase());
+};
 
 // Must run before ready. GPU and SwiftShader need separate userData so a
 // software-GL run cannot poison Metal (and the reverse).
@@ -45,6 +57,7 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
       partition: 'argent-qa',
+      sandbox: true,
       webgl: true,
     },
     width: WIDTH,
@@ -53,5 +66,20 @@ const createWindow = () => {
   win.loadURL(SITE_URL);
 };
 
-app.whenReady().then(createWindow);
-app.on('window-all-closed', () => app.quit());
+if (!isAllowedSiteUrl(SITE_URL)) {
+  console.error(
+    `SITE_URL must be http://127.0.0.1 or http://localhost, got ${SITE_URL}`,
+  );
+  app.exit(1);
+} else {
+  app.on('web-contents-created', (_event, contents) => {
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    contents.on('will-navigate', (event, url) => {
+      if (!isAllowedSiteUrl(url)) {
+        event.preventDefault();
+      }
+    });
+  });
+  app.whenReady().then(createWindow);
+  app.on('window-all-closed', () => app.quit());
+}
