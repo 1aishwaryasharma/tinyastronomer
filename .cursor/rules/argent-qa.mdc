@@ -1,0 +1,6 @@
+---
+alwaysApply: false
+description: Bounded Argent behavior review for pull requests and running-site QA. Use when verifying a PR in the live observatory, running Argent QA, or checking a user flow on the site.
+---
+
+Follow `.argent/qa.md`. Infer acceptance criteria from the change, run the matching `qa-*` flow, and report ship / fail / uncertain with evidence from the running site.

@@ -19,11 +19,12 @@ test("only the public directory is deployable", () => {
   const wrangler = JSON.parse(readFileSync("../wrangler.jsonc", "utf8"));
   expect(wrangler.assets.directory).toBe("./public");
   for (const privatePath of [
-    ".git",
-    "site.test.ts",
-    "wrangler.jsonc",
-    "README.md",
-    "dev-server.ts",
+    '.argent',
+    '.git',
+    'dev-server.ts',
+    'README.md',
+    'site.test.ts',
+    'wrangler.jsonc',
   ]) {
     expect(existsSync(privatePath), `${privatePath} must not be a public asset`).toBe(false);
   }
@@ -172,6 +173,32 @@ describe.each(pages)("%s", (file) => {
       expect(toggle).toMatch(/\baria-pressed=["'](?:true|false)["']/i);
     }
   });
+});
+
+test('Argent QA selectors stay on every observatory path', () => {
+  const chrome = readFileSync('chrome.js', 'utf8');
+  const index = readFileSync('index.html', 'utf8');
+  expect(chrome).toContain("btn.id = 'scene-nav-btn'");
+  expect(chrome).toContain("a.id = 'scene-link-' + s.key");
+  expect(chrome).toContain("nextLink.id = 'scene-next'");
+  expect(index).toContain('id="launch-title"');
+  expect(index).toContain('id="play-btn"');
+  for (const id of [
+    'launch-grand-tour',
+    'launch-light-study',
+    'launch-missions',
+    'launch-scale-walk',
+    'launch-seasons',
+    'launch-sky-tonight',
+  ]) {
+    expect(index).toContain(`id="${id}"`);
+  }
+  expect(index).toContain('id="light-study-header"');
+  expect(readFileSync('seasons.html', 'utf8')).toContain('id="seasons-header"');
+  expect(readFileSync('solar-system.html', 'utf8')).toContain('id="grand-tour-header"');
+  expect(readFileSync('scale-walk.html', 'utf8')).toContain('id="scale-walk-header"');
+  expect(readFileSync('missions.html', 'utf8')).toContain('id="missions-header"');
+  expect(readFileSync('sky-tonight.html', 'utf8')).toContain('id="sky-tonight-header"');
 });
 
 test("shared scene navigation points to every live page", () => {
@@ -771,7 +798,7 @@ test('every page carries the wordmark and links it home', () => {
     // Keep the visible name as one token; <em> can split it for crawlers.
     expect(brand![0]).not.toMatch(/<em>/i);
     // It sits inside the fixed header, which is pointer-events: none.
-    expect(html.indexOf(brand![0])).toBeGreaterThan(html.indexOf('<header class="header">'));
+    expect(html.indexOf(brand![0])).toBeGreaterThan(html.indexOf('<header class="header"'));
   }
   expect(commonCss).toMatch(/\.brand\s*\{[\s\S]*?pointer-events:\s*auto/);
 });

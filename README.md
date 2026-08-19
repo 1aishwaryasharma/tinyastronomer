@@ -39,6 +39,16 @@ Run the repository checks with Bun:
 bun test site.test.ts
 ```
 
+For behavior review of the running site, start the local server and replay the
+Argent QA flows (Electron shell under `.argent/electron`):
+
+```sh
+bun dev-server.ts
+argent flow run qa-home-open-light-study --platform chromium
+```
+
+Flows live in `.argent/flows/`. The agent playbook is `.argent/qa.md`.
+
 For an additional HTML conformance check:
 
 ```sh
