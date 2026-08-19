@@ -66,7 +66,7 @@ canvas { display: block; }
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-family: 'Fragment Mono', monospace;
   font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--ink-dim); text-decoration: none;
@@ -555,7 +555,7 @@ canvas { display: block; }
              calc(18px + env(safe-area-inset-left, 0px)) !important;
   }
   .brand {
-    margin-bottom: 6px;
+    margin-bottom: 10px;
     font-size: 11px;
     letter-spacing: 0.18em;
   }

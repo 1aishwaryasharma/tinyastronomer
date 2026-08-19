@@ -670,7 +670,7 @@ test('mobile drawer restores its heading after it closes', () => {
 
 test('every browser can hit-test the narrow launch-deck scroller', () => {
   const launchJs = readFileSync('home-launch.js', 'utf8');
-  const homeCss = readFileSync('home-hallmark.css', 'utf8');
+  const homeCss = readFileSync('home.css', 'utf8');
 
   expect(launchJs).not.toContain('navigator.vendor');
   expect(launchJs).not.toContain('is-apple-webkit');
