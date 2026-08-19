@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+platform="${1:-}"
+shift || true
+
+usage() {
+  echo 'usage: .agent-device/run ios|android [flow-name] [agent-device flags…]' >&2
+  echo 'Requires bun dev-server.ts on port 8765 and a booted simulator or emulator.' >&2
+  echo 'Pull-request CI is Argent Chromium, not this command.' >&2
+  exit 1
+}
+
+case "$platform" in
+  android|ios) ;;
+  *) usage ;;
+esac
+
+root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+cd "$root"
+
+suite=".agent-device/flows/$platform"
+if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then
+  flow=$1
+  shift
+  suite="$suite/${flow}.ad"
+fi
+
+exec agent-device test "$suite" --platform "$platform" "$@"

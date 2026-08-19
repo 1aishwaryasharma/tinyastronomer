@@ -36,18 +36,22 @@ Missions and Sky Tonight import only `chrome.js` and never load Three.js.
 Run the repository checks with Bun:
 
 ```sh
-bun test site.test.ts
+bun test
 ```
 
-For behavior review of the running site, start the local server and replay the
-Argent QA flows (Electron shell under `.argent/electron`):
+The Argent flows are the pull-request regression suite. CI replays them in
+Electron (`--platform chromium`). On a booted Simulator or emulator, use
+agent-device:
 
 ```sh
 bun dev-server.ts
 argent flow run qa-home-open-light-study --platform chromium
+.agent-device/run ios
+.agent-device/run android
 ```
 
-Flows live in `.argent/flows/`. The agent playbook is `.argent/qa.md`.
+Argent YAML lives in `.argent/flows/` (`.argent/qa.md`). Local Safari/Chrome
+scripts live in `.agent-device/flows/` (`.agent-device/qa.md`).
 
 For an additional HTML conformance check:
 

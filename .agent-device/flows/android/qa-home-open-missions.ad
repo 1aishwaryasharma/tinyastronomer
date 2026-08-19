@@ -1,0 +1,9 @@
+context platform=android
+open "Chrome" "http://10.0.2.2:8765/" --relaunch
+wait "id=\"launch-title\"" 20000
+wait "text" "Choose an observation" 20000
+gesture "fling" "up" 540 1600 700
+wait "id=\"launch-missions\"" 10000
+press "id=\"launch-missions\""
+wait "id=\"missions-header\"" 20000
+close

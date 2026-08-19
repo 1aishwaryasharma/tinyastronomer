@@ -1,0 +1,8 @@
+context platform=android
+open "Chrome" "http://10.0.2.2:8765/" --relaunch
+wait "id=\"launch-title\"" 20000
+wait "text" "Choose an observation" 20000
+press "id=\"launch-light-study\""
+wait "id=\"light-study-header\"" 20000
+wait "id=\"play-btn\"" 10000
+close

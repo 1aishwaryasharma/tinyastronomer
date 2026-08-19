@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   flows:
@@ -64,20 +63,7 @@ jobs:
           SITE_URL: http://127.0.0.1:8765/
         run: |
           mkdir -p artifacts
-          failed=0
-          for flow in .argent/flows/qa-*.yaml; do
-            name=$(basename "$flow" .yaml)
-            echo "::group::${name}"
-            if argent flow run "$name" --platform chromium --output artifacts --json \
-              > "artifacts/${name}.json"; then
-              echo "${name} passed"
-            else
-              echo "${name} failed"
-              failed=1
-            fi
-            echo '::endgroup::'
-          done
-          exit "$failed"
+          argent flow run .argent/flows --platform chromium --output artifacts
 
       - name: Upload evidence
         if: always()
@@ -86,25 +72,3 @@ jobs:
           if-no-files-found: warn
           name: argent-qa
           path: artifacts/
-
-      - name: Comment on the pull request
-        if: always() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo '## Argent behavior review'
-            echo
-            echo 'Replay of `.argent/flows/qa-*.yaml` against the Electron shell.'
-            echo
-            for report in artifacts/qa-*.json; do
-              [ -f "$report" ] || continue
-              name=$(basename "$report" .json)
-              bun -e "
-                const report = JSON.parse(await Bun.file(process.argv[1]).text());
-                const mark = report.ok ? 'pass' : 'fail';
-                console.log('- **' + process.argv[2] + '**: ' + mark);
-              " "$report" "$name"
-            done
-          } > argent-comment.md
-          gh pr comment "${{ github.event.pull_request.number }}" --body-file argent-comment.md
