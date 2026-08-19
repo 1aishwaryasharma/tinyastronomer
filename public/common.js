@@ -544,6 +544,10 @@ float fbm(vec3 p) {
     const composer = opts.composer || null;
     const bloomPass = opts.bloomPass || null;
     const fxaaPass = opts.fxaaPass || null;
+    // Electron's compositor reports jumpy frame times even on a real GPU, and
+    // every tier change reallocates the drawing buffer — a visible flash.
+    const freezeTiers = typeof navigator !== 'undefined'
+      && /Electron/i.test(navigator.userAgent);
     // Late-bound: scenes often create lights after the governor. Call
     // setShadowLight(light) once the light exists.
     let shadowLight = opts.shadowLight || null;
@@ -602,6 +606,7 @@ float fbm(vec3 p) {
 
     return {
       frame(rawDt, interactionActive = false) {
+        if (freezeTiers) return;
         if (!(rawDt > 0) || rawDt > MAX_SAMPLE_S) return;
         const now = performance.now();
         // Shader compilation and active orbiting are both transient work.
@@ -717,7 +722,14 @@ float fbm(vec3 p) {
   function createRenderer(opts) {
     let renderer = null;
     try {
-      renderer = new THREE.WebGLRenderer(opts || {});
+      const isElectron = typeof navigator !== 'undefined'
+        && /Electron/i.test(navigator.userAgent);
+      renderer = new THREE.WebGLRenderer({
+        failIfMajorPerformanceCaveat: false,
+        powerPreference: 'high-performance',
+        preserveDrawingBuffer: isElectron,
+        ...(opts || {}),
+      });
     } catch (err) {
       failWebGL(err);
       return null;
@@ -745,7 +757,7 @@ float fbm(vec3 p) {
       opts.far != null ? opts.far : 2000
     );
 
-    const renderer = createRenderer({ antialias: false, alpha: false });
+    const renderer = createRenderer({ alpha: false, antialias: false });
     if (!renderer) return null;
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));

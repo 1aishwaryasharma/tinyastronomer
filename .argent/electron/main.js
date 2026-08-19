@@ -1,5 +1,4 @@
 const { app, BrowserWindow } = require('electron');
-const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
@@ -9,12 +8,23 @@ const WIDTH = 1280;
 const useSwiftShader = process.env.ARGENT_ELECTRON_SWIFTSHADER === '1'
   || process.platform === 'linux';
 
-// Must run before ready. A prior disable-gpu launch poisons Chromium's GPUCache
-// under userData, so later boots keep failing WebGL even after that flag is gone.
-const userData = path.join(os.tmpdir(), 'tinyastronomer-argent-electron');
-fs.rmSync(path.join(userData, 'GPUCache'), { force: true, recursive: true });
-app.setPath('userData', userData);
+// Must run before ready. GPU and SwiftShader need separate userData so a
+// software-GL run cannot poison Metal (and the reverse).
+app.setPath(
+  'userData',
+  path.join(
+    os.tmpdir(),
+    useSwiftShader
+      ? 'tinyastronomer-argent-electron-swiftshader'
+      : 'tinyastronomer-argent-electron-gpu',
+  ),
+);
 
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-webgl');
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 if (useSwiftShader) {
@@ -25,6 +35,7 @@ if (useSwiftShader) {
 
 const createWindow = () => {
   const win = new BrowserWindow({
+    autoHideMenuBar: true,
     backgroundColor: '#050810',
     height: HEIGHT,
     show: true,
