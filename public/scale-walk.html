@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-20">
+<link rel="stylesheet" href="common.css?v=20260818-5">
 <style>
   .info-panel { top: 128px; width: 350px; }
   .info-title { font-size: 26px; line-height: 1.1; }
@@ -49,6 +49,7 @@
 <body>
 
 <main id="canvas-container" aria-label="3D true-scale walk through the solar system"></main>
+<p id="scene-description" class="sr-only">A journey from the Sun through the eight planets using proportional mean orbital distances. Choose any stop in the list or use Previous and Travel. Each stop has a written distance, light-time, diameter, and basketball-Sun analogy.</p>
 <div class="loader" id="loader" role="status" aria-live="polite"><div class="loader-text">Measuring the void…</div></div>
 <noscript>
   <div class="loader loader-js-required" role="alert">
@@ -103,12 +104,14 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260816-17';
+import { SPACE } from './common.js?v=20260818-5';
 import { SPACE_DATA } from './data.js';
 import { createTourTextures } from './tour-textures.js';
 const clamp = SPACE.clamp;
 
 const setup = SPACE.createScene({
+  canvasLabel: 'True-scale solar system distance walk. Focus it and use the arrow keys to rotate, plus and minus to zoom.',
+  canvasDescriptionId: 'scene-description',
   far: 6000,
   fov: 50,
   near: 0.05
@@ -278,7 +281,7 @@ STOPS.forEach((s, i) => {
   s.btn = b;
 });
 
-function render() {
+function render(announce = false) {
   const s = STOPS[idx];
   STOPS.forEach(x => {
     const active = x === s;
@@ -306,6 +309,9 @@ function render() {
       row('Mean diameter', p.dia.toLocaleString() + ' km');
     sAnalogy.innerHTML = '<span class="fact-tag">✦ Basketball Sun</span>' + analogyFor(p);
   }
+  if (announce) {
+    setup.accessibility.announce(`${sTitle.textContent}, stop ${idx + 1} of ${STOPS.length}. ${sBody.textContent}`);
+  }
 }
 const _walkTarget = new THREE.Vector3();
 function targetPos() {
@@ -319,7 +325,7 @@ function targetDist() {
 function goTo(i) {
   idx = clamp(i, 0, STOPS.length - 1);
   cam.distanceTarget = targetDist();
-  render();
+  render(true);
 }
 prevBtn.onclick = () => goTo(idx - 1);
 nextBtn.onclick = () => goTo(idx + 1);

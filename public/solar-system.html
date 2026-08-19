@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-20">
+<link rel="stylesheet" href="common.css?v=20260818-5">
 <style>
   /* ── Page-specific styling for the grand tour; shared .facts / .fact-row /
      .fact-callout / .side-rail / .rail-btn live in common.css ── */
@@ -71,6 +71,7 @@
 <body>
 
 <main id="canvas-container" aria-label="3D model of the solar system"></main>
+<p id="scene-description" class="sr-only">A selectable model of the Sun, eight planets, dwarf planets, belts, and a comet. Every body is also available as a button in the Bodies list; selecting one presents its description and facts in the information panel.</p>
 
 <div class="loader" id="loader" role="status" aria-live="polite">
   <div class="loader-text">Charting the planets…</div>
@@ -166,7 +167,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260816-17';
+import { SPACE } from './common.js?v=20260818-5';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry } from './earth-visuals.js?v=20260815-1';
 import { createTourTextures } from './tour-textures.js?v=20260815-4';
@@ -179,6 +180,7 @@ const clamp = SPACE.clamp;
 // ─────────────────────────────────────────────────────────
 const setup = SPACE.createScene({
   canvasLabel: '3D model of the solar system. Focus it and use the arrow keys to rotate, plus and minus to zoom.',
+  canvasDescriptionId: 'scene-description',
   far: 4000,
   near: 0.05
 });
@@ -579,8 +581,9 @@ function renderInfo(info, label) {
   const f = info.facts;
   infoFacts.innerHTML = row('Size', f.size) + row('Spin', f.day) + row('Year', f.year) + row('Moons', f.moons) + row('Gravity', f.gravity);
   infoWow.style.display = ''; infoWowText.innerHTML = info.wow;
+  setup.accessibility.announce(`${info.name} selected. ${info.blurb}`);
 }
-function renderOverview() {
+function renderOverview(announce = true) {
   infoLabel.textContent = '— Welcome —';
   infoTitle.textContent = 'Meet the neighbourhood';
   infoBody.innerHTML = 'Eight planets loop around our <strong>Sun</strong>. The four closest are small and rocky; the four far ones are giant balls of gas and ice. Beyond them float dwarf planets, two belts of rocky and icy rubble, and a comet. Tap anything to fly over.';
@@ -590,6 +593,7 @@ function renderOverview() {
     row('Belts', 'Rubble rings: the <strong>asteroid belt</strong> and the <strong>Kuiper belt</strong>.') +
     row('Tip', 'Turn on <strong>Distance View</strong> to compare the planets at proportional mean orbital spacing.');
   infoWow.style.display = 'none';
+  if (announce) setup.accessibility.announce('Whole solar system selected. Meet the neighbourhood.');
 }
 
 // ─────────────────────────────────────────────────────────
@@ -679,7 +683,7 @@ function selectBody(key) {
   automaticPlanetDistance = clampedPlanetFocusDistance(w);
   cam.distanceTarget = automaticPlanetDistance;
 }
-renderOverview();
+renderOverview(false);
 
 // picking — oversized invisible hit spheres keep small worlds tappable
 const raycaster = new THREE.Raycaster();

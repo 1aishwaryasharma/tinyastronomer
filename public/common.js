@@ -12,10 +12,11 @@ import {
   clamp,
   initMobileHints,
   initMobileInfoPanels,
+  initSceneAccessibility,
   prefersReducedMotion,
   revealRailButton,
   setText
-} from './chrome.js?v=20260816-17';
+} from './chrome.js?v=20260818-5';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js';
@@ -758,13 +759,19 @@ float fbm(vec3 p) {
     // its luminance threshold rather than dimming the entire rendered image.
     renderer.toneMappingExposure = 1.1;
     if (opts.canvasLabel) {
+      const description = document.getElementById(opts.canvasDescriptionId);
+      if (!description) {
+        throw new Error('createScene requires canvasDescriptionId to reference a text equivalent');
+      }
       renderer.domElement.setAttribute('tabindex', '0');
       renderer.domElement.setAttribute('role', 'img');
       renderer.domElement.setAttribute('aria-label', opts.canvasLabel);
+      renderer.domElement.setAttribute('aria-describedby', description.id);
     } else {
       renderer.domElement.setAttribute('aria-hidden', 'true');
     }
     container.appendChild(renderer.domElement);
+    const accessibility = initSceneAccessibility();
 
     let composer = null, bloomPass = null, fxaaPass = null;
     if (opts.composer !== false) {
@@ -826,7 +833,7 @@ float fbm(vec3 p) {
       else renderer.render(scene, camera);
     }
 
-    const setup = { bloomPass, camera, composer, fxaaPass, quality, render, renderer, resize, scene };
+    const setup = { accessibility, bloomPass, camera, composer, fxaaPass, quality, render, renderer, resize, scene };
     if (/[?&]diag=1\b/.test(window.location.search)) installDiagnostics(setup);
     return setup;
   }

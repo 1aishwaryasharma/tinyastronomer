@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-20">
+<link rel="stylesheet" href="common.css?v=20260818-5">
 <style>
   .info-panel { top: 128px; width: 340px; }
   .info-title { font-size: 26px; line-height: 1.1; }
@@ -50,6 +50,7 @@
 <body>
 
 <main id="canvas-container" aria-label="3D model of Earth orbiting the Sun through the seasons"></main>
+<p id="scene-description" class="sr-only">Earth orbits the Sun with its axis held at a 23.4 degree tilt. Choose an equinox or solstice, or use the time-of-year slider. The information panel reports the northern and southern seasons and the subsolar latitude.</p>
 <div class="loader" id="loader" role="status" aria-live="polite"><div class="loader-text">Tilting the Earth…</div></div>
 <noscript>
   <div class="loader loader-js-required" role="alert">
@@ -122,7 +123,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260816-17';
+import { SPACE } from './common.js?v=20260818-5';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 const clamp = SPACE.clamp;
@@ -130,6 +131,7 @@ const DEG = THREE.MathUtils.degToRad;
 
 const setup = SPACE.createScene({
   canvasLabel: '3D model of Earth orbiting the Sun through the seasons. Focus it and use the arrow keys to rotate, plus and minus to zoom.',
+  canvasDescriptionId: 'scene-description',
   far: 3000,
   onResize: refitCamera
 });
@@ -239,7 +241,8 @@ const state = {
 const playBtn=document.getElementById('play-btn'), playIcon=document.getElementById('play-icon');
 const slider=document.getElementById('year-slider');
 const updatePlayButton = SPACE.wirePlayPause(playBtn, playIcon, state);
-slider.oninput=()=>{ state.theta=parseFloat(slider.value); state.playing=false; updatePlayButton(); };
+slider.oninput=()=>setTheta(parseFloat(slider.value));
+slider.onchange=()=>setTheta(parseFloat(slider.value), true);
 document.getElementById('toggle-axis').onclick=function(){
   state.showAxis=!state.showAxis; axis.visible=equator.visible=state.showAxis;
   this.classList.toggle('active',state.showAxis);
@@ -257,7 +260,7 @@ MARKERS.forEach(m=>{
   const b=document.createElement('button'); b.type='button'; b.className='rail-btn';
   b.setAttribute('aria-pressed','false');
   b.innerHTML=`<span class="rail-dot" style="background:${m.dot};color:${m.dot}"></span><span>${m.name}</span>`;
-  b.onclick=()=>{ state.theta=m.deg; slider.value=m.deg; state.playing=false; updatePlayButton(); };
+  b.onclick=()=>setTheta(m.deg, true);
   picker.appendChild(b); m.btn=b;
 });
 
@@ -280,6 +283,16 @@ const BODY = {
   Autumn: 'The Sun slips back toward the equator. Northern days shorten, while the south moves toward summer.',
   Winter: 'The Northern Hemisphere leans away from the Sun. Sunlight arrives at a lower angle and daylight is shorter. The Southern Hemisphere is having summer.'
 };
+function setTheta(theta, announce = false) {
+  state.theta = theta;
+  slider.value = theta;
+  state.playing = false;
+  updatePlayButton();
+  if (announce) {
+    const northern = seasonName(theta);
+    setup.accessibility.announce(`${monthAt(theta)} selected. Northern Hemisphere: ${northern}. Southern Hemisphere: ${OPPOSITE[northern]}.`);
+  }
+}
 
 const _p=new THREE.Vector3(), _sunDir=new THREE.Vector3(), _v=new THREE.Vector3();
 const _perp=new THREE.Vector3(), _off=new THREE.Vector3(), _s=new THREE.Vector3(), _e=new THREE.Vector3(), _start=new THREE.Vector3();

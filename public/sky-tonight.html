@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260816-20">
+<link rel="stylesheet" href="common.css?v=20260818-5">
 <style>
   #sky { position: fixed; inset: 0; z-index: 0; display: block; }
   .info-panel { top: 128px; width: 340px; max-height: calc(100dvh - 244px); overflow: auto; }
@@ -112,7 +112,7 @@
 </div>
 
 <script type="module">
-import { SPACE } from './chrome.js?v=20260816-17';
+import { SPACE } from './chrome.js?v=20260818-5';
 import { SPACE_DATA } from './data.js';
 const clamp = SPACE.clamp;
 
@@ -160,6 +160,7 @@ function skyInfo(pos){
 // ── canvas orrery ──
 const canvas = document.getElementById('sky');
 const ctx = canvas.getContext('2d');
+const accessibility = SPACE.initSceneAccessibility();
 let W=0, H=0, DPR=1;
 const stars = [];
 function resize(){
@@ -244,8 +245,15 @@ function update(){
   slider.setAttribute('aria-valuetext', fmtDate(offset));
   renderList(offset);
 }
+function commitDate(){
+  update();
+  accessibility.announce(`Sky guide updated for ${fmtDate(offset)}.`);
+}
 slider.oninput = () => { offset = parseInt(slider.value,10); update(); };
-document.getElementById('today-btn').onclick = () => { offset=0; slider.value=0; update(); };
+slider.onchange = commitDate;
+document.getElementById('today-btn').onclick = () => {
+  offset=0; slider.value=0; commitDate();
+};
 update();
 
 let t0 = performance.now();

@@ -202,6 +202,51 @@ test('shared assets use a consistent cache-busting version', () => {
   expect(versions.size).toBe(1);
 });
 
+test('interactive scenes expose canvas descriptions and live announcements', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const chrome = readFileSync('chrome.js', 'utf8');
+  expect(common).toContain("renderer.domElement.setAttribute('aria-describedby', description.id)");
+  expect(common).toContain('createScene requires canvasDescriptionId to reference a text equivalent');
+  expect(chrome).toContain("status.setAttribute('aria-live', 'polite')");
+  expect(chrome).toContain("status.setAttribute('aria-atomic', 'true')");
+  expect(chrome).toContain('return { announce };');
+  expect(chrome).not.toContain('describe(text)');
+
+  for (const page of ['index.html', 'solar-system.html', 'seasons.html', 'scale-walk.html']) {
+    const html = readFileSync(page, 'utf8');
+    const description = html.match(/<p id="scene-description" class="sr-only">([^<]+)<\/p>/)?.[1];
+    expect(description?.length, `${page} needs a real scene-specific text equivalent`).toBeGreaterThan(80);
+    expect(html).toContain("canvasDescriptionId: 'scene-description'");
+    expect(html, `${page} needs user-triggered scene announcements`).toContain('setup.accessibility.announce(');
+  }
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  expect(sky).toContain('<canvas id="sky" aria-hidden="true"></canvas>');
+  expect(sky).toContain('SPACE.initSceneAccessibility()');
+  expect(sky).toContain('accessibility.announce(');
+  expect(readFileSync('missions.html', 'utf8')).toContain('<canvas id="bg" aria-hidden="true"></canvas>');
+});
+
+test('system reduced-motion preference uses play state as the animation policy', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const chrome = readFileSync('chrome.js', 'utf8');
+  expect(chrome).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+  expect(chrome).not.toContain('Reduced motion');
+  expect(common).toContain('sim.playing = !sim.playing');
+
+  const index = readFileSync('index.html', 'utf8');
+  const solar = readFileSync('solar-system.html', 'utf8');
+  const seasons = readFileSync('seasons.html', 'utf8');
+  for (const page of [index, solar, seasons]) {
+    expect(page).toContain('playing: !SPACE.prefersReducedMotion');
+    expect(page).toContain('SPACE.wirePlayPause(');
+  }
+  expect(index).toContain('if (sim.playing) {\n    sim.time +=');
+  expect(index).not.toContain('playing && !SPACE.prefersReducedMotion');
+  expect(index.match(/setPlaying\(!SPACE\.prefersReducedMotion\)/g)?.length).toBe(2);
+  expect(solar).toContain('if (sim.playing) {\n    sim.timeDays +=');
+  expect(seasons).toContain('if (state.playing){\n    state.theta=');
+});
+
 test('Three.js is loaded as a local ES module', () => {
   const commonJs = readFileSync('common.js', 'utf8');
   expect(commonJs).toMatch(/from\s+['"]three['"]/);

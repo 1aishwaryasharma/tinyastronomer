@@ -35,7 +35,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=20260815-2">
-<link rel="stylesheet" href="common.css?v=20260816-20">
+<link rel="stylesheet" href="common.css?v=20260818-5">
 <link rel="stylesheet" href="home.css?v=20260817-2">
 <style>
   /* Shared design tokens & component styles live in common.css.
@@ -162,6 +162,7 @@
 </div>
 
 <main id="canvas-container" aria-label="3D model of the Sun, Earth, and Moon"></main>
+<p id="scene-description" class="sr-only">An Earth-centred model of sunlight, the Moon, eclipses, tides, and auroras. Use the Observation presets for a text explanation of each view; the current explanation and facts appear in the information panel.</p>
 
 <div class="loader" id="loader" role="status" aria-live="polite">
   <div class="loader-text">Igniting the sun…</div>
@@ -276,7 +277,7 @@
 <script type="module" src="home-launch.js?v=20260817-2"></script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260816-17';
+import { SPACE } from './common.js?v=20260818-5';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 
@@ -285,6 +286,7 @@ import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-v
 // ─────────────────────────────────────────────────────────
 const setup = SPACE.createScene({
   canvasLabel: '3D model of the Sun, Earth, and Moon. Focus it and use the arrow keys to rotate, plus and minus to zoom.',
+  canvasDescriptionId: 'scene-description',
   shadowMap: true
 });
 if (!setup) throw new Error('WebGL unavailable');
@@ -1032,7 +1034,7 @@ function updateSolarStorm(dt) {
     return;
   }
 
-  if (sim.playing && !SPACE.prefersReducedMotion) solarWeather.elapsed += dt;
+  if (sim.playing) solarWeather.elapsed += dt;
   const cycle = solarWeather.elapsed % SOLAR_STORM_TIMELINE.duration;
   const fadeOut = 1 - THREE.MathUtils.smoothstep(cycle, ...SOLAR_STORM_TIMELINE.reset);
   const impactIn = THREE.MathUtils.smoothstep(cycle, ...SOLAR_STORM_TIMELINE.impactRise);
@@ -1049,7 +1051,7 @@ function updateTides(dt) {
     return;
   }
 
-  if (sim.playing && !SPACE.prefersReducedMotion) tideStudy.elapsed += dt;
+  if (sim.playing) tideStudy.elapsed += dt;
   const cycle = tideStudy.elapsed % TIDE_TIMELINE.duration;
   const keyframe = TIDE_TIMELINE.moonKeyframes.find(frame => cycle < frame.until);
 
@@ -1124,7 +1126,7 @@ const presetData = {
     body: 'The <strong>Moon\'s gravity</strong> pulls differently across Earth, helping create <strong>two broad tidal bulges</strong> in this simple model. Most coasts experience about two high and two low tides each lunar day, but some have only one pair and many have unequal tides. When the Sun and Moon line up, their effects combine into stronger <strong>spring tides</strong>; near quarter moon they partly offset one another, producing weaker <strong>neap tides</strong>.',
     fact: 'The bulges here are hugely exaggerated. Real tides are long waves reshaped by continents, ocean depth, coastlines, and Earth\'s rotation, so local tide times and heights need observations and detailed forecasts.',
     apply: () => {
-      setPlaying(true);
+      setPlaying(!SPACE.prefersReducedMotion);
       sim.speed = 1.6;
       speedSlider.value = Math.log2(1.6).toFixed(2);
       speedValue.textContent = '1.6×';
@@ -1177,7 +1179,7 @@ const presetData = {
     body: 'A <strong>solar flare</strong> can erupt alongside a <strong>coronal mass ejection</strong> (CME), which hurls magnetized plasma into space. An Earth-directed disturbance with a favourable magnetic orientation can transfer energy into our <strong>magnetic field</strong>. Charged particles are guided toward the poles and energize oxygen and nitrogen high in the atmosphere: oxygen commonly glows green or red, while nitrogen can glow blue or pink.',
     fact: 'This trip is compressed for the model. A fast Earth-directed CME can arrive in less than a day; slower ones may take several days. Auroral ovals circle the magnetic poles, and their glow is easiest to see on Earth\'s night side.',
     apply: () => {
-      setPlaying(true);
+      setPlaying(!SPACE.prefersReducedMotion);
       setAuroraVisible(true);
       sim.speed = 0.7;
       speedSlider.value = Math.log2(0.7).toFixed(2);
@@ -1197,7 +1199,7 @@ const presetData = {
   }
 };
 
-function applyPreset(name) {
+function applyPreset(name, announce = true) {
   sim.preset = name;
   // At this close, freely orbitable view the outer corona can cross the
   // viewport edge and make the bloom pass flash. Keep the Sun and its inner
@@ -1222,6 +1224,7 @@ function applyPreset(name) {
   infoBody.innerHTML = p.body;
   infoFactText.textContent = p.fact;
   p.apply();
+  if (announce) setup.accessibility.announce(`${p.title} selected. ${infoBody.textContent}`);
 }
 presetEls.forEach(el => {
   el.addEventListener('click', () => applyPreset(el.dataset.preset));
@@ -1395,7 +1398,7 @@ SPACE.createLoader(loadingManager);
 requestAnimationFrame(() => { animate(); });
 
 // Start with free preset info
-applyPreset('free');
+applyPreset('free', false);
 
 SPACE.buildNav('light');
 </script>

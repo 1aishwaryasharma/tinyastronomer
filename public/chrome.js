@@ -8,6 +8,24 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const MOBILE_HINT_KEY = 'ta-mobile-hint-seen';
 
+function initSceneAccessibility() {
+  const status = document.createElement('p');
+  status.className = 'sr-only';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  status.setAttribute('aria-atomic', 'true');
+  document.body.appendChild(status);
+
+  let announcementTimer = 0;
+  function announce(message) {
+    window.clearTimeout(announcementTimer);
+    // Clearing first makes repeat actions announce reliably.
+    status.textContent = '';
+    announcementTimer = window.setTimeout(() => { status.textContent = message; }, 30);
+  }
+  return { announce };
+}
+
 function setText(el, text) {
   if (el.__spaceText !== text) {
     el.__spaceText = text;
@@ -232,6 +250,7 @@ const SPACE = {
   initMobileHints,
   initMobileInfoPanels,
   prefersReducedMotion,
+  initSceneAccessibility,
   revealRailButton,
   setText
 };
@@ -244,6 +263,7 @@ export {
   clamp,
   initMobileHints,
   initMobileInfoPanels,
+  initSceneAccessibility,
   prefersReducedMotion,
   revealRailButton,
   setText
