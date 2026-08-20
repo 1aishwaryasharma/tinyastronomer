@@ -1,0 +1,10 @@
+context platform=ios
+open "Safari" "http://127.0.0.1:8765/" --relaunch
+wait "text" "Choose an observation" 20000
+gesture "fling" "up" 195 640 280
+wait "label=\"Grand Tour\"" 10000
+press "role=\"link\" label=\"Grand Tour\" || label=\"Grand Tour\""
+wait "text" "The Sun & Its Planets" 20000
+wait "label=\"Grand Tour controls, banner\"" 10000
+
+close

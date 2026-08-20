@@ -1,0 +1,6 @@
+---
+alwaysApply: false
+description: Bounded Argent behavior review for pull requests. Use when verifying a PR in the Electron observatory, running Argent QA, or updating a qa-* Chromium flow.
+---
+
+Follow `.argent/qa.md`. Pull requests replay the `qa-*` flows on Chromium (Electron). Local Simulator and emulator checks are agent-device (`.agent-device/qa.md`), not Argent. Infer acceptance criteria from the change, run the matching flow, and report ship / fail / uncertain with evidence from the running site. If the journey changed, repair or add the flow in the same PR and prove two consecutive Chromium passes — do not weaken checks.

@@ -62,6 +62,16 @@ for (const line of readIfPresent("_headers").split("\n")) {
   ]);
 }
 
+// This process is HTTP-only. Production _headers still sends
+// upgrade-insecure-requests; Safari would honor it here and then fail
+// same-origin navigations like /seasons because nothing listens on 443.
+for (const rule of headerRules) {
+  for (const header of rule.headers) {
+    if (header[0] !== 'Content-Security-Policy') continue;
+    header[1] = header[1].replace(/;?\s*upgrade-insecure-requests/g, '').trim();
+  }
+}
+
 const headersFor = (pathname: string) => {
   const headers = new Headers();
   for (const rule of headerRules) {

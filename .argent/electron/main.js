@@ -1,0 +1,81 @@
+const { app, BrowserWindow } = require('electron');
+const os = require('os');
+const path = require('path');
+
+const ALLOWED_SITE_HOSTS = new Set(['127.0.0.1', 'localhost']);
+const HEIGHT = 800;
+const SITE_URL = process.env.SITE_URL || 'http://127.0.0.1:8765/';
+const WIDTH = 1280;
+const useSwiftShader = process.env.ARGENT_ELECTRON_SWIFTSHADER === '1'
+  || process.platform === 'linux';
+
+const isAllowedSiteUrl = (rawUrl) => {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  return parsed.protocol === 'http:'
+    && ALLOWED_SITE_HOSTS.has(parsed.hostname.toLowerCase());
+};
+
+if (!isAllowedSiteUrl(SITE_URL)) {
+  console.error(
+    `SITE_URL must be http://127.0.0.1 or http://localhost, got ${SITE_URL}`,
+  );
+  process.exit(1);
+}
+
+// Must run before ready. GPU and SwiftShader need separate userData so a
+// software-GL run cannot poison Metal (and the reverse).
+app.setPath(
+  'userData',
+  path.join(
+    os.tmpdir(),
+    useSwiftShader
+      ? 'tinyastronomer-argent-electron-swiftshader'
+      : 'tinyastronomer-argent-electron-gpu',
+  ),
+);
+
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-webgl');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+if (useSwiftShader) {
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+  app.commandLine.appendSwitch('use-angle', 'swiftshader');
+  app.commandLine.appendSwitch('use-gl', 'angle');
+}
+
+const createWindow = () => {
+  const win = new BrowserWindow({
+    autoHideMenuBar: true,
+    backgroundColor: '#050810',
+    height: HEIGHT,
+    show: true,
+    useContentSize: true,
+    webPreferences: {
+      backgroundThrottling: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      partition: 'argent-qa',
+      preload: path.join(__dirname, 'preload.js'),
+      sandbox: true,
+      webgl: true,
+    },
+    width: WIDTH,
+  });
+  win.setMenuBarVisibility(false);
+  win.loadURL(SITE_URL);
+};
+
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+});
+app.whenReady().then(createWindow);
+app.on('window-all-closed', () => app.quit());

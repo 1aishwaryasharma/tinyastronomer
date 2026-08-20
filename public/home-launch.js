@@ -17,17 +17,26 @@ function setSceneAvailable(available) {
   });
 }
 
-function openLightStudy(event) {
-  event.preventDefault();
+function showLightStudy() {
   document.body.classList.add('is-study-open');
   deck.hidden = true;
   setSceneAvailable(true);
-  window.history.replaceState(null, '', '#light-study');
+  if (window.location.hash !== '#light-study') {
+    window.history.replaceState(null, '', '#light-study');
+  }
   requestAnimationFrame(() => document.querySelector('canvas')?.focus());
+}
+
+function openLightStudy(event) {
+  event.preventDefault();
+  showLightStudy();
 }
 
 setSceneAvailable(false);
 launchStudies.forEach((launchStudy) => launchStudy.addEventListener('click', openLightStudy));
+window.addEventListener('hashchange', () => {
+  if (window.location.hash === '#light-study') showLightStudy();
+});
 
 const sceneObserver = new MutationObserver((entries) => {
   if (deck.hidden) return;
@@ -39,5 +48,5 @@ const sceneObserver = new MutationObserver((entries) => {
 sceneObserver.observe(document.body, { childList: true });
 
 if (window.location.hash === '#light-study') {
-  openLightStudy(new Event('click'));
+  showLightStudy();
 }

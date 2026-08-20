@@ -1,0 +1,33 @@
+steps:
+  - run: ../fragments/boot-electron.yaml
+  - echo: On launch deck. Open Light Study.
+  - tap:
+      id: launch-light-study
+  - await:
+      timeout: 20000
+      visible:
+        id: light-study-header
+  - await:
+      idle: true
+  - echo: On Light Study. Open Explore to go to the next stop.
+  - tap:
+      id: scene-nav-btn
+  - await:
+      timeout: 10000
+      visible:
+        id: scene-menu
+  - await:
+      idle: true
+  - echo: Explore menu is open. Take Next stop to Seasons.
+  - tap:
+      id: scene-next
+  - await:
+      timeout: 20000
+      visible:
+        id: seasons-header
+  - await:
+      idle: true
+  - await:
+      hidden:
+        id: launch-title
+      timeout: 10000

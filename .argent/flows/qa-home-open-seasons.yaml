@@ -1,0 +1,15 @@
+steps:
+  - run: ../fragments/boot-electron.yaml
+  - echo: On launch deck. Open Seasons.
+  - tap:
+      id: launch-seasons
+  - await:
+      timeout: 20000
+      visible:
+        id: seasons-header
+  - await:
+      idle: true
+  - await:
+      hidden:
+        id: launch-title
+      timeout: 10000

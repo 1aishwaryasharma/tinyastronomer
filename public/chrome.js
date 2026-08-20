@@ -130,6 +130,7 @@ function buildNav(currentKey) {
   nav.setAttribute('aria-label', 'Explore scenes');
   const btn = document.createElement('button');
   btn.className = 'scene-nav-btn';
+  btn.id = 'scene-nav-btn';
   btn.type = 'button';
   btn.textContent = '✦ Explore';
   btn.setAttribute('aria-expanded', 'false');
@@ -150,6 +151,7 @@ function buildNav(currentKey) {
   SCENES.forEach((s, i) => {
     const a = document.createElement('a');
     a.href = s.href;
+    a.id = 'scene-link-' + s.key;
     if (s.key === currentKey) {
       a.className = 'current';
       a.setAttribute('aria-current', 'page');
@@ -168,6 +170,7 @@ function buildNav(currentKey) {
     : null;
   const nextLink = document.createElement('a');
   nextLink.className = 'scene-next';
+  nextLink.id = 'scene-next';
   nextLink.href = (next || SCENES[0]).href;
   nextLink.innerHTML = next
     ? 'Next stop · ' + next.label + ' <span class="arrow">→</span>'

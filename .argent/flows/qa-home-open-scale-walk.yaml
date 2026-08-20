@@ -1,0 +1,15 @@
+steps:
+  - run: ../fragments/boot-electron.yaml
+  - echo: On launch deck. Open Scale Walk.
+  - tap:
+      id: launch-scale-walk
+  - await:
+      timeout: 20000
+      visible:
+        id: scale-walk-header
+  - await:
+      idle: true
+  - await:
+      hidden:
+        id: launch-title
+      timeout: 10000

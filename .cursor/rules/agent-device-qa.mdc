@@ -1,0 +1,6 @@
+---
+alwaysApply: false
+description: Local agent-device QA on iOS Simulator Safari or Android emulator Chrome. Use when testing the observatory on a booted simulator or emulator, or updating a qa-* .ad flow.
+---
+
+Follow `.agent-device/qa.md`. These flows are local only; pull-request CI is Argent Chromium. Infer acceptance criteria from the change, run the matching `qa-*` flow on Safari or Chrome, and report ship / fail / uncertain with evidence from the running site.

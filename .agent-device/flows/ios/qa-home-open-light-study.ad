@@ -1,0 +1,7 @@
+context platform=ios
+open "Safari" "http://127.0.0.1:8765/" --relaunch
+wait "text" "Choose an observation" 20000
+press "role=\"link\" label=\"Light Study\" || label=\"Light Study\""
+wait "text" "A world half-lit" 15000
+wait "label=\"Pause simulation\"" 10000
+close

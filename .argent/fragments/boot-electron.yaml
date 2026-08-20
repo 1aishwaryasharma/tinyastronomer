@@ -1,0 +1,13 @@
+steps:
+  - echo: Electron shell loaded the launch deck. Expect launch-title.
+  - launch:
+      chromium:
+        args:
+          - --no-sandbox
+        path: ../electron
+  - await:
+      timeout: 15000
+      visible:
+        id: launch-title
+  - await:
+      idle: true

@@ -1,0 +1,12 @@
+context platform=ios
+open "Safari" "http://127.0.0.1:8765/" --relaunch
+wait "text" "Choose an observation" 20000
+press "role=\"link\" label=\"Light Study\" || label=\"Light Study\""
+wait "label=\"Pause simulation\"" 15000
+press "role=\"other\" label=\"✦ EXPLORE\" || label=\"✦ EXPLORE\""
+wait "text" "Next stop" 10000
+press "role=\"link\" label=\"NEXT STOP · SEASONS →\" || label=\"NEXT STOP · SEASONS →\""
+wait "text" "Why We Have Seasons" 20000
+wait "label=\"Seasons controls, banner\"" 10000
+
+close

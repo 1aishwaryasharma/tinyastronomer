@@ -19,11 +19,14 @@ test("only the public directory is deployable", () => {
   const wrangler = JSON.parse(readFileSync("../wrangler.jsonc", "utf8"));
   expect(wrangler.assets.directory).toBe("./public");
   for (const privatePath of [
-    ".git",
-    "site.test.ts",
-    "wrangler.jsonc",
-    "README.md",
-    "dev-server.ts",
+    '.agent-device',
+    '.argent',
+    '.git',
+    'dev-server.ts',
+    'qa-selectors.test.ts',
+    'README.md',
+    'site.test.ts',
+    'wrangler.jsonc',
   ]) {
     expect(existsSync(privatePath), `${privatePath} must not be a public asset`).toBe(false);
   }
@@ -771,7 +774,7 @@ test('every page carries the wordmark and links it home', () => {
     // Keep the visible name as one token; <em> can split it for crawlers.
     expect(brand![0]).not.toMatch(/<em>/i);
     // It sits inside the fixed header, which is pointer-events: none.
-    expect(html.indexOf(brand![0])).toBeGreaterThan(html.indexOf('<header class="header">'));
+    expect(html.indexOf(brand![0])).toBeGreaterThan(html.indexOf('<header class="header"'));
   }
   expect(commonCss).toMatch(/\.brand\s*\{[\s\S]*?pointer-events:\s*auto/);
 });

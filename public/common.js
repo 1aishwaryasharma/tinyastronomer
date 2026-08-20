@@ -16,7 +16,7 @@ import {
   prefersReducedMotion,
   revealRailButton,
   setText
-} from './chrome.js?v=20260818-5';
+} from './chrome.js?v=20260819-1';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js';
@@ -544,6 +544,9 @@ float fbm(vec3 p) {
     const composer = opts.composer || null;
     const bloomPass = opts.bloomPass || null;
     const fxaaPass = opts.fxaaPass || null;
+    // QA shells set globalThis.taQa so compositor jitter cannot flash the
+    // drawing buffer. Production never sets this.
+    const freezeTiers = Boolean(globalThis.taQa);
     // Late-bound: scenes often create lights after the governor. Call
     // setShadowLight(light) once the light exists.
     let shadowLight = opts.shadowLight || null;
@@ -602,6 +605,7 @@ float fbm(vec3 p) {
 
     return {
       frame(rawDt, interactionActive = false) {
+        if (freezeTiers) return;
         if (!(rawDt > 0) || rawDt > MAX_SAMPLE_S) return;
         const now = performance.now();
         // Shader compilation and active orbiting are both transient work.
@@ -717,7 +721,12 @@ float fbm(vec3 p) {
   function createRenderer(opts) {
     let renderer = null;
     try {
-      renderer = new THREE.WebGLRenderer(opts || {});
+      renderer = new THREE.WebGLRenderer({
+        failIfMajorPerformanceCaveat: false,
+        powerPreference: 'high-performance',
+        preserveDrawingBuffer: Boolean(globalThis.taQa),
+        ...(opts || {}),
+      });
     } catch (err) {
       failWebGL(err);
       return null;
@@ -745,7 +754,7 @@ float fbm(vec3 p) {
       opts.far != null ? opts.far : 2000
     );
 
-    const renderer = createRenderer({ antialias: false, alpha: false });
+    const renderer = createRenderer({ alpha: false, antialias: false });
     if (!renderer) return null;
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
