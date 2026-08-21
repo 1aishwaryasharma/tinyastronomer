@@ -49,8 +49,8 @@
     border: 1px solid var(--line); border-radius: 3px; padding: 22px 22px 20px; position: relative; overflow: hidden;
     transition: transform 0.25s ease, border-color 0.25s ease;
   }
-  .card:hover { transform: translateY(-4px); border-color: var(--accent-edge, rgba(244,197,96,0.4)); }
-  .card .glow { position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; filter: blur(30px); opacity: 0.35; }
+  .card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--mission-accent) 40%, transparent); }
+  .card .glow { background: var(--mission-accent); position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; filter: blur(30px); opacity: 0.35; }
   .card .icon { font-size: 30px; line-height: 1; }
   .card .yr { float: right; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.14em; color: var(--ink-faint); margin-top: 8px; }
   .card h3 { font-size: 20px; font-weight: 400; margin: 14px 0 2px; }
@@ -111,12 +111,6 @@
 <body>
 
 <canvas id="bg" aria-hidden="true"></canvas>
-<noscript>
-  <div class="loader loader-js-required" role="alert">
-    <div class="loader-text">JavaScript is required to explore this page.</div>
-  </div>
-</noscript>
-
 <header class="header" id="missions-header" aria-label="Missions">
   <div>
     <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
@@ -136,19 +130,19 @@
     </details>
   </div>
   <div class="grid">
-    <article class="card" style="--accent-edge: #6ab0ff66">
-      <div class="glow" style="background:#6ab0ff"></div>
+    <article class="card" style="--mission-accent: #6ab0ff">
+      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🛰️</span><span class="yr">Launched 1977</span>
       <h3>Voyager 1 &amp; 2</h3>
       <div class="tag">The farthest travellers</div>
       <p class="blurb">Two probes that flew past the giant planets and kept going. Both have crossed the heliopause — the edge of the Sun's protective bubble — into interstellar space. Each carries a Golden Record of sounds and pictures from Earth.</p>
       <div class="wow"><span class="lbl">✦ Wow</span>Voyager 1 is so far away that its faint radio whisper takes <b>nearly 24 hours</b> to reach Earth.</div>
-      <div class="live"><span class="lbl">⟡ Live estimate</span>Voyager 1 is about <b><span id="voyager-dist">…</span> km</b> from the Sun. This linear estimate starts from a January 2026 reference and adds about 16.9 km each second.</div>
+      <div class="live"><span class="lbl">⟡ Live estimate</span>Voyager 1 is about <b><span id="voyager-dist">25,320,225,956</span> km</b> from the Sun. This linear estimate starts from a January 2026 reference and adds about 16.9 km each second.</div>
       <a class="source" href="https://science.nasa.gov/mission/voyager/where-are-voyager-1-and-voyager-2-now/">NASA mission source ↗</a>
       <a class="go" href="/solar-system#neptune">Visit Neptune, its last flyby →</a>
     </article>
-    <article class="card" style="--accent-edge: #d0674a66">
-      <div class="glow" style="background:#d0674a"></div>
+    <article class="card" style="--mission-accent: #d0674a">
+      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🤖</span><span class="yr">Launched 2020</span>
       <h3>Perseverance</h3>
       <div class="tag">A robot geologist on Mars</div>
@@ -157,8 +151,8 @@
       <a class="source" href="https://science.nasa.gov/mission/mars-2020-perseverance/">NASA mission source ↗</a>
       <a class="go" href="/solar-system#mars">Visit Mars, where it explores →</a>
     </article>
-    <article class="card" style="--accent-edge: #f4c56066">
-      <div class="glow" style="background:#f4c560"></div>
+    <article class="card" style="--mission-accent: #f4c560">
+      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🔭</span><span class="yr">Launched 2021</span>
       <h3>James Webb Space Telescope</h3>
       <div class="tag">A time machine for light</div>
@@ -167,8 +161,8 @@
       <a class="source" href="https://science.nasa.gov/mission/webb/">NASA mission source ↗</a>
       <a class="go" href="/solar-system">Tour the neighbourhood Webb looks beyond →</a>
     </article>
-    <article class="card" style="--accent-edge: #e6d3a066">
-      <div class="glow" style="background:#e6d3a0"></div>
+    <article class="card" style="--mission-accent: #e6d3a0">
+      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🪐</span><span class="yr">Launched 1997</span>
       <h3>Cassini</h3>
       <div class="tag">Saturn's explorer</div>
@@ -177,8 +171,8 @@
       <a class="source" href="https://science.nasa.gov/mission/cassini/">NASA mission source ↗</a>
       <a class="go" href="/solar-system#saturn">Visit Saturn and its rings →</a>
     </article>
-    <article class="card" style="--accent-edge: #c9b8a066">
-      <div class="glow" style="background:#c9b8a0"></div>
+    <article class="card" style="--mission-accent: #c9b8a0">
+      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🚀</span><span class="yr">Launched 2006</span>
       <h3>New Horizons</h3>
       <div class="tag">The Pluto flyby</div>
@@ -187,8 +181,8 @@
       <a class="source" href="https://science.nasa.gov/mission/new-horizons/">NASA mission source ↗</a>
       <a class="go" href="/solar-system#pluto">Visit Pluto in the Grand Tour →</a>
     </article>
-    <article class="card" style="--accent-edge: #e8924866">
-      <div class="glow" style="background:#e89248"></div>
+    <article class="card" style="--mission-accent: #e89248">
+      <div class="glow"></div>
       <span class="icon" aria-hidden="true">☀️</span><span class="yr">Launched 2018</span>
       <h3>Parker Solar Probe</h3>
       <div class="tag">The Sun-toucher</div>
@@ -197,8 +191,8 @@
       <a class="source" href="https://science.nasa.gov/mission/parker-solar-probe/">NASA mission source ↗</a>
       <a class="go" href="/">Meet the Sun in the Light Study →</a>
     </article>
-    <article class="card" style="--accent-edge: #c9c5b866">
-      <div class="glow" style="background:#c9c5b8"></div>
+    <article class="card" style="--mission-accent: #c9c5b8">
+      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🌕</span><span class="yr">Launched 1969</span>
       <h3>Apollo 11</h3>
       <div class="tag">First footsteps on the Moon</div>
@@ -207,8 +201,8 @@
       <a class="source" href="https://www.nasa.gov/mission/apollo-11/">NASA mission source ↗</a>
       <a class="go" href="/">Watch the Moon's phases in the Light Study →</a>
     </article>
-    <article class="card" style="--accent-edge: #a9e0e266">
-      <div class="glow" style="background:#a9e0e2"></div>
+    <article class="card" style="--mission-accent: #a9e0e2">
+      <div class="glow"></div>
       <span class="icon" aria-hidden="true">✨</span><span class="yr">Launched 1990</span>
       <h3>Hubble Telescope</h3>
       <div class="tag">Our eye in the sky</div>
@@ -228,19 +222,18 @@ import { SPACE } from './chrome.js?v=20260819-1';
 // Live Voyager 1 distance: a linear estimate from a recent epoch. The probe
 // recedes at ~16.9 km/s, so the last digits visibly climb every second.
 const voyagerDist = document.getElementById('voyager-dist');
-if (voyagerDist) {
-  const EPOCH = Date.UTC(2026, 0, 1);
-  // JPL Horizons heliocentric vector for Voyager 1 on 2026-01-01,
-  // rounded radial speed. This remains an explicitly labelled estimate.
-  const KM_AT_EPOCH = 25320225956;
-  const KM_PER_SEC = 16.8825;
-  const tick = () => {
-    const km = KM_AT_EPOCH + ((Date.now() - EPOCH) / 1000) * KM_PER_SEC;
-    voyagerDist.textContent = Math.round(km).toLocaleString('en-US');
-  };
-  tick();
-  setInterval(tick, 1000);
-}
+const EPOCH = Date.UTC(2026, 0, 1);
+// JPL Horizons heliocentric vector for Voyager 1 on 2026-01-01, rounded radial
+// speed. This remains an explicitly labelled estimate. The markup ships the
+// epoch figure so a no-JS read still matches the sentence around it.
+const KM_AT_EPOCH = 25320225956;
+const KM_PER_SEC = 16.8825;
+const tick = () => {
+  const km = KM_AT_EPOCH + ((Date.now() - EPOCH) / 1000) * KM_PER_SEC;
+  voyagerDist.textContent = Math.round(km).toLocaleString('en-US');
+};
+tick();
+setInterval(tick, 1000);
 
 // subtle drifting starfield background
 const canvas = document.getElementById('bg'), ctx = canvas.getContext('2d');
