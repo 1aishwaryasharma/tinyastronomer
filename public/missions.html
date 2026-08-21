@@ -50,7 +50,7 @@
     transition: transform 0.25s ease, border-color 0.25s ease;
   }
   .card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--mission-accent) 40%, transparent); }
-  .card .glow { background: var(--mission-accent); position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; filter: blur(30px); opacity: 0.35; }
+  .card::before { content: ''; background: var(--mission-accent); position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; filter: blur(30px); opacity: 0.35; }
   .card .icon { font-size: 30px; line-height: 1; }
   .card .yr { float: right; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.14em; color: var(--ink-faint); margin-top: 8px; }
   .card h3 { font-size: 20px; font-weight: 400; margin: 14px 0 2px; }
@@ -131,7 +131,6 @@
   </div>
   <div class="grid">
     <article class="card" style="--mission-accent: #6ab0ff">
-      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🛰️</span><span class="yr">Launched 1977</span>
       <h3>Voyager 1 &amp; 2</h3>
       <div class="tag">The farthest travellers</div>
@@ -142,7 +141,6 @@
       <a class="go" href="/solar-system#neptune">Visit Neptune, its last flyby →</a>
     </article>
     <article class="card" style="--mission-accent: #d0674a">
-      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🤖</span><span class="yr">Launched 2020</span>
       <h3>Perseverance</h3>
       <div class="tag">A robot geologist on Mars</div>
@@ -152,7 +150,6 @@
       <a class="go" href="/solar-system#mars">Visit Mars, where it explores →</a>
     </article>
     <article class="card" style="--mission-accent: #f4c560">
-      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🔭</span><span class="yr">Launched 2021</span>
       <h3>James Webb Space Telescope</h3>
       <div class="tag">A time machine for light</div>
@@ -162,7 +159,6 @@
       <a class="go" href="/solar-system">Tour the neighbourhood Webb looks beyond →</a>
     </article>
     <article class="card" style="--mission-accent: #e6d3a0">
-      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🪐</span><span class="yr">Launched 1997</span>
       <h3>Cassini</h3>
       <div class="tag">Saturn's explorer</div>
@@ -172,7 +168,6 @@
       <a class="go" href="/solar-system#saturn">Visit Saturn and its rings →</a>
     </article>
     <article class="card" style="--mission-accent: #c9b8a0">
-      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🚀</span><span class="yr">Launched 2006</span>
       <h3>New Horizons</h3>
       <div class="tag">The Pluto flyby</div>
@@ -182,7 +177,6 @@
       <a class="go" href="/solar-system#pluto">Visit Pluto in the Grand Tour →</a>
     </article>
     <article class="card" style="--mission-accent: #e89248">
-      <div class="glow"></div>
       <span class="icon" aria-hidden="true">☀️</span><span class="yr">Launched 2018</span>
       <h3>Parker Solar Probe</h3>
       <div class="tag">The Sun-toucher</div>
@@ -192,7 +186,6 @@
       <a class="go" href="/">Meet the Sun in the Light Study →</a>
     </article>
     <article class="card" style="--mission-accent: #c9c5b8">
-      <div class="glow"></div>
       <span class="icon" aria-hidden="true">🌕</span><span class="yr">Launched 1969</span>
       <h3>Apollo 11</h3>
       <div class="tag">First footsteps on the Moon</div>
@@ -202,7 +195,6 @@
       <a class="go" href="/">Watch the Moon's phases in the Light Study →</a>
     </article>
     <article class="card" style="--mission-accent: #a9e0e2">
-      <div class="glow"></div>
       <span class="icon" aria-hidden="true">✨</span><span class="yr">Launched 1990</span>
       <h3>Hubble Telescope</h3>
       <div class="tag">Our eye in the sky</div>
