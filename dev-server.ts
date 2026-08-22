@@ -102,7 +102,12 @@ const configFiles = new Set(["/_headers", "/_redirects", "/_routes.json", "/_wor
 
 const fileAt = (relativePath: string) => {
   // Reject traversal before touching the filesystem.
-  const resolved = decodeURIComponent(new URL(`.${relativePath}`, `file://${root}/`).pathname);
+  let resolved: string;
+  try {
+    resolved = decodeURIComponent(new URL(`.${relativePath}`, `file://${root}/`).pathname);
+  } catch {
+    return null;
+  }
   if (!resolved.startsWith(`${root}/`)) return null;
   if (configFiles.has(resolved.slice(root.length))) return null;
   try {
@@ -122,7 +127,12 @@ const server = Bun.serve({
   port,
   fetch(request) {
     const url = new URL(request.url);
-    const pathname = decodeURIComponent(url.pathname);
+    let pathname: string;
+    try {
+      pathname = decodeURIComponent(url.pathname);
+    } catch {
+      return new Response("Bad request\n", { status: 400 });
+    }
 
     // 1. _redirects
     const rule = redirects.find((candidate) => candidate.from === pathname);

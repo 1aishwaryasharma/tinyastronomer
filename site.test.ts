@@ -599,6 +599,11 @@ test('missions link to the worlds they explored', () => {
   for (const target of ['#neptune', '#mars', '#saturn', '#pluto']) {
     expect(missions).toContain(`/solar-system${target}`);
   }
+  const lightStudyGoes = [...missions.matchAll(/<a class="go" href="([^"]+)">[^<]*Light Study[^<]*<\/a>/g)];
+  expect(lightStudyGoes).toHaveLength(2);
+  for (const match of lightStudyGoes) {
+    expect(match[1]).toBe('/#light-study');
+  }
   expect(missions).toContain('id="voyager-dist"');
   expect(missions).toContain('KM_PER_SEC');
 });
