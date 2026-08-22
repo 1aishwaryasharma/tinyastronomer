@@ -100,9 +100,18 @@ const contentTypes: Record<string, string> = {
 // Cloudflare treats these as configuration and never serves them as assets.
 const configFiles = new Set(["/_headers", "/_redirects", "/_routes.json", "/_worker.js"]);
 
+const safeDecode = (value: string): string | null => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+};
+
 const fileAt = (relativePath: string) => {
-  // Reject traversal before touching the filesystem.
-  const resolved = decodeURIComponent(new URL(`.${relativePath}`, `file://${root}/`).pathname);
+  // Reject traversal before touching the filesystem. Paths are already decoded
+  // at fetch; fileURLToPath only undoes encoding URL() applies to the file: URL.
+  const resolved = fileURLToPath(new URL(`.${relativePath}`, `file://${root}/`));
   if (!resolved.startsWith(`${root}/`)) return null;
   if (configFiles.has(resolved.slice(root.length))) return null;
   try {
@@ -118,59 +127,66 @@ const redirect = (location: string, status: number, pathname: string) => {
   return new Response(null, { status, headers });
 };
 
-const server = Bun.serve({
-  port,
-  fetch(request) {
-    const url = new URL(request.url);
-    const pathname = decodeURIComponent(url.pathname);
+export const handleRequest = (request: Request) => {
+  const url = new URL(request.url);
+  const pathname = safeDecode(url.pathname);
+  if (pathname === null) {
+    return new Response("Bad request\n", { status: 400, headers: headersFor("/*") });
+  }
 
-    // 1. _redirects
-    const rule = redirects.find((candidate) => candidate.from === pathname);
-    if (rule) return redirect(rule.to + url.search, rule.status, pathname);
+  // 1. _redirects
+  const rule = redirects.find((candidate) => candidate.from === pathname);
+  if (rule) return redirect(rule.to + url.search, rule.status, pathname);
 
-    // 2. html_handling. Cloudflare uses 308 for its own normalisation, which
-    //    preserves the method and, like a 301, is permanent.
-    if (htmlHandling !== "none") {
-      const asHtml = pathname.replace(/\/$/, "");
-      if (pathname.endsWith(".html") && fileAt(pathname)) {
-        const extensionless = pathname === "/index.html" ? "/" : pathname.slice(0, -".html".length);
-        return redirect(extensionless + url.search, 308, pathname);
-      }
-      if (
-        htmlHandling === "drop-trailing-slash" &&
-        pathname !== "/" &&
-        pathname.endsWith("/") &&
-        (fileAt(`${asHtml}.html`) || fileAt(`${asHtml}/index.html`))
-      ) {
-        return redirect(asHtml + url.search, 308, pathname);
-      }
+  // 2. html_handling. Cloudflare uses 308 for its own normalisation, which
+  //    preserves the method and, like a 301, is permanent.
+  if (htmlHandling !== "none") {
+    const asHtml = pathname.replace(/\/$/, "");
+    if (pathname.endsWith(".html") && fileAt(pathname)) {
+      const extensionless = pathname === "/index.html" ? "/" : pathname.slice(0, -".html".length);
+      return redirect(extensionless + url.search, 308, pathname);
     }
-
-    // 3. static assets, with the extensionless → .html rewrite
-    const candidates =
-      pathname === "/"
-        ? ["/index.html"]
-        : [pathname, `${pathname}.html`, `${pathname.replace(/\/$/, "")}/index.html`];
-    for (const candidate of candidates) {
-      const resolved = fileAt(candidate);
-      if (!resolved) continue;
-      const headers = headersFor(pathname);
-      const extension = resolved.split(".").pop()?.toLowerCase() ?? "";
-      headers.set("Content-Type", contentTypes[extension] ?? "application/octet-stream");
-      headers.set("Cache-Control", "no-store");
-      return new Response(Bun.file(resolved), { headers });
+    if (
+      htmlHandling === "drop-trailing-slash" &&
+      pathname !== "/" &&
+      pathname.endsWith("/") &&
+      (fileAt(`${asHtml}.html`) || fileAt(`${asHtml}/index.html`))
+    ) {
+      return redirect(asHtml + url.search, 308, pathname);
     }
+  }
 
-    // 4. not_found_handling
-    if (notFoundHandling === "single-page-application" && fileAt("/index.html")) {
-      const headers = headersFor(pathname);
-      headers.set("Content-Type", contentTypes.html);
-      return new Response(Bun.file(`${root}/index.html`), { headers });
-    }
-    return new Response("Not found\n", { status: 404, headers: headersFor(pathname) });
-  },
-});
+  // 3. static assets, with the extensionless → .html rewrite
+  const candidates =
+    pathname === "/"
+      ? ["/index.html"]
+      : [pathname, `${pathname}.html`, `${pathname.replace(/\/$/, "")}/index.html`];
+  for (const candidate of candidates) {
+    const resolved = fileAt(candidate);
+    if (!resolved) continue;
+    const headers = headersFor(pathname);
+    const extension = resolved.split(".").pop()?.toLowerCase() ?? "";
+    headers.set("Content-Type", contentTypes[extension] ?? "application/octet-stream");
+    headers.set("Cache-Control", "no-store");
+    return new Response(Bun.file(resolved), { headers });
+  }
 
-console.log(`tinyastronomer → http://localhost:${server.port}`);
-console.log(`  html_handling: ${htmlHandling} · not_found_handling: ${notFoundHandling}`);
-console.log(`  ${redirects.length} redirect rule(s), ${headerRules.length} header block(s)`);
+  // 4. not_found_handling
+  if (notFoundHandling === "single-page-application" && fileAt("/index.html")) {
+    const headers = headersFor(pathname);
+    headers.set("Content-Type", contentTypes.html);
+    return new Response(Bun.file(`${root}/index.html`), { headers });
+  }
+  return new Response("Not found\n", { status: 404, headers: headersFor(pathname) });
+};
+
+if (import.meta.main) {
+  const server = Bun.serve({
+    port,
+    fetch: handleRequest,
+  });
+
+  console.log(`tinyastronomer → http://localhost:${server.port}`);
+  console.log(`  html_handling: ${htmlHandling} · not_found_handling: ${notFoundHandling}`);
+  console.log(`  ${redirects.length} redirect rule(s), ${headerRules.length} header block(s)`);
+}
