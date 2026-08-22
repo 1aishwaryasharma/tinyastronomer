@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { handleRequest } from "./dev-server.ts";
 import {
   advanceTrackedCoordinate,
   relaxedPlanetDistance,
@@ -91,6 +92,23 @@ test("security headers cover every static response and authorize current inline 
     expect(liveHashes.has(declared), `CSP lists ${declared}, which no inline script matches`).toBe(
       true,
     );
+  }
+});
+
+test("dev server answers invalid percent-encoding with 400 and security headers", async () => {
+  const response = handleRequest(new Request("http://127.0.0.1/%"));
+  expect(response.status).toBe(400);
+  expect(await response.text()).toBe("Bad request\n");
+  for (const name of [
+    "Content-Security-Policy",
+    "Cross-Origin-Opener-Policy",
+    "Permissions-Policy",
+    "Referrer-Policy",
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "X-Frame-Options",
+  ]) {
+    expect(response.headers.get(name), `${name} missing on 400`).toBeTruthy();
   }
 });
 
