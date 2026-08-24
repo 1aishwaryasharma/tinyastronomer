@@ -2,10 +2,13 @@
 # canonicals. Cloudflare's html_handling would redirect them on its own, but
 # only temporarily, which leaves the old URLs sitting in Google's index. These
 # explicit 301s are evaluated before html_handling and make the consolidation
-# permanent.
-/index.html        /               301
-/missions.html     /missions       301
-/scale-walk.html   /scale-walk     301
-/seasons.html      /seasons        301
-/sky-tonight.html  /sky-tonight    301
-/solar-system.html /solar-system   301
+# permanent. Destinations are the absolute https canonicals so Location is
+# the target URL itself, not a relative path like `/` that still has to be
+# resolved (and that leaves HTTP /index.html as an extra hop after the
+# platform HTTPS upgrade).
+/index.html        https://tinyastronomer.com/               301
+/missions.html     https://tinyastronomer.com/missions       301
+/scale-walk.html   https://tinyastronomer.com/scale-walk     301
+/seasons.html      https://tinyastronomer.com/seasons        301
+/sky-tonight.html  https://tinyastronomer.com/sky-tonight    301
+/solar-system.html https://tinyastronomer.com/solar-system   301
