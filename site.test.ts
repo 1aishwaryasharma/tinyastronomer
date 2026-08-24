@@ -867,6 +867,11 @@ test('indexing signals use directly served canonical URLs', () => {
   const sitemap = readFileSync('sitemap.xml', 'utf8');
   const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
   expect(sitemapUrls).toEqual(Object.values(canonicalUrls));
+  expect(sitemap, 'sitemap must not list index.html').not.toMatch(/index\.html/);
+  expect(
+    sitemapUrls.some((url) => url.startsWith('http://')),
+    'sitemap must not list http:// loc URLs',
+  ).toBe(false);
 
   const chrome = readFileSync('chrome.js', 'utf8');
   expect(chrome, 'shared navigation must not advertise redirecting .html URLs').not.toMatch(
@@ -877,7 +882,8 @@ test('indexing signals use directly served canonical URLs', () => {
 test('every .html URL permanently redirects to its canonical', () => {
   // Cloudflare's own html_handling redirect is temporary, so Google keeps the
   // .html URL in the index instead of folding it into the canonical. These
-  // explicit 301s are what actually consolidate the two.
+  // explicit 301s are what actually consolidate the two. Absolute https
+  // destinations keep Location the canonical URL itself, not a relative `/`.
   const rules = new Map(
     readFileSync('_redirects', 'utf8')
       .split('\n')
@@ -890,13 +896,25 @@ test('every .html URL permanently redirects to its canonical', () => {
   );
 
   for (const page of pages) {
+    const canonical =
+      page === 'index.html'
+        ? 'https://tinyastronomer.com/'
+        : `https://tinyastronomer.com/${page.slice(0, -'.html'.length)}`;
     const rule = rules.get(`/${page}`);
     expect(rule, `/${page} has no redirect rule`).toBeDefined();
-    expect(rule!.to, `/${page} must redirect to its canonical path`).toBe(
-      page === 'index.html' ? '/' : `/${page.slice(0, -'.html'.length)}`,
-    );
+    expect(rule!.to, `/${page} must redirect to its absolute canonical`).toBe(canonical);
     expect(rule!.status, `/${page} must redirect permanently, not temporarily`).toBe('301');
+
+    // handleRequest already applies _redirects before html_handling, so
+    // /index.html is not an untested Cloudflare-only path.
+    for (const origin of ['https://tinyastronomer.com', 'http://tinyastronomer.com']) {
+      const response = handleRequest(new Request(`${origin}/${page}`));
+      expect(response.status, `GET ${origin}/${page} must 301, not 200 or 404`).toBe(301);
+      expect(response.headers.get('Location'), `GET ${origin}/${page} Location`).toBe(canonical);
+    }
   }
+
+  expect(handleRequest(new Request('https://tinyastronomer.com/')).status).toBe(200);
 
   for (const from of rules.keys()) {
     expect(pages, `${from} redirects from a page that no longer exists`).toContain(from.slice(1));
