@@ -5,4 +5,5 @@ wait "text" "Choose an observation" 20000
 press "id=\"launch-light-study\""
 wait "id=\"light-study-header\"" 20000
 wait "id=\"play-btn\"" 10000
+wait "id=\"save-view-btn\"" 10000
 close

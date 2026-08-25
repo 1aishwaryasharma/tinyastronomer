@@ -581,7 +581,8 @@ body,
 .header,
 .info-panel,
 .controls,
-.toggle-btn {
+.toggle-btn,
+.save-view-btn {
   font-family: var(--font-body);
 }
 

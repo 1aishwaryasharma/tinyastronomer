@@ -427,16 +427,48 @@ canvas { display: block; }
 .divider { width: 1px; height: 24px; background: var(--line); }
 
 .toggle-group { display: flex; gap: 8px; flex-wrap: nowrap; }
-.toggle-btn {
+.toggle-btn,
+.save-view-btn {
   background: transparent; border: 1px solid var(--line); color: var(--ink-dim);
   padding: 7px 12px; font-family: 'Fragment Mono', monospace;
   font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
   border-radius: 2px; cursor: pointer; transition: all 0.2s; min-height: 32px;
 }
-.toggle-btn:hover { color: var(--ink); border-color: rgba(232,236,244,0.2); }
+.toggle-btn:hover,
+.save-view-btn:hover { color: var(--ink); border-color: rgba(232,236,244,0.2); }
 .toggle-btn.active {
   color: var(--accent); border-color: rgba(244, 197, 96, 0.4);
   background: rgba(244, 197, 96, 0.05);
+}
+.save-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.save-view-btn svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+.save-view-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* Hide chrome for a wallpaper capture so a brief resize cannot composite UI
+   onto the sky. The PNG itself is the WebGL buffer, not a page screenshot. */
+html.is-capturing-view .header,
+html.is-capturing-view .info-panel,
+html.is-capturing-view .side-rail,
+html.is-capturing-view .controls,
+html.is-capturing-view .date-controls,
+html.is-capturing-view .walk-controls,
+html.is-capturing-view .hint,
+html.is-capturing-view .label-3d,
+html.is-capturing-view .scene-nav,
+html.is-capturing-view .loader {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* ──── Hint ──── */
@@ -820,7 +852,8 @@ canvas { display: block; }
   .speed-group { gap: 8px; }
   .speed-slider { width: 88px; }
   .speed-value { min-width: 40px; }
-  .toggle-btn {
+  .toggle-btn,
+  .save-view-btn {
     padding: 7px 10px;
     font-size: 8px;
   }
@@ -881,6 +914,7 @@ canvas { display: block; }
     height: 18px;
   }
   .toggle-btn,
+  .save-view-btn,
   .scene-nav-btn,
   .mobile-info-toggle,
   .walk-btn,
@@ -957,7 +991,8 @@ canvas { display: block; }
     gap: 6px 8px !important;
   }
   .speed-slider { width: 72px; }
-  .toggle-btn { padding: 5px 8px; font-size: 8px; }
+  .toggle-btn,
+  .save-view-btn { padding: 5px 8px; font-size: 8px; }
 
   .scale-note,
   .stage {

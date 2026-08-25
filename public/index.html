@@ -35,8 +35,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=20260815-2">
-<link rel="stylesheet" href="common.css?v=20260818-5">
-<link rel="stylesheet" href="home.css?v=20260819-4">
+<link rel="stylesheet" href="common.css?v=20260825-1">
+<link rel="stylesheet" href="home.css?v=20260825-1">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -256,6 +256,11 @@
     <button type="button" class="toggle-btn" id="toggle-axis" aria-pressed="false">Axis</button>
     <button type="button" class="toggle-btn" id="toggle-aurora" aria-pressed="false">Aurora</button>
   </div>
+  <div class="divider"></div>
+  <button type="button" class="save-view-btn" id="save-view-btn" aria-label="Save this view as a wallpaper image">
+    <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 3.2C2 2.5 2.5 2 3.2 2h.9l.4-.8C4.6 1 4.8.9 5 .9h2c.2 0 .4.1.5.3l.4.8h.9c.7 0 1.2.5 1.2 1.2v5.6c0 .7-.5 1.2-1.2 1.2H3.2C2.5 10 2 9.5 2 8.8zM6 8.2A2 2 0 1 0 6 4.2a2 2 0 0 0 0 4z"/></svg>
+    Save view
+  </button>
 </div>
 
 <div class="hint">
@@ -277,7 +282,7 @@
 <script type="module" src="home-launch.js?v=20260819-1"></script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260819-4';
+import { SPACE } from './common.js?v=20260825-1';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
 
@@ -1396,6 +1401,16 @@ function animate() {
 
 SPACE.createLoader(loadingManager);
 requestAnimationFrame(() => { animate(); });
+
+function syncBloomOutputScale() {
+  sunUniforms.uOutputScale.value = setup.bloomPass && setup.bloomPass.enabled ? Math.PI : 1;
+}
+
+SPACE.bindSaveViewControl(setup, {
+  getObservation: () => infoTitle.textContent,
+  prepare: syncBloomOutputScale,
+  restore: syncBloomOutputScale
+});
 
 // Start with free preset info
 applyPreset('free', false);

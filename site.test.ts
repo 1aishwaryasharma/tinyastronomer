@@ -1029,3 +1029,310 @@ test('Three.js +Y carries the near face toward geographic east', () => {
   const x = Math.sin(theta);
   expect(x).toBeGreaterThan(0);
 });
+
+test('Light Study can save the current view as a wallpaper image', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const common = readFileSync('common.js', 'utf8');
+  const commonCss = readFileSync('common.css', 'utf8');
+
+  expect(index).toContain('id="save-view-btn"');
+  expect(index).toContain('aria-label="Save this view as a wallpaper image"');
+  expect(index).toContain('Save view');
+  expect(index).not.toContain('Set wallpaper');
+  expect(index).not.toContain('set wallpaper');
+  expect(index).toContain('SPACE.bindSaveViewControl(setup');
+  expect(index).toContain('getObservation: () => infoTitle.textContent');
+
+  expect(common).toContain('preserveDrawingBuffer: Boolean(globalThis.taQa)');
+  expect(common).not.toContain('preserveDrawingBuffer: true');
+  expect(common).toContain('function captureSceneView');
+  expect(common).toContain('function wallpaperSize');
+  expect(common).toContain("root.classList.add(CAPTURE_HIDE_CLASS)");
+  expect(common).toContain('copyDrawingBuffer(canvas)');
+  expect(common).toContain("toBlob((blob) => {");
+  expect(common).toContain("'image/png'");
+  expect(common).toContain('applyCaptureQuality');
+  expect(common).toContain('restoreLiveSurface(setup, snap)');
+  expect(common).toContain('Refusing to save the on-screen buffer as a wallpaper');
+
+  expect(commonCss).toContain('html.is-capturing-view .header');
+  expect(commonCss).toContain('html.is-capturing-view .scene-nav');
+  expect(commonCss).toContain('.save-view-btn');
+
+  for (const file of ['seasons.html', 'solar-system.html', 'scale-walk.html', 'missions.html', 'sky-tonight.html']) {
+    expect(readFileSync(file, 'utf8'), `${file} should not grow a Save view control`).not.toContain('save-view-btn');
+  }
+});
+
+function loadCaptureHelpers(windowLike: object, documentLike: object) {
+  const common = readFileSync('common.js', 'utf8');
+  const start = common.indexOf('// ── High-resolution view capture');
+  const end = common.indexOf('// Body catalog lives in data.js');
+  expect(start).toBeGreaterThan(0);
+  expect(end).toBeGreaterThan(start);
+  return new Function(
+    'window',
+    'document',
+    `${common.slice(start, end)}; return {
+      wallpaperSize, wallpaperFilename, captureAttempts, captureSceneView
+    };`,
+  )(windowLike, documentLike);
+}
+
+test('wallpaper size keeps the current framing and meets phone wallpaper minima', () => {
+  const { wallpaperSize, wallpaperFilename, captureAttempts } = loadCaptureHelpers(
+    { innerWidth: 390, innerHeight: 844 },
+    { documentElement: { classList: { add() {}, remove() {} } } },
+  );
+
+  const portrait = wallpaperSize(390, 844);
+  expect(portrait.portrait).toBe(true);
+  expect(portrait.width).toBeGreaterThanOrEqual(1440);
+  expect(portrait.height).toBeGreaterThanOrEqual(2560);
+  expect(portrait.width / portrait.height).toBeCloseTo(390 / 844, 3);
+
+  const landscape = wallpaperSize(1280, 800);
+  expect(landscape.portrait).toBe(false);
+  expect(landscape.width).toBeGreaterThanOrEqual(2560);
+  expect(landscape.height).toBeGreaterThanOrEqual(1440);
+  expect(landscape.width / landscape.height).toBeCloseTo(1280 / 800, 3);
+
+  const attempts = captureAttempts(390, 844, 8192);
+  expect(attempts.length).toBe(2);
+  expect(attempts[0].width).toBe(portrait.width);
+  expect(attempts[1].width).toBeLessThan(attempts[0].width);
+  expect(attempts[1].width).toBeGreaterThanOrEqual(1080);
+
+  expect(wallpaperFilename('light-study', 'Solar Eclipse')).toBe('light-study-solar-eclipse.png');
+  expect(wallpaperFilename('light-study', 'Day & Night')).toBe('light-study-day-and-night.png');
+  expect(wallpaperFilename('light-study', 'A world half-lit')).toBe('light-study-a-world-half-lit.png');
+});
+
+test('wallpaper capture resizes the composer, copies pixels, then restores the live surface', () => {
+  const classes = new Set<string>();
+  const copies: Array<{ width: number; height: number }> = [];
+  const sizes: string[] = [];
+  const documentLike = {
+    documentElement: {
+      classList: {
+        add(name: string) { classes.add(name); },
+        remove(name: string) { classes.delete(name); },
+      },
+      offsetHeight: 1,
+    },
+    createElement(tag: string) {
+      expect(tag).toBe('canvas');
+      const copy = {
+        width: 0,
+        height: 0,
+        getContext() {
+          return { drawImage() {} };
+        },
+      };
+      copies.push(copy);
+      return copy;
+    },
+  };
+  const windowLike = { innerWidth: 390, innerHeight: 844, devicePixelRatio: 2 };
+  const { captureSceneView, wallpaperSize } = loadCaptureHelpers(windowLike, documentLike);
+  const target = wallpaperSize(390, 844);
+
+  let pr = 2;
+  const canvas = {
+    width: 780,
+    height: 1688,
+    style: { width: '390px', height: '844px' },
+  };
+  const bloomPass = { enabled: false };
+  const qualityState = { bloomEnabled: false, shadowSize: 512 };
+  const renderer = {
+    getPixelRatio() { return pr; },
+    setPixelRatio(value: number) { pr = value; },
+    setSize(width: number, height: number) {
+      sizes.push(`renderer:${width}x${height}@${pr}`);
+      canvas.width = Math.round(width * pr);
+      canvas.height = Math.round(height * pr);
+    },
+    getContext() {
+      return {
+        drawingBufferWidth: canvas.width,
+        drawingBufferHeight: canvas.height,
+        getParameter() { return 8192; },
+        isContextLost() { return false; },
+      };
+    },
+    domElement: canvas,
+  };
+  const composer = {
+    setPixelRatio(value: number) { sizes.push(`composer.pr:${value}`); },
+    setSize(width: number, height: number) { sizes.push(`composer:${width}x${height}`); },
+  };
+  const camera = {
+    aspect: 390 / 844,
+    updateProjectionMatrix() {},
+  };
+  let liveRenders = 0;
+  let captureRenders = 0;
+  const setup = {
+    renderer,
+    composer,
+    camera,
+    bloomPass,
+    quality: {
+      snapshotQuality() { return { ...qualityState }; },
+      applyCaptureQuality() {
+        qualityState.bloomEnabled = true;
+        qualityState.shadowSize = 2048;
+        bloomPass.enabled = true;
+      },
+      restoreQuality(state: { bloomEnabled: boolean; shadowSize: number }) {
+        qualityState.bloomEnabled = state.bloomEnabled;
+        qualityState.shadowSize = state.shadowSize;
+        bloomPass.enabled = state.bloomEnabled;
+      },
+    },
+    render() {
+      if (canvas.width >= target.width * 0.9) captureRenders++;
+      else liveRenders++;
+    },
+  };
+
+  const result = captureSceneView(setup, {
+    observation: 'Solar Eclipse',
+    prepare() {
+      expect(bloomPass.enabled).toBe(true);
+      expect(pr).toBe(1);
+    },
+  });
+
+  expect(result.filename).toBe('light-study-solar-eclipse.png');
+  expect(result.width).toBe(target.width);
+  expect(result.height).toBe(target.height);
+  expect(copies[0]?.width).toBe(target.width);
+  expect(copies[0]?.height).toBe(target.height);
+  expect(captureRenders).toBe(1);
+  expect(liveRenders).toBeGreaterThanOrEqual(1);
+  expect(pr).toBe(2);
+  expect(canvas.width).toBe(780);
+  expect(canvas.height).toBe(1688);
+  expect(camera.aspect).toBeCloseTo(390 / 844, 5);
+  expect(bloomPass.enabled).toBe(false);
+  expect(qualityState.shadowSize).toBe(512);
+  expect(classes.has('is-capturing-view')).toBe(false);
+  expect(sizes.some((entry) => entry === `renderer:${target.width}x${target.height}@1`)).toBe(true);
+  expect(sizes.filter((entry) => entry.startsWith('renderer:')).at(-1)).toBe('renderer:390x844@2');
+});
+
+test('wallpaper capture steps down once on GPU memory failure and still saves a sharp image', () => {
+  const copies: Array<{ width: number; height: number }> = [];
+  const documentLike = {
+    documentElement: {
+      classList: { add() {}, remove() {} },
+      offsetHeight: 1,
+    },
+    createElement() {
+      const copy = {
+        width: 0,
+        height: 0,
+        getContext() { return { drawImage() {} }; },
+      };
+      copies.push(copy);
+      return copy;
+    },
+  };
+  const windowLike = { innerWidth: 390, innerHeight: 844, devicePixelRatio: 2 };
+  const { captureSceneView, captureAttempts } = loadCaptureHelpers(windowLike, documentLike);
+  const attempts = captureAttempts(390, 844, 8192);
+  expect(attempts.length).toBe(2);
+
+  let pr = 2;
+  let failFirst = true;
+  const canvas = { width: 780, height: 1688, style: { width: '390px', height: '844px' } };
+  const renderer = {
+    getPixelRatio() { return pr; },
+    setPixelRatio(value: number) { pr = value; },
+    setSize(width: number, height: number) {
+      if (failFirst && width === attempts[0].width) {
+        failFirst = false;
+        throw new Error('GPU memory');
+      }
+      canvas.width = Math.round(width * pr);
+      canvas.height = Math.round(height * pr);
+    },
+    getContext() {
+      return {
+        drawingBufferWidth: canvas.width,
+        drawingBufferHeight: canvas.height,
+        getParameter() { return 8192; },
+        isContextLost() { return false; },
+      };
+    },
+    domElement: canvas,
+  };
+  const setup = {
+    renderer,
+    composer: { setPixelRatio() {}, setSize() {} },
+    camera: { aspect: 390 / 844, updateProjectionMatrix() {} },
+    quality: {
+      snapshotQuality() { return { bloomEnabled: true, shadowSize: 2048 }; },
+      applyCaptureQuality() {},
+      restoreQuality() {},
+    },
+    render() {},
+  };
+
+  const result = captureSceneView(setup, { filename: 'light-study-solar-eclipse.png' });
+  expect(result.width).toBe(attempts[1].width);
+  expect(result.height).toBe(attempts[1].height);
+  expect(result.width).toBeGreaterThanOrEqual(1080);
+  expect(result.height).toBeGreaterThanOrEqual(1920);
+  expect(copies.some((copy) => copy.width === 780 && copy.height === 1688)).toBe(false);
+  expect(pr).toBe(2);
+  expect(canvas.width).toBe(780);
+});
+
+test('quality governor can raise bloom for one capture frame without changing the live tier', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const governor = common.slice(
+    common.indexOf('function createQualityGovernor'),
+    common.indexOf('// ── Keyboard camera control')
+  );
+  let now = 0;
+  const createQualityGovernor = new Function(
+    'performance',
+    'window',
+    `${governor}; return createQualityGovernor;`,
+  )(
+    { now: () => now },
+    { innerWidth: 1280, innerHeight: 800 },
+  );
+  const bloomPass = { enabled: true };
+  const quality = createQualityGovernor({
+    renderer: { setPixelRatio() {}, setSize() {} },
+    composer: { setPixelRatio() {}, setSize() {} },
+    bloomPass,
+  });
+
+  now = 2000;
+  for (let frame = 0; frame < 30; frame++) {
+    now += 50;
+    quality.frame(0.05, false);
+  }
+  expect(quality.tier).toBe(1);
+  expect(bloomPass.enabled).toBe(true);
+
+  now += 4000;
+  for (let frame = 0; frame < 30; frame++) {
+    now += 50;
+    quality.frame(0.05, false);
+  }
+  expect(quality.tier).toBe(2);
+  expect(bloomPass.enabled).toBe(false);
+  const degraded = quality.snapshotQuality();
+  quality.applyCaptureQuality();
+  expect(bloomPass.enabled).toBe(true);
+  expect(quality.tier).toBe(2);
+  quality.restoreQuality(degraded);
+  expect(bloomPass.enabled).toBe(false);
+  expect(quality.tier).toBe(2);
+});

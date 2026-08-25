@@ -579,6 +579,16 @@ float fbm(vec3 p) {
     const FLAP_WINDOW_MS = 12000;
     const MAX_DWELL_S = 600;
 
+    function setShadowMapSize(size) {
+      if (!shadowLight || !shadowLight.shadow || size == null) return;
+      if (shadowLight.shadow.mapSize.x === size) return;
+      shadowLight.shadow.mapSize.set(size, size);
+      if (shadowLight.shadow.map) {
+        shadowLight.shadow.map.dispose();
+        shadowLight.shadow.map = null;
+      }
+    }
+
     function apply() {
       const pr = PR_STEPS[tier];
       const w = window.innerWidth, h = window.innerHeight;
@@ -594,13 +604,7 @@ float fbm(vec3 p) {
         fxaaPass.setSize(w * pr, h * pr);
       }
       if (bloomPass) bloomPass.enabled = tier < 2;
-      if (shadowLight && shadowLight.shadow && shadowLight.shadow.mapSize.x !== SHADOW_STEPS[tier]) {
-        shadowLight.shadow.mapSize.set(SHADOW_STEPS[tier], SHADOW_STEPS[tier]);
-        if (shadowLight.shadow.map) {
-          shadowLight.shadow.map.dispose();
-          shadowLight.shadow.map = null;
-        }
-      }
+      setShadowMapSize(SHADOW_STEPS[tier]);
     }
 
     return {
@@ -642,6 +646,23 @@ float fbm(vec3 p) {
       setShadowLight(light) {
         shadowLight = light || null;
         apply();
+      },
+      snapshotQuality() {
+        return {
+          bloomEnabled: bloomPass ? bloomPass.enabled : null,
+          shadowSize: shadowLight && shadowLight.shadow ? shadowLight.shadow.mapSize.x : null
+        };
+      },
+      // One wallpaper frame should match the pretty view even if the live
+      // governor has already stepped bloom or shadows down.
+      applyCaptureQuality() {
+        if (bloomPass) bloomPass.enabled = true;
+        setShadowMapSize(SHADOW_STEPS[0]);
+      },
+      restoreQuality(state) {
+        if (!state) return;
+        if (bloomPass && state.bloomEnabled != null) bloomPass.enabled = state.bloomEnabled;
+        setShadowMapSize(state.shadowSize);
       },
       get tier() { return tier; }
     };
@@ -843,6 +864,9 @@ float fbm(vec3 p) {
     }
 
     const setup = { accessibility, bloomPass, camera, composer, fxaaPass, quality, render, renderer, resize, scene };
+    setup.captureView = function (opts) {
+      return captureSceneView(setup, opts);
+    };
     if (/[?&]diag=1\b/.test(window.location.search)) installDiagnostics(setup);
     return setup;
   }
@@ -987,12 +1011,276 @@ float fbm(vec3 p) {
     return hide;
   }
 
+  // ── High-resolution view capture ──
+  // Phone CSS pixels × pixelRatio≤2 are too small for a wallpaper. Capture
+  // resizes the shared composer to a wallpaper buffer, reads PNG pixels in
+  // the same turn (2D copy, not preserveDrawingBuffer), then restores the
+  // live renderer. GPU OOM steps down once; it never silently saves the
+  // on-screen buffer.
+  const CAPTURE_HIDE_CLASS = 'is-capturing-view';
+  const WALLPAPER_PORTRAIT = { width: 1440, height: 2560 };
+  const WALLPAPER_LANDSCAPE = { width: 2560, height: 1440 };
+
+  function slugifyFilename(text) {
+    return String(text || '')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function wallpaperFilename(study, observation) {
+    const studySlug = slugifyFilename(study) || 'tinyastronomer';
+    const observationSlug = slugifyFilename(observation);
+    return (observationSlug ? studySlug + '-' + observationSlug : studySlug) + '.png';
+  }
+
+  function wallpaperSize(viewW, viewH, maxEdge) {
+    const width = Math.max(1, Number(viewW) || 1);
+    const height = Math.max(1, Number(viewH) || 1);
+    const portrait = height >= width;
+    const min = portrait ? WALLPAPER_PORTRAIT : WALLPAPER_LANDSCAPE;
+    const scale = Math.max(min.width / width, min.height / height);
+    let outW = Math.round(width * scale);
+    let outH = Math.round(height * scale);
+    if (maxEdge && Math.max(outW, outH) > maxEdge) {
+      const clampScale = maxEdge / Math.max(outW, outH);
+      outW = Math.max(1, Math.round(outW * clampScale));
+      outH = Math.max(1, Math.round(outH * clampScale));
+    }
+    return { width: outW, height: outH, portrait };
+  }
+
+  function captureAttempts(viewW, viewH, maxEdge) {
+    const full = wallpaperSize(viewW, viewH, maxEdge);
+    const steppedEdge = Math.max(1, Math.round(Math.max(full.width, full.height) * 0.75));
+    const cap = maxEdge ? Math.min(maxEdge, steppedEdge) : steppedEdge;
+    const stepped = wallpaperSize(viewW, viewH, cap);
+    const attempts = [{ width: full.width, height: full.height }];
+    if (stepped.width !== full.width || stepped.height !== full.height) {
+      attempts.push({ width: stepped.width, height: stepped.height });
+    }
+    return attempts;
+  }
+
+  function copyDrawingBuffer(source) {
+    if (!source || !source.width || !source.height) {
+      throw new Error('Nothing to copy');
+    }
+    const copy = document.createElement('canvas');
+    copy.width = source.width;
+    copy.height = source.height;
+    const ctx = copy.getContext('2d');
+    if (!ctx || typeof ctx.drawImage !== 'function') {
+      throw new Error('2D copy unavailable');
+    }
+    ctx.drawImage(source, 0, 0);
+    return copy;
+  }
+
+  function pngBlobFromCanvas(canvas) {
+    return new Promise((resolve, reject) => {
+      if (typeof canvas.toBlob === 'function') {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('PNG encode failed'));
+        }, 'image/png');
+        return;
+      }
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        const comma = dataUrl.indexOf(',');
+        const binary = atob(dataUrl.slice(comma + 1));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        resolve(new Blob([bytes], { type: 'image/png' }));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  function snapshotLiveSurface(setup) {
+    const renderer = setup.renderer;
+    const canvas = renderer.domElement;
+    return {
+      pixelRatio: renderer.getPixelRatio(),
+      width: window.innerWidth,
+      height: window.innerHeight,
+      cameraAspect: setup.camera.aspect,
+      drawingWidth: canvas.width,
+      drawingHeight: canvas.height,
+      canvasStyleWidth: canvas.style.width,
+      canvasStyleHeight: canvas.style.height,
+      quality: setup.quality && typeof setup.quality.snapshotQuality === 'function'
+        ? setup.quality.snapshotQuality()
+        : null
+    };
+  }
+
+  function restoreLiveSurface(setup, snap) {
+    const renderer = setup.renderer;
+    const composer = setup.composer;
+    const camera = setup.camera;
+    renderer.setPixelRatio(snap.pixelRatio);
+    renderer.setSize(snap.width, snap.height);
+    if (snap.canvasStyleWidth) renderer.domElement.style.width = snap.canvasStyleWidth;
+    if (snap.canvasStyleHeight) renderer.domElement.style.height = snap.canvasStyleHeight;
+    camera.aspect = snap.cameraAspect;
+    camera.updateProjectionMatrix();
+    if (composer) {
+      composer.setPixelRatio(snap.pixelRatio);
+      composer.setSize(snap.width, snap.height);
+    }
+    if (setup.quality && typeof setup.quality.restoreQuality === 'function') {
+      setup.quality.restoreQuality(snap.quality);
+    }
+  }
+
+  function renderCapturePass(setup, size, prepare) {
+    const renderer = setup.renderer;
+    const composer = setup.composer;
+    const camera = setup.camera;
+    renderer.setPixelRatio(1);
+    renderer.setSize(size.width, size.height, false);
+    camera.aspect = size.width / size.height;
+    camera.updateProjectionMatrix();
+    if (composer) {
+      composer.setPixelRatio(1);
+      composer.setSize(size.width, size.height);
+    }
+    if (setup.quality && typeof setup.quality.applyCaptureQuality === 'function') {
+      setup.quality.applyCaptureQuality();
+    }
+    if (typeof prepare === 'function') prepare();
+
+    const gl = renderer.getContext && renderer.getContext();
+    if (gl && gl.isContextLost && gl.isContextLost()) {
+      throw new Error('WebGL context lost');
+    }
+
+    setup.render();
+
+    const canvas = renderer.domElement;
+    const drawnW = (gl && gl.drawingBufferWidth) || canvas.width;
+    const drawnH = (gl && gl.drawingBufferHeight) || canvas.height;
+    if (drawnW < size.width * 0.9 || drawnH < size.height * 0.9) {
+      throw new Error('Capture buffer smaller than requested');
+    }
+    return copyDrawingBuffer(canvas);
+  }
+
+  function captureSceneView(setup, opts) {
+    opts = opts || {};
+    const renderer = setup.renderer;
+    const viewW = opts.viewWidth != null ? opts.viewWidth : window.innerWidth;
+    const viewH = opts.viewHeight != null ? opts.viewHeight : window.innerHeight;
+    const gl = renderer.getContext && renderer.getContext();
+    const maxEdge = (gl && typeof gl.getParameter === 'function')
+      ? gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)
+      : 8192;
+    const attempts = captureAttempts(viewW, viewH, maxEdge);
+    const root = document.documentElement;
+    const snap = snapshotLiveSurface(setup);
+    root.classList.add(CAPTURE_HIDE_CLASS);
+    void root.offsetHeight;
+
+    let copy = null;
+    let lastError = null;
+    try {
+      for (let i = 0; i < attempts.length; i++) {
+        try {
+          copy = renderCapturePass(setup, attempts[i], opts.prepare);
+          break;
+        } catch (err) {
+          lastError = err;
+          restoreLiveSurface(setup, snap);
+        }
+      }
+    } finally {
+      restoreLiveSurface(setup, snap);
+      root.classList.remove(CAPTURE_HIDE_CLASS);
+      if (typeof opts.restore === 'function') opts.restore();
+      try { setup.render(); } catch (err) { /* live frame is best-effort */ }
+    }
+
+    if (!copy) throw lastError || new Error('Could not capture this view');
+    if (
+      copy.width === snap.drawingWidth
+      && copy.height === snap.drawingHeight
+      && (copy.width < attempts[0].width * 0.9 || copy.height < attempts[0].height * 0.9)
+    ) {
+      throw new Error('Refusing to save the on-screen buffer as a wallpaper');
+    }
+
+    return {
+      canvas: copy,
+      width: copy.width,
+      height: copy.height,
+      filename: opts.filename || wallpaperFilename(opts.study || 'light-study', opts.observation)
+    };
+  }
+
+  function bindSaveViewControl(setup, opts) {
+    opts = opts || {};
+    const btn = opts.button || document.getElementById(opts.buttonId || 'save-view-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+      const observation = typeof opts.getObservation === 'function'
+        ? opts.getObservation()
+        : (opts.observation || '');
+      const filename = wallpaperFilename(opts.study || 'light-study', observation);
+      const announce = setup.accessibility && setup.accessibility.announce;
+      try {
+        const result = captureSceneView(setup, {
+          filename,
+          observation,
+          prepare: opts.prepare,
+          restore: opts.restore
+        });
+        Promise.resolve(pngBlobFromCanvas(result.canvas)).then((blob) => {
+          downloadBlob(blob, result.filename);
+          if (announce) announce('Saved wallpaper image of this view.');
+        }).catch((err) => {
+          console.error(err);
+          if (announce) announce('Could not save this view.');
+        }).then(() => {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+        });
+      } catch (err) {
+        console.error(err);
+        if (announce) announce('Could not save this view.');
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+      }
+    });
+  }
+
   // Body catalog lives in data.js (SPACE_DATA). Navigation and
   // mobile chrome live in chrome.js (imported above).
 
   return {
     bindCameraKeys,
+    bindSaveViewControl,
     buildNav,
+    captureSceneView,
     clamp,
     createAurora,
     createLoader,
@@ -1012,6 +1300,8 @@ float fbm(vec3 p) {
     revealRailButton,
     seededRandom,
     setText,
+    wallpaperFilename,
+    wallpaperSize,
     wirePlayPause
   };
 })();
