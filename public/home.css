@@ -581,9 +581,25 @@ body,
 .header,
 .info-panel,
 .controls,
-.toggle-btn,
-.save-view-btn {
+.toggle-btn {
   font-family: var(--font-body);
+}
+
+#save-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#save-view-btn svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+
+#save-view-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .brand,

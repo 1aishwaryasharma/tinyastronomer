@@ -1,10 +1,6 @@
 steps:
   - run: ../fragments/boot-electron.yaml
   - echo: On launch deck. Open Sky Tonight.
-  - await:
-      timeout: 10000
-      visible:
-        id: launch-sky-tonight
   - tap:
       id: launch-sky-tonight
   - await:

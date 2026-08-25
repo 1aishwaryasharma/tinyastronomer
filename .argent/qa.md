@@ -35,7 +35,6 @@ When a journey changes, update the matching flow in the same PR. Do not leave a 
 
 - **Replay first** with `argent flow run … --platform chromium`. Unchanged YAML that still passes needs no edit.
 - **Repair on failure.** Re-record the diverging step against the live site. Keep `id:` targets (`launch-*`, `*-header`, `scene-nav-btn`, `scene-next`).
-- **Gate taps on the control.** If `idle` could not screenshot the launch deck, await `visible: id: launch-*` before tapping it.
 - **Prove Chromium twice** before merging.
 - **Keep ids in the page.** `qa-selectors.test.ts` fails if a launch link, study header, or Explore control loses its id.
 

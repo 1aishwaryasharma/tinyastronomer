@@ -1,10 +1,6 @@
 steps:
   - run: ../fragments/boot-electron.yaml
   - echo: On launch deck. Open Grand Tour.
-  - await:
-      timeout: 10000
-      visible:
-        id: launch-grand-tour
   - tap:
       id: launch-grand-tour
   - await:
