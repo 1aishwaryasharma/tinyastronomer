@@ -17,6 +17,7 @@ const requiredIds: Record<string, string[]> = {
     'launch-title',
     'light-study-header',
     'play-btn',
+    'save-view-btn',
   ],
   'missions.html': ['missions-header'],
   'scale-walk.html': ['scale-walk-header'],

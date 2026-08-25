@@ -1,6 +1,10 @@
 steps:
   - run: ../fragments/boot-electron.yaml
   - echo: On launch deck. Open Light Study.
+  - await:
+      timeout: 10000
+      visible:
+        id: launch-light-study
   - tap:
       id: launch-light-study
   - await:
@@ -13,6 +17,10 @@ steps:
       timeout: 15000
       visible:
         id: play-btn
+  - await:
+      timeout: 10000
+      visible:
+        id: save-view-btn
   - await:
       hidden:
         id: launch-title

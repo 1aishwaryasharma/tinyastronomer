@@ -2,7 +2,7 @@
 
 An accessible, responsive collection of interactive solar-system experiences:
 
-- **Light Study** — Sun, Earth, and Moon lighting, phases, and eclipses
+- **Light Study** — Sun, Earth, and Moon lighting, phases, and eclipses. Save the current view as a wallpaper image.
 - **Grand Tour** — the planets, dwarf planets, belts, moons, and a comet
 - **Seasons** — Earth's tilt, sunlight, solstices, and equinoxes
 - **Scale Walk** — proportional planetary distances and size analogies
