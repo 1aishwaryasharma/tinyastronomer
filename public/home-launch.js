@@ -1,6 +1,8 @@
 const deck = document.querySelector('#launch-deck');
 const launchStudies = document.querySelectorAll('[data-launch-study]');
 const canvasContainer = document.querySelector('#canvas-container');
+const earthViewport = document.querySelector('#home-earth-viewport');
+earthViewport.append(canvasContainer);
 const isSceneNode = (node) => (
   node.nodeType === Node.ELEMENT_NODE
   && node !== deck
@@ -18,13 +20,16 @@ function setSceneAvailable(available) {
 }
 
 function showLightStudy() {
+  const wasOpen = document.body.classList.contains('is-study-open');
   document.body.classList.add('is-study-open');
+  document.body.append(canvasContainer);
   deck.hidden = true;
   setSceneAvailable(true);
   if (window.location.hash !== '#light-study') {
     window.history.replaceState(null, '', '#light-study');
   }
   requestAnimationFrame(() => document.querySelector('canvas')?.focus());
+  if (!wasOpen) window.dispatchEvent(new Event('light-study-open'));
 }
 
 function openLightStudy(event) {

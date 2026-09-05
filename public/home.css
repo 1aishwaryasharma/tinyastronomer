@@ -1,3 +1,6 @@
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R5 V4
+ * Existing observatory theme · Earth preview and typography have separate space.
+ */
 html,
 body {
   overflow-x: clip;
@@ -36,7 +39,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: var(--color-overlay);
+  background: var(--color-space);
   pointer-events: none;
 }
 
@@ -63,7 +66,7 @@ body {
   justify-content: space-between;
   gap: var(--space-md);
   padding: max(var(--space-md), env(safe-area-inset-top)) var(--page-gutter) var(--space-md);
-  background: var(--color-overlay);
+  background: var(--color-space);
 }
 
 .observatory-wordmark {
@@ -120,12 +123,12 @@ body {
 
 .observatory-map {
   min-height: calc(100dvh - 4.75rem);
-  padding: var(--space-xl) var(--page-gutter) var(--space-lg);
+  padding: var(--space-md) var(--page-gutter) var(--space-lg);
 }
 
 .observatory-intro {
   max-width: 37rem;
-  padding: var(--space-lg) 0 var(--space-xl);
+  padding: var(--space-md) 0 0;
   animation: observatory-arrive var(--dur-long) var(--ease-out) both;
 }
 
@@ -147,7 +150,7 @@ body {
 
 .observatory-intro h1 {
   min-width: 0;
-  max-width: 12ch;
+  max-width: 17ch;
   margin: 0;
   font-family: var(--font-display);
   font-size: var(--text-display);
@@ -172,9 +175,40 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  margin: var(--space-xl) 0 0;
+  margin: var(--space-md) 0 0;
   color: var(--color-muted);
   letter-spacing: 0.06em;
+}
+
+.observatory-viewport {
+  position: relative;
+  height: clamp(17rem, 70vw, 28rem);
+  margin-block: var(--space-sm);
+  pointer-events: auto;
+}
+
+@media (max-width: 39.999rem) {
+  .observatory-intro h1 {
+    font-size: clamp(2.1rem, 9vw, 2.65rem);
+  }
+
+  .observatory-lede {
+    font-size: var(--text-base);
+  }
+}
+
+body:not(.is-study-open) #canvas-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Stars gently disappear into the surrounding sky without a panel edge. */
+  mask-image: radial-gradient(ellipse closest-side, black 72%, transparent 100%);
+}
+
+body:not(.is-study-open) #canvas-container canvas {
+  display: block;
+  touch-action: none;
 }
 
 .observatory-hint span {
@@ -470,7 +504,7 @@ body:not(.is-study-open) > .loader {
   }
 
   .launch-deck::before {
-    background: linear-gradient(90deg, var(--color-overlay) 0 34%, var(--color-overlay-soft) 50%, var(--color-transparent) 72%);
+    background: var(--color-space);
   }
 
   .observatory-nav {
@@ -490,12 +524,20 @@ body:not(.is-study-open) > .loader {
     position: absolute;
     inset-inline-start: var(--page-gutter);
     inset-block-end: clamp(7.5rem, 12dvh, 9.5rem);
-    width: min(42vw, 37rem);
+    width: min(34vw, 32rem);
     padding: 0;
   }
 
   .observatory-intro h1 {
-    font-size: clamp(3.4rem, 5vw, 5.6rem);
+    max-width: 12ch;
+    font-size: clamp(3rem, 4.4vw, 5.2rem);
+  }
+
+  .observatory-viewport {
+    position: absolute;
+    inset: 20% 28% 23% 36%;
+    height: auto;
+    margin: 0;
   }
 
   .study-index {
@@ -507,7 +549,7 @@ body:not(.is-study-open) > .loader {
     flex-direction: column;
     justify-content: center;
     justify-content: safe center;
-    width: min(31vw, 27rem);
+    width: min(25vw, 27rem);
     max-width: none;
     margin: 0;
     overflow-x: hidden;
@@ -540,11 +582,11 @@ body:not(.is-study-open) > .loader {
 
 @media (min-width: 90rem) {
   .study-index {
-    width: 28rem;
+    width: min(25vw, 28rem);
   }
 
   .observatory-intro {
-    width: 40rem;
+    width: min(34vw, 40rem);
   }
 }
 

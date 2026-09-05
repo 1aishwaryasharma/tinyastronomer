@@ -34,9 +34,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=20260815-2">
+<link rel="stylesheet" href="tokens.css?v=20260904-1">
 <link rel="stylesheet" href="common.css?v=20260818-5">
-<link rel="stylesheet" href="home.css?v=20260825-1">
+<link rel="stylesheet" href="home.css?v=20260904-1">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -90,8 +90,10 @@
       <p class="observatory-kicker">Interactive solar system · six studies</p>
       <h1 id="launch-title">A small observatory for our neighbourhood in space.</h1>
       <p class="observatory-lede">Turn the model. Pause time. Watch day and night, phases, tides, eclipses, and more unfold.</p>
-      <p class="observatory-hint"><span aria-hidden="true">↔</span> Drag anywhere in the sky to look around</p>
+      <p class="observatory-hint"><span aria-hidden="true">↔</span> Drag the Earth to look around</p>
     </section>
+
+    <div class="observatory-viewport" id="home-earth-viewport" aria-label="Earth preview"></div>
 
     <nav class="study-index" aria-label="Interactive astronomy studies">
       <p class="study-index-label">Choose an observation</p>
@@ -293,13 +295,13 @@
   }
 }
 </script>
-<script type="module" src="home-launch.js?v=20260819-1"></script>
+<script type="module" src="home-launch.js?v=20260904-1"></script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260819-4';
+import { SPACE } from './common.js?v=20260904-1';
 import { bindSaveViewControl } from './capture.js?v=20260825-1';
 import { SPACE_DATA } from './data.js';
-import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
+import { createEarthGeometry, createEarthClouds, createEarthAtmosphere, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260904-1';
 
 // ─────────────────────────────────────────────────────────
 // 1. SCENE SETUP
@@ -307,7 +309,12 @@ import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-v
 const setup = SPACE.createScene({
   canvasLabel: '3D model of the Sun, Earth, and Moon. Focus it and use the arrow keys to rotate, plus and minus to zoom.',
   canvasDescriptionId: 'scene-description',
-  shadowMap: true
+  shadowMap: true,
+  // Sample packed depth directly. The PCF comparison sampler blackens the
+  // entire lit hemisphere in Safari on the iOS simulator; this keeps eclipse
+  // occlusion working on both rendering backends at the same shadow resolution.
+  shadowMapType: THREE.BasicShadowMap,
+  sizeToContainer: true
 });
 if (!setup) throw new Error('WebGL unavailable');
 const scene = setup.scene;
@@ -368,105 +375,27 @@ scene.add(sunLight.target);
 quality.setShadowLight(sunLight);
 
 // ─────────────────────────────────────────────────────────
-// 4. EARTH (photographic day/night maps + procedural moon)
+// 4. EARTH (photographic Earth and lunar maps)
 // ─────────────────────────────────────────────────────────
-function createMoonTextures() {
-  const W = 1024;
-  const H = 512;
-  const colorCanvas = document.createElement('canvas');
-  const bumpCanvas = document.createElement('canvas');
-  colorCanvas.width = bumpCanvas.width = W;
-  colorCanvas.height = bumpCanvas.height = H;
-  const ctx = colorCanvas.getContext('2d');
-  const bumpCtx = bumpCanvas.getContext('2d');
-
-  const base = ctx.createLinearGradient(0, 0, 0, H);
-  base.addColorStop(0, '#858582');
-  base.addColorStop(0.22, '#aaa9a3');
-  base.addColorStop(0.5, '#b8b6ae');
-  base.addColorStop(0.78, '#aaa9a3');
-  base.addColorStop(1, '#858582');
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, W, H);
-  bumpCtx.fillStyle = '#808080';
-  bumpCtx.fillRect(0, 0, W, H);
-
-  // Repeatable surface detail keeps the Moon stable between reloads.
-  const random = SPACE.seededRandom(7419);
-
-  for (let i = 0; i < 3500; i++) {
-    const shade = 118 + Math.floor(random() * 48);
-    ctx.fillStyle = `rgba(${shade},${shade},${shade - 3},0.11)`;
-    ctx.fillRect(random() * W, random() * H, 1.2, 1.2);
-  }
-
-  // A restrained set of fixed maria reads more like the real lunar near side
-  // than a different collection of random dark circles on every load.
-  const maria = [
-    [470, 218, 108, 62], [585, 190, 72, 48], [645, 278, 92, 55],
-    [370, 290, 64, 42], [530, 330, 74, 38], [750, 205, 48, 34]
-  ];
-  maria.forEach(([x, y, rx, ry]) => {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(1, ry / rx);
-    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
-    grad.addColorStop(0, 'rgba(63,64,63,0.5)');
-    grad.addColorStop(0.72, 'rgba(76,77,75,0.34)');
-    grad.addColorStop(1, 'rgba(90,90,87,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, 0, rx, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  });
-
-  for (let i = 0; i < 260; i++) {
-    const x = random() * W;
-    const y = 14 + random() * (H - 28);
-    const r = 2 + random() * random() * 27;
-    [-W, 0, W].forEach(offset => {
-      const cx = x + offset;
-      const colorGrad = ctx.createRadialGradient(cx - r * 0.12, y - r * 0.12, 0, cx, y, r);
-      colorGrad.addColorStop(0, 'rgba(60,60,58,0.42)');
-      colorGrad.addColorStop(0.62, 'rgba(83,83,80,0.22)');
-      colorGrad.addColorStop(0.78, 'rgba(220,218,205,0.26)');
-      colorGrad.addColorStop(1, 'rgba(150,148,142,0)');
-      ctx.fillStyle = colorGrad;
-      ctx.beginPath();
-      ctx.arc(cx, y, r, 0, Math.PI * 2);
-      ctx.fill();
-
-      const bumpGrad = bumpCtx.createRadialGradient(cx, y, 0, cx, y, r);
-      bumpGrad.addColorStop(0, '#686868');
-      bumpGrad.addColorStop(0.62, '#747474');
-      bumpGrad.addColorStop(0.78, '#999999');
-      bumpGrad.addColorStop(1, '#808080');
-      bumpCtx.fillStyle = bumpGrad;
-      bumpCtx.beginPath();
-      bumpCtx.arc(cx, y, r, 0, Math.PI * 2);
-      bumpCtx.fill();
-    });
-  }
-
-  const color = new THREE.CanvasTexture(colorCanvas);
-  const bump = new THREE.CanvasTexture(bumpCanvas);
-  color.colorSpace = THREE.SRGBColorSpace;
-  [color, bump].forEach(tex => {
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.anisotropy = 8;
-  });
-  return { color, bump };
-}
-
 const loadingManager = new THREE.LoadingManager();
-const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day', 'normal', 'specular', 'lights']);
+const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day', 'normal', 'specular', 'lights', 'clouds']);
 const earthTexture = earthTextures.day;
 const earthNormalTexture = earthTextures.normal;
 const earthSpecularTexture = earthTextures.specular;
 const nightTexture = earthTextures.lights;
-const moonTextures = createMoonTextures();
+const moonLoader = new THREE.TextureLoader(loadingManager);
+const moonTextures = {
+  color: moonLoader.load('assets/moon/color-2k.jpg'),
+  bump: moonLoader.load('assets/moon/height-1k.jpg')
+};
+moonTextures.color.colorSpace = THREE.SRGBColorSpace;
+Object.values(moonTextures).forEach(texture => {
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  // NASA's 0° longitude is at U=0.5; Mesh.lookAt faces local +Z (U=0.25).
+  // Align the observed near side with the hemisphere locked toward Earth.
+  texture.offset.x = 0.25;
+});
 
 // Earth: phong base (keeps shadow support for eclipses) + injected
 // night-lights pass that fades in as each region rotates into darkness
@@ -478,10 +407,10 @@ const earthNightUniforms = {
 const earthMaterial = new THREE.MeshPhongMaterial({
   map: earthTexture,
   normalMap: earthNormalTexture,
-  normalScale: new THREE.Vector2(0.55, 0.55),
+  normalScale: new THREE.Vector2(0.22, 0.22),
   specularMap: earthSpecularTexture,
-  specular: new THREE.Color(0x596779),
-  shininess: 14
+  specular: new THREE.Color(0x364c68),
+  shininess: 28
 });
 earthMaterial.onBeforeCompile = (shader) => {
   shader.uniforms.nightMap = earthNightUniforms.nightMap;
@@ -512,36 +441,9 @@ earthGroup.add(earth);
 earthGroup.rotation.x = -EARTH_TILT;
 scene.add(earthGroup);
 
-// Atmosphere — rim glow that brightens toward the sun-facing limb
-const atmosphere = new THREE.Mesh(
-  createEarthGeometry(EARTH_RADIUS * 1.045, 64, 64),
-  new THREE.ShaderMaterial({
-    transparent: true,
-    side: THREE.BackSide,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    uniforms: { sunDir: { value: new THREE.Vector3(-1, 0, 0) } },
-    vertexShader: `
-      varying vec3 vN;
-      varying vec3 vWN;
-      void main() {
-        vN = normalize(normalMatrix * normal);
-        vWN = normalize(mat3(modelMatrix) * normal);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }`,
-    fragmentShader: `
-      varying vec3 vN;
-      varying vec3 vWN;
-      uniform vec3 sunDir;
-      void main() {
-        float intensity = pow(max(0.72 - dot(vN, vec3(0.0, 0.0, 1.0)), 0.0), 2.5);
-        float sunFacing = clamp(dot(normalize(vWN), sunDir) * 0.5 + 0.5, 0.0, 1.0);
-        vec3 col = mix(vec3(0.08, 0.18, 0.45), vec3(0.45, 0.7, 1.0), sunFacing);
-        gl_FragColor = vec4(col, 1.0) * intensity * 0.9;
-      }`
-  })
-);
-atmosphere.renderOrder = 2;
+const clouds = createEarthClouds(EARTH_RADIUS, earthTextures.clouds);
+earthGroup.add(clouds);
+const atmosphere = createEarthAtmosphere(EARTH_RADIUS);
 earthGroup.add(atmosphere);
 
 // Off unless the Polar Lights preset (or the toggle) asks for it: the oval
@@ -910,8 +812,9 @@ earthGroup.add(axisLine);
 // ─────────────────────────────────────────────────────────
 const moonMaterial = new THREE.MeshPhongMaterial({
   map: moonTextures.color,
+  emissiveMap: moonTextures.color,
   bumpMap: moonTextures.bump,
-  bumpScale: 0.018,
+  bumpScale: 0.0025,
   specular: new THREE.Color(0x111111),
   shininess: 1
 });
@@ -946,7 +849,11 @@ scene.add(moonOrbitFrame);
 // ─────────────────────────────────────────────────────────
 // 7. CAMERA CONTROLS (shared orbit controls)
 // ─────────────────────────────────────────────────────────
+const homeDeck = document.getElementById('launch-deck');
 const cam = SPACE.createOrbitControls(camera, renderer.domElement, {
+  azimuth: homeDeck.hidden ? -0.3 : -0.85,
+  elevation: 0.2,
+  distance: homeDeck.hidden ? 8.5 : 4,
   maxDistance: 100,
   minDistance: 3
 });
@@ -958,7 +865,7 @@ SPACE.bindCameraKeys(cam, { maxDistance: 100, minDistance: 3 });
 const sim = {
   time: 0,           // simulation time
   visualTime: 0,     // shader/corona time, frozen whenever the simulation is paused
-  earthRotation: 0,  // integrated separately so presets can pause it without a jump
+  earthRotation: 2.8,  // integrated separately so presets can pause it without a jump
   speed: 1,          // -3..3 (slider) but we use sliderToSpeed
   playing: !SPACE.prefersReducedMotion,
   earthSpinSpeed: 0.6, // one displayed rotation represents one mean Earth day
@@ -1289,6 +1196,13 @@ const _moonDir = new THREE.Vector3();
 // ─────────────────────────────────────────────────────────
 // 12. ANIMATION LOOP
 // ─────────────────────────────────────────────────────────
+let homeAspect = null;
+window.addEventListener('light-study-open', () => {
+  setup.resize();
+  cam.distanceTarget = 8.5;
+  cam.azimuthTarget = -0.3;
+  cam.elevationTarget = 0.2;
+});
 let lastT = performance.now();
 const _sunDirView = new THREE.Vector3();
 const _orbitNodeAxis = new THREE.Vector3();
@@ -1310,10 +1224,10 @@ function animate() {
     // A rapidly rotating, texture-dense pole aliases into visible flashes in
     // a top-down view. Polar Lights keeps Earth still while the independent
     // solar-weather timeline and free orbit camera continue to animate.
-    const earthSpinRate = sim.preset === 'aurora' ? 0 : sim.earthSpinSpeed;
+    const earthSpinRate = sim.preset === 'aurora' ? 0 : sim.earthSpinSpeed * (homeDeck.hidden ? 1 : 0.045);
     sim.earthRotation += dt * sim.speed * earthSpinRate;
     sim.moonPhaseAngle += dt * sim.speed * sim.moonOrbitSpeed;
-    sim.sunLongitude += dt * sim.speed * sim.sunYearSpeed;
+    if (homeDeck.hidden) sim.sunLongitude += dt * sim.speed * sim.sunYearSpeed;
     sim.moonNodeLongitude += dt * sim.speed * sim.nodePrecessionSpeed;
   }
 
@@ -1321,7 +1235,14 @@ function animate() {
   // is right-hand around +Y, so from above the north pole it is CCW = eastward.
   // Face-on with north up, +Y also carries the near-side surface toward geographic
   // east. Do not negate this sign.
+  const homeVisible = !homeDeck.hidden;
   earth.rotation.y = sim.earthRotation;
+  clouds.rotation.y = sim.earthRotation + sim.time * 0.008;
+  // The landing preview holds the sunlight steady while Earth rotates slowly.
+  // Study mode retains the astronomical day/month/year timing relationships.
+  sunGroup.visible = !homeVisible;
+  moon.visible = !homeVisible && sim.preset !== 'aurora';
+  moonOrbitFrame.visible = !homeVisible && sim.showOrbits && sim.preset !== 'aurora';
 
   // The Sun's apparent annual path in this explicitly Earth-centered frame.
   sunGroup.position.set(
@@ -1361,7 +1282,12 @@ function animate() {
   // directions while the camera remains free to orbit the model.
   updateTides(dt);
 
-  // Smooth camera
+  // Fit Earth within its own responsive opening instead of behind the copy.
+  if (homeVisible && camera.aspect !== homeAspect) {
+    homeAspect = camera.aspect;
+    const halfFov = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * Math.min(1, homeAspect));
+    cam.distance = cam.distanceTarget = 1.18 / Math.sin(halfFov);
+  }
   cam.update();
 
   // Animated shader clocks

@@ -279,7 +279,7 @@ test('Three.js is loaded as a local ES module', () => {
   const commonJs = readFileSync('common.js', 'utf8');
   expect(commonJs).toMatch(/from\s+['"]three['"]/);
   expect(commonJs).toContain('three/addons/postprocessing/');
-  expect(commonJs).toContain('renderer.shadowMap.type = THREE.PCFShadowMap');
+  expect(commonJs).toContain('renderer.shadowMap.type = opts.shadowMapType ?? THREE.PCFShadowMap');
   expect(commonJs).not.toContain('THREE.PCFSoftShadowMap');
   expect(existsSync('vendor/three/three.module.min.js')).toBe(true);
   expect(existsSync('vendor/three/three.core.min.js')).toBe(true);
@@ -497,6 +497,41 @@ test('Polar Lights cannot resize the framebuffer during an orbit drag', () => {
   }
   expect(quality.tier).toBe(1);
   expect(resizeCalls.length).toBeGreaterThan(0);
+});
+
+test('adaptive quality follows the preview container and its expansion into a study', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const governor = common.slice(
+    common.indexOf('function createQualityGovernor'),
+    common.indexOf('// ── Keyboard camera control')
+  );
+  let now = 0;
+  let size = { width: 343, height: 272 };
+  const sizes: number[][] = [];
+  const surface = {
+    setPixelRatio() {},
+    setSize(width: number, height: number) { sizes.push([width, height]); },
+  };
+  const createGovernor = new Function('performance', 'window',
+    `${governor}; return createQualityGovernor;`
+  )({ now: () => now }, { innerWidth: 1280, innerHeight: 800 });
+  const quality = createGovernor({
+    renderer: surface, composer: surface, getSize: () => size
+  });
+  for (let frame = 0; frame < 80; frame++) {
+    now += 50;
+    quality.frame(0.05);
+  }
+  expect(sizes.length).toBeGreaterThan(0);
+  expect(sizes.every(([w, h]) => w === 343 && h === 272)).toBe(true);
+  sizes.length = 0;
+  size = { width: 1280, height: 800 };
+  for (let frame = 0; frame < 100; frame++) {
+    now += 50;
+    quality.frame(0.05);
+  }
+  expect(sizes.length).toBeGreaterThan(0);
+  expect(sizes.every(([w, h]) => w === 1280 && h === 800)).toBe(true);
 });
 
 test('render diagnostics stay opt-in and cost nothing by default', () => {

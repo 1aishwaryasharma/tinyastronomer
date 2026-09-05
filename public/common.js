@@ -581,7 +581,8 @@ float fbm(vec3 p) {
 
     function apply() {
       const pr = PR_STEPS[tier];
-      const w = window.innerWidth, h = window.innerHeight;
+      const { width: w, height: h } = opts.getSize
+        ? opts.getSize() : { width: window.innerWidth, height: window.innerHeight };
       renderer.setPixelRatio(pr);
       renderer.setSize(w, h);
       if (composer) {
@@ -745,22 +746,27 @@ float fbm(vec3 p) {
   function createScene(opts) {
     opts = opts || {};
     const container = document.getElementById(opts.containerId || 'canvas-container');
+    const getSize = () => ({
+      width: opts.sizeToContainer ? Math.max(1, container.clientWidth) : window.innerWidth,
+      height: opts.sizeToContainer ? Math.max(1, container.clientHeight) : window.innerHeight
+    });
+    const initialSize = getSize();
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(opts.background != null ? opts.background : 0x050810);
     const camera = new THREE.PerspectiveCamera(
       opts.fov != null ? opts.fov : 45,
-      window.innerWidth / window.innerHeight,
+      initialSize.width / initialSize.height,
       opts.near != null ? opts.near : 0.1,
       opts.far != null ? opts.far : 2000
     );
 
     const renderer = createRenderer({ alpha: false, antialias: false });
     if (!renderer) return null;
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(initialSize.width, initialSize.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     if (opts.shadowMap) {
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFShadowMap;
+      renderer.shadowMap.type = opts.shadowMapType ?? THREE.PCFShadowMap;
     }
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -787,7 +793,7 @@ float fbm(vec3 p) {
       try {
         composer = new EffectComposer(renderer);
         composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        composer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(initialSize.width, initialSize.height);
         composer.addPass(new RenderPass(scene, camera));
         const b = opts.bloom || {};
         // Half-float composer buffers are HDR. Scale the bloom floor with the
@@ -811,6 +817,7 @@ float fbm(vec3 p) {
     }
 
     const quality = createQualityGovernor({
+      getSize,
       bloomPass,
       composer,
       fxaaPass,
@@ -818,14 +825,13 @@ float fbm(vec3 p) {
       shadowLight: opts.shadowLight || null
     });
 
-    let lastW = window.innerWidth;
-    let lastH = window.innerHeight;
+    let lastW = initialSize.width;
+    let lastH = initialSize.height;
     function resize() {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const { width: w, height: h } = getSize();
       // iOS shows/hides the URL bar with a height-only change; resizing the
       // WebGL surface for that makes every overlay appear to drift.
-      if (w === lastW && Math.abs(h - lastH) < 120) return;
+      if (w === lastW && (opts.sizeToContainer ? h === lastH : Math.abs(h - lastH) < 120)) return;
       lastW = w;
       lastH = h;
       camera.aspect = w / h;
@@ -836,6 +842,7 @@ float fbm(vec3 p) {
     window.addEventListener('resize', opts.onResize
       ? function () { resize(); opts.onResize(); }
       : resize);
+    if (opts.sizeToContainer) new ResizeObserver(resize).observe(container);
 
     function render() {
       if (composer) composer.render();

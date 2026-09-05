@@ -1,4 +1,5 @@
 :root {
+  --color-space: #050810;
   --color-paper: oklch(10% 0.018 258);
   --color-paper-2: oklch(14% 0.022 258);
   --color-paper-3: oklch(19% 0.025 258);
