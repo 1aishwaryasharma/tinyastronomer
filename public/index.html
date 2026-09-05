@@ -36,7 +36,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=20260904-1">
 <link rel="stylesheet" href="common.css?v=20260818-5">
-<link rel="stylesheet" href="home.css?v=20260904-1">
+<link rel="stylesheet" href="home.css?v=20260904-2">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -91,11 +91,12 @@
       <h1 id="launch-title">A small observatory for our neighbourhood in space.</h1>
       <p class="observatory-lede">Turn the model. Pause time. Watch day and night, phases, tides, eclipses, and more unfold.</p>
       <p class="observatory-hint"><span aria-hidden="true">↔</span> Drag the Earth to look around</p>
+      <a class="observatory-hint observatory-scroll" href="#observations"><span aria-hidden="true">↓</span> Scroll to explore six studies</a>
     </section>
 
     <div class="observatory-viewport" id="home-earth-viewport" aria-label="Earth preview"></div>
 
-    <nav class="study-index" aria-label="Interactive astronomy studies">
+    <nav class="study-index" id="observations" aria-label="Interactive astronomy studies">
       <p class="study-index-label">Choose an observation</p>
       <ol>
         <li class="is-current">
