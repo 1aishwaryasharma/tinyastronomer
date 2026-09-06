@@ -187,20 +187,90 @@ body {
   pointer-events: auto;
 }
 
+.observatory-actions,
 .observatory-scroll {
   display: none;
   text-decoration: none;
 }
 
+/* Phones: the composition stacks, so the hero must hand over a choice inside
+   the first screen. The copy tightens, a primary action launches the first
+   study directly, and the Earth preview yields height so the study list
+   starts at the fold instead of a full screen below it. */
 @media not all and (min-width: 60rem) {
+  .observatory-nav {
+    padding-block: max(var(--space-xs), env(safe-area-inset-top)) var(--space-xs);
+  }
+
+  .observatory-map {
+    padding-block-start: var(--space-xs);
+  }
+
+  .observatory-intro {
+    padding-block-start: 0;
+  }
+
+  .observatory-kicker {
+    margin-block-end: var(--space-xs);
+  }
+
+  .observatory-lede {
+    margin-block-start: var(--space-sm);
+  }
+
   .observatory-intro > p.observatory-hint {
     display: none;
   }
 
+  .observatory-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2xs) var(--space-sm);
+    margin-block-start: var(--space-md);
+  }
+
+  .observatory-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 3rem;
+    padding: 0 var(--space-md);
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    font-family: var(--font-label);
+    font-size: var(--text-sm);
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: background-color var(--dur-short) var(--ease-out);
+  }
+
+  .observatory-cta:active {
+    background: var(--color-accent-deep);
+  }
+
   .launch-deck .observatory-scroll {
     display: inline-flex;
+    gap: var(--space-2xs);
     min-height: 3rem;
+    margin: 0;
     color: var(--color-accent);
+  }
+
+  .launch-deck .observatory-scroll span {
+    width: auto;
+    height: auto;
+    background: none;
+  }
+
+  .observatory-viewport {
+    height: clamp(11rem, min(70vw, 38svh), 28rem);
+    margin-block: var(--space-xs);
+  }
+
+  .study-index {
+    margin-block-start: var(--space-md);
   }
 
   /* The preview shares the page's scroll gesture. Opening Light Study
@@ -216,7 +286,8 @@ body {
 
 @media (max-width: 39.999rem) {
   .observatory-intro h1 {
-    font-size: clamp(2.1rem, 9vw, 2.65rem);
+    max-width: none;
+    font-size: clamp(1.65rem, 8.6vw, 2.65rem);
   }
 
   .observatory-lede {

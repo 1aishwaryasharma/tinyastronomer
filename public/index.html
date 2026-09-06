@@ -35,8 +35,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=20260904-1">
-<link rel="stylesheet" href="common.css?v=20260818-5">
-<link rel="stylesheet" href="home.css?v=20260904-2">
+<link rel="stylesheet" href="common.css?v=20260906-1">
+<link rel="stylesheet" href="home.css?v=20260906-1">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -91,7 +91,10 @@
       <h1 id="launch-title">A small observatory for our neighbourhood in space.</h1>
       <p class="observatory-lede">Turn the model. Pause time. Watch day and night, phases, tides, eclipses, and more unfold.</p>
       <p class="observatory-hint"><span aria-hidden="true">↔</span> Drag the Earth to look around</p>
-      <a class="observatory-hint observatory-scroll" href="#observations"><span aria-hidden="true">↓</span> Scroll to explore six studies</a>
+      <div class="observatory-actions">
+        <a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>Start exploring <span aria-hidden="true">↗</span></a>
+        <a class="observatory-hint observatory-scroll" href="#observations"><span aria-hidden="true">↓</span> All six studies</a>
+      </div>
     </section>
 
     <div class="observatory-viewport" id="home-earth-viewport" aria-label="Earth preview"></div>
@@ -267,7 +270,7 @@
     <span class="speed-value" id="speed-value">1.0×</span>
   </div>
   <div class="divider"></div>
-  <div class="toggle-group">
+  <div class="toggle-group" data-display-menu>
     <button type="button" class="toggle-btn active" id="toggle-orbits" aria-pressed="true">Orbits</button>
     <button type="button" class="toggle-btn active" id="toggle-labels" aria-pressed="true">Labels</button>
     <button type="button" class="toggle-btn" id="toggle-axis" aria-pressed="false">Axis</button>
@@ -299,7 +302,7 @@
 <script type="module" src="home-launch.js?v=20260904-1"></script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260904-1';
+import { SPACE } from './common.js?v=20260906-1';
 import { bindSaveViewControl } from './capture.js?v=20260825-1';
 import { SPACE_DATA } from './data.js';
 import { createEarthGeometry, createEarthClouds, createEarthAtmosphere, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260904-1';

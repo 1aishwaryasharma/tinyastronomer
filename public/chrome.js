@@ -50,6 +50,72 @@ function revealRailButton(btn) {
   });
 }
 
+// A chip strip that hides half its stops looks complete. Expose how much is
+// still off-screen on each edge as CSS variables; the stylesheet turns them
+// into edge fades wherever a rail scrolls. Both axes are measured because
+// the rail is a row on phones and a column on wide screens.
+function initRailOverflow() {
+  const rails = document.querySelectorAll('.side-rail');
+  if (!rails.length) return;
+  const FADE = '28px';
+  const update = (rail) => {
+    const maxX = rail.scrollWidth - rail.clientWidth;
+    const maxY = rail.scrollHeight - rail.clientHeight;
+    rail.style.setProperty('--rail-fade-start', maxX > 1 && rail.scrollLeft > 1 ? FADE : '0px');
+    rail.style.setProperty('--rail-fade-end', maxX > 1 && rail.scrollLeft < maxX - 1 ? FADE : '0px');
+    rail.style.setProperty('--rail-fade-top', maxY > 1 && rail.scrollTop > 1 ? FADE : '0px');
+    rail.style.setProperty('--rail-fade-bottom', maxY > 1 && rail.scrollTop < maxY - 1 ? FADE : '0px');
+  };
+  rails.forEach((rail) => {
+    rail.addEventListener('scroll', () => update(rail), { passive: true });
+    // Rails are filled by each study after this runs, and web fonts change
+    // the chip widths once they arrive.
+    new MutationObserver(() => update(rail)).observe(rail, { childList: true });
+    new ResizeObserver(() => update(rail)).observe(rail);
+    update(rail);
+  });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => rails.forEach(update));
+  }
+}
+
+// On short phones a three-row dock covers a third of the scene. The display
+// toggles fold behind one Display button that opens a popover above the dock.
+// The stylesheet decides when that applies; on wide screens the button stays
+// hidden and the toggles sit inline exactly as before.
+function initDisplayMenus() {
+  document.querySelectorAll('.controls .toggle-group[data-display-menu]').forEach((group, index) => {
+    if (!group.id) group.id = 'display-menu-' + (index + 1);
+    group.classList.add('display-menu');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Display options');
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toggle-btn display-menu-btn';
+    btn.textContent = 'Display';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', group.id);
+    group.before(btn);
+
+    function setOpen(open) {
+      group.classList.toggle('is-open', open);
+      btn.classList.toggle('active', open);
+      btn.setAttribute('aria-expanded', String(open));
+    }
+    btn.addEventListener('click', () => setOpen(!group.classList.contains('is-open')));
+    group.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        btn.focus();
+      }
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (!group.contains(e.target) && !btn.contains(e.target)) setOpen(false);
+    });
+  });
+}
+
 function initMobileHints() {
   const hints = document.querySelectorAll('.hint');
   if (!hints.length) return;
@@ -237,21 +303,26 @@ function initMobileInfoPanels() {
   });
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initMobileInfoPanels();
-    initMobileHints();
-  }, { once: true });
-} else {
+function initChrome() {
   initMobileInfoPanels();
   initMobileHints();
+  initDisplayMenus();
+  initRailOverflow();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initChrome, { once: true });
+} else {
+  initChrome();
 }
 
 const SPACE = {
   buildNav,
   clamp,
+  initDisplayMenus,
   initMobileHints,
   initMobileInfoPanels,
+  initRailOverflow,
   prefersReducedMotion,
   initSceneAccessibility,
   revealRailButton,
@@ -264,8 +335,10 @@ export {
   SPACE,
   buildNav,
   clamp,
+  initDisplayMenus,
   initMobileHints,
   initMobileInfoPanels,
+  initRailOverflow,
   initSceneAccessibility,
   prefersReducedMotion,
   revealRailButton,

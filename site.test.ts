@@ -997,6 +997,87 @@ test('mobile interaction hint is shown only once across pages', () => {
   expect(chromeJs).toContain("h.classList.add('is-dismissed')");
 });
 
+test('phone landing offers a first action above the fold and no drag hint', () => {
+  const home = readFileSync('index.html', 'utf8');
+  const homeCss = readFileSync('home.css', 'utf8');
+  // The primary action launches the first study in place, like card 01.
+  expect(home).toMatch(/<a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>/);
+  expect(home).toContain('class="observatory-hint observatory-scroll" href="#observations"');
+  const narrow = homeCss.slice(
+    homeCss.indexOf('@media not all and (min-width: 60rem)'),
+    homeCss.indexOf('@media (max-width: 39.999rem)')
+  );
+  expect(narrow).toMatch(/\.observatory-intro > p\.observatory-hint\s*\{\s*display:\s*none/);
+  expect(narrow).toMatch(/\.observatory-actions\s*\{\s*display:\s*flex/);
+  // The Earth preview yields height on short phones instead of pushing the
+  // study list a full screen down.
+  expect(narrow).toMatch(/\.observatory-viewport\s*\{\s*height:\s*clamp\([^)]*svh/);
+  // Wide screens keep the composition: the actions row exists only on phones.
+  expect(homeCss).toMatch(/\.observatory-actions,\s*\.observatory-scroll\s*\{\s*display:\s*none/);
+});
+
+test('short phones fold display toggles behind one Display button', () => {
+  const chrome = readFileSync('chrome.js', 'utf8');
+  const commonCss = readFileSync('common.css', 'utf8');
+  expect(chrome).toContain('function initDisplayMenus');
+  expect(chrome).toContain(".toggle-group[data-display-menu]");
+  expect(chrome).toContain("btn.setAttribute('aria-expanded', String(open))");
+  expect(readFileSync('index.html', 'utf8')).toContain('<div class="toggle-group" data-display-menu>');
+  expect(readFileSync('solar-system.html', 'utf8')).toContain('<div class="toggle-group" data-display-menu>');
+  // Seasons has two toggles and a one-row dock already; folding them would
+  // only add a tap.
+  expect(readFileSync('seasons.html', 'utf8')).not.toContain('data-display-menu');
+  expect(commonCss).toMatch(/\.display-menu-btn\s*\{\s*display:\s*none/);
+  const short = commonCss.slice(
+    commonCss.indexOf('@media (max-width: 820px) and (max-height: 700px)'),
+    commonCss.indexOf('@media (max-height: 520px) and (orientation: landscape) {\n  .header')
+  );
+  expect(short).toMatch(/\.display-menu-btn\s*\{\s*display:\s*inline-flex/);
+  expect(short).toMatch(/\.toggle-group\.display-menu\s*\{\s*display:\s*none;\s*position:\s*absolute/);
+  expect(short).toMatch(/\.toggle-group\.display-menu\.is-open\s*\{\s*display:\s*flex/);
+});
+
+test('scrollable chip rails fade the edge that still has stops', () => {
+  const chrome = readFileSync('chrome.js', 'utf8');
+  const commonCss = readFileSync('common.css', 'utf8');
+  expect(chrome).toContain('function initRailOverflow');
+  expect(chrome).toContain("rail.style.setProperty('--rail-fade-end'");
+  expect(chrome).toContain("observe(rail, { childList: true })");
+  expect(commonCss).toMatch(/\.side-rail\s*\{\s*--rail-fade-start:\s*0px/);
+  expect(commonCss).toContain('mask-image: linear-gradient(to right, transparent, #000 var(--rail-fade-start)');
+  expect(commonCss).toContain('mask-image: linear-gradient(to bottom, transparent, #000 var(--rail-fade-top)');
+});
+
+test('sky tonight can step the date by a day and pick one natively', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  expect(sky).toContain('id="date-prev" aria-label="Previous day"');
+  expect(sky).toContain('id="date-next" aria-label="Next day"');
+  expect(sky).toMatch(/<input type="date" class="date-input" id="date-input" aria-label="[^"]+">/);
+  expect(sky).toContain('prevBtn.onclick = () => setOffset(offset - 1)');
+  expect(sky).toContain('nextBtn.onclick = () => setOffset(offset + 1)');
+  // Local calendar dates, not toISOString, so the picker never drifts a day.
+  expect(sky).toContain('function isoLocal');
+  expect(sky).not.toContain('.toISOString(');
+  expect(sky).toContain('dateInput.min = isoLocal(dateAt(0))');
+  expect(sky).toContain('dateInput.max = isoLocal(dateAt(MAX_OFFSET))');
+});
+
+test('mission cards fold to their hook on phones and stay open without JavaScript', () => {
+  const missions = readFileSync('missions.html', 'utf8');
+  const cards = missions.match(/<article class="card"/g) ?? [];
+  const folds = missions.match(/<div class="more" id="more-[a-z-]+">/g) ?? [];
+  expect(cards.length).toBeGreaterThan(0);
+  expect(folds.length).toBe(cards.length);
+  // The fold is a JS enhancement: the stylesheet hides nothing until the
+  // script marks the body, so a no-JS read keeps every card complete.
+  expect(missions).toContain("document.body.classList.add('has-card-fold')");
+  expect(missions).toMatch(/body\.has-card-fold \.card:not\(\.is-open\) \.more\s*\{\s*display:\s*none/);
+  expect(missions).toMatch(/body\.has-card-fold \.card:not\(\.is-open\) \.blurb\s*\{[^}]*-webkit-line-clamp:\s*2/);
+  expect(missions).toMatch(/\.more-btn\s*\{\s*display:\s*none/);
+  expect(missions).toContain("btn.setAttribute('aria-controls', more.id)");
+  expect(missions).toContain("'Read more about '");
+});
+
 test('sky tonight uses the shared mobile drawer so the sky stays visible', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   const chromeJs = readFileSync('chrome.js', 'utf8');

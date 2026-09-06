@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260818-5">
+<link rel="stylesheet" href="common.css?v=20260906-1">
 <style>
   #sky { position: fixed; inset: 0; z-index: 0; display: block; }
   .info-panel { top: 128px; width: 340px; max-height: calc(100dvh - 244px); overflow: auto; }
@@ -50,8 +50,31 @@
   .date-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
   .today-btn { background: transparent; border: 1px solid var(--line); color: var(--ink-dim); font-family: 'Fragment Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; padding: 6px 10px; border-radius: 2px; cursor: pointer; transition: all 0.2s; }
   .today-btn:hover { color: var(--accent); border-color: rgba(244,197,96,0.4); }
+  /* The slider covers 800 days, so on a phone one pixel is several days.
+     Day steps and a native date picker give the precision it cannot. */
+  .step-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; min-height: 32px; padding: 0 8px;
+    background: transparent; border: 1px solid var(--line); border-radius: 2px;
+    color: var(--ink); font-family: 'Newsreader', serif; font-size: 20px; line-height: 1;
+    cursor: pointer; transition: color 0.2s, border-color 0.2s;
+  }
+  .step-btn:hover:not(:disabled) { color: var(--accent); border-color: rgba(244,197,96,0.4); }
+  .step-btn:disabled { opacity: 0.3; cursor: default; }
+  .date-input {
+    min-height: 32px; padding: 4px 8px;
+    background: transparent; border: 1px solid var(--line); border-radius: 2px;
+    color: var(--accent); color-scheme: dark;
+    font-family: 'Fragment Mono', monospace; font-size: 12px; letter-spacing: 0.04em;
+  }
+  .date-input::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.7; }
   @media (max-width: 820px) {
-    .date-slider { width: min(160px, 42vw); }
+    .date-slider { width: min(140px, 36vw); }
+    .date-value { min-width: 0; }
+  }
+  @media (pointer: coarse) {
+    .step-btn, .date-input { min-height: 44px; }
+    .step-btn { min-width: 44px; }
   }
 </style>
 </head>
@@ -106,13 +129,16 @@
 
 <div class="date-controls">
   <span class="date-label">Date</span>
+  <button type="button" class="step-btn" id="date-prev" aria-label="Previous day" disabled>‹</button>
   <input type="range" class="date-slider" id="date-slider" min="0" max="800" step="1" value="0" aria-label="Observation date">
+  <button type="button" class="step-btn" id="date-next" aria-label="Next day">›</button>
+  <input type="date" class="date-input" id="date-input" aria-label="Pick an observation date">
   <span class="date-value" id="date-value">Today</span>
   <button type="button" class="today-btn" id="today-btn">Today</button>
 </div>
 
 <script type="module">
-import { SPACE } from './chrome.js?v=20260819-1';
+import { SPACE } from './chrome.js?v=20260906-1';
 import { SPACE_DATA } from './data.js';
 const clamp = SPACE.clamp;
 
@@ -224,12 +250,31 @@ const listEl = document.getElementById('sky-list');
 const metaDate = document.getElementById('meta-date');
 const dateValue = document.getElementById('date-value');
 const slider = document.getElementById('date-slider');
+const dateInput = document.getElementById('date-input');
+const prevBtn = document.getElementById('date-prev');
+const nextBtn = document.getElementById('date-next');
+const MAX_OFFSET = parseInt(slider.max, 10);
+const DAY_MS = 86400000;
 let offset = 0;
 
+function dateAt(dOffset){ return new Date(Date.now() + dOffset*DAY_MS); }
 function fmtDate(dOffset){
-  const d = new Date(Date.now() + dOffset*86400000);
-  return d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+  return dateAt(dOffset).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
 }
+// The date input speaks local calendar dates; toISOString would shift them
+// by the time-zone offset near midnight.
+function isoLocal(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function offsetFromIso(value){
+  const [y, m, d] = value.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const today = dateAt(0); today.setHours(0,0,0,0);
+  const picked = new Date(y, m-1, d);
+  return Math.round((picked - today) / DAY_MS);
+}
+dateInput.min = isoLocal(dateAt(0));
+dateInput.max = isoLocal(dateAt(MAX_OFFSET));
 function renderList(dOffset){
   const info = skyInfo(positions(dOffset));
   listEl.innerHTML = info.map(i => `
@@ -241,19 +286,32 @@ function renderList(dOffset){
 }
 function update(){
   metaDate.textContent = fmtDate(offset);
-  dateValue.textContent = offset===0 ? 'Today' : ('+' + offset + ' days');
+  dateValue.textContent = offset===0 ? 'Today' : (offset===1 ? '+1 day' : '+' + offset + ' days');
   slider.setAttribute('aria-valuetext', fmtDate(offset));
+  dateInput.value = isoLocal(dateAt(offset));
+  prevBtn.disabled = offset <= 0;
+  nextBtn.disabled = offset >= MAX_OFFSET;
   renderList(offset);
 }
 function commitDate(){
   update();
   accessibility.announce(`Sky guide updated for ${fmtDate(offset)}.`);
 }
+function setOffset(next){
+  offset = clamp(Math.round(next), 0, MAX_OFFSET);
+  slider.value = offset;
+  commitDate();
+}
 slider.oninput = () => { offset = parseInt(slider.value,10); update(); };
 slider.onchange = commitDate;
-document.getElementById('today-btn').onclick = () => {
-  offset=0; slider.value=0; commitDate();
+prevBtn.onclick = () => setOffset(offset - 1);
+nextBtn.onclick = () => setOffset(offset + 1);
+dateInput.onchange = () => {
+  const next = offsetFromIso(dateInput.value);
+  if (next === null) { update(); return; }
+  setOffset(next);
 };
+document.getElementById('today-btn').onclick = () => setOffset(0);
 update();
 
 let t0 = performance.now();
