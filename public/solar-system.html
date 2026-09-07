@@ -14,8 +14,6 @@
 }
 </script>
 <script type="module" async src="chrome.js?v=20260907-2"></script>
-<link rel="modulepreload" href="vendor/three/three.module.min.js">
-<link rel="modulepreload" href="vendor/three/three.core.min.js">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/solar-system">
 <link rel="icon" href="favicon.svg?v=20260816-20" type="image/svg+xml">
@@ -169,13 +167,20 @@
 
 
 <script type="module">
-import * as THREE from 'three';
-import { SPACE } from './common.bundle.js?v=20260907-2';
-import { SPACE_DATA } from './data.js';
-import { createEarthGeometry } from './earth-visuals.js?v=20260907-2';
-import { createTourTextures } from './tour-textures.js?v=20260907-2';
-import { createPlanetModelLoader } from './planet-models.js?v=20260907-2';
-import { advanceTrackedCoordinate, relaxedPlanetDistance, sunAndPlanetFrame, updatedAutomaticDistance } from './tour-camera.js?v=20260815-1';
+// Initialize navigation and mobile controls before requesting the 3D graph.
+import './chrome.js?v=20260907-2';
+const [THREE, { SPACE }, { SPACE_DATA }, { createEarthGeometry },
+  { createTourTextures }, { createPlanetModelLoader },
+  { advanceTrackedCoordinate, relaxedPlanetDistance, sunAndPlanetFrame, updatedAutomaticDistance }
+] = await Promise.all([
+  import('three'),
+  import('./common.bundle.js?v=20260907-2'),
+  import('./data.js'),
+  import('./earth-visuals.js?v=20260907-2'),
+  import('./tour-textures.js?v=20260908-1'),
+  import('./planet-models.js?v=20260907-2'),
+  import('./tour-camera.js?v=20260815-1'),
+]);
 const clamp = SPACE.clamp;
 
 // ─────────────────────────────────────────────────────────
@@ -246,7 +251,7 @@ scene.add(sunLight);
 // ─────────────────────────────────────────────────────────
 // 4. PLANET TEXTURES (tour-textures.js)
 // ─────────────────────────────────────────────────────────
-const tourTextures = createTourTextures(renderer);
+const tourTextures = createTourTextures(renderer, { earthDetails: false });
 const loadingManager = tourTextures.loadingManager;
 const planetMaterial = tourTextures.planetMaterial;
 const makeRingTexture = tourTextures.makeRingTexture;
@@ -660,6 +665,7 @@ function clampedPlanetFocusDistance(w) {
 }
 let automaticPlanetDistance = null;
 function selectBody(key) {
+  if (key === 'earth') tourTextures.loadEarthDetails();
   WORLDS.find(w => w.key === key)?.loadDetail();
   sim.selected = key;
   sim.follow = !!key;
@@ -817,8 +823,10 @@ function animate(now, frameDt) {
   setup.render();
 }
 
+// Keep the loading screen through shader preparation and the first frame.
+loadingManager.itemStart('scene-startup');
 SPACE.createLoader(loadingManager);
-SPACE.createFrameLoop(animate, { element: renderer.domElement });
+
 
 // ─────────────────────────────────────────────────────────
 // 17. GUIDED TOUR + QUIZ MODES
@@ -945,6 +953,19 @@ window.addEventListener('hashchange', applyBodyHash);
 applyBodyHash();
 
 SPACE.buildNav('tour');
+// Match the composer's render target so the first frame reuses these programs.
+const previousTarget = renderer.getRenderTarget();
+try {
+  if (composer) renderer.setRenderTarget(composer.readBuffer);
+  await renderer.compileAsync(scene, camera);
+} catch (error) {
+  console.warn('Shader warmup unavailable; compiling during rendering.', error);
+} finally {
+  renderer.setRenderTarget(previousTarget);
+}
+animate(performance.now(), 0);
+loadingManager.itemEnd('scene-startup');
+SPACE.createFrameLoop(animate, { element: renderer.domElement });
 </script>
 </body>
 </html>

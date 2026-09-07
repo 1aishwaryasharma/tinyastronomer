@@ -76,3 +76,34 @@ test('model loader code is deferred until selection and shared between requests'
   expect(imports).toEqual(['three/addons/loaders/GLTFLoader.js']);
   expect(models).toEqual(['assets/planet-models/mars.glb', 'assets/planet-models/saturn.glb']);
 });
+
+test('Grand Tour defers Earth detail maps until selection and updates the existing material once', () => {
+  const batches: string[][] = [];
+  const THREE = {
+    LoadingManager: class {}, TextureLoader: class {},
+    Vector3: class {}, Vector2: class {}, Color: class {},
+    MeshPhongMaterial: class { constructor(options: object) { Object.assign(this, options); } },
+  };
+  const source = read('tour-textures.js').replace(/^import .*;$/gm, '').replace('export function', 'function');
+  const factory = new Function('THREE', 'SPACE', 'loadEarthTextureSet', 'window',
+    source + ';return createTourTextures;')(
+    THREE, {}, (_renderer: unknown, _manager: unknown, keys: string[]) => {
+      batches.push(keys);
+      return Object.fromEntries(keys.map(key => [key, { key }]));
+    }, {}
+  );
+  const textures = factory({}, { earthDetails: false });
+  const material = textures.planetMaterial({ type: 'earth' });
+  expect(batches).toEqual([['day']]);
+  expect(material.onBeforeCompile).toBeUndefined();
+  textures.loadEarthDetails();
+  expect(batches).toEqual([['day'], ['normal', 'specular', 'lights']]);
+  expect(material.normalMap.key).toBe('normal');
+  expect(material.specularMap.key).toBe('specular');
+  expect(material.needsUpdate).toBe(true);
+  const shader = { uniforms: {}, fragmentShader: '#include <emissivemap_fragment>' };
+  material.onBeforeCompile(shader);
+  expect(shader.uniforms.nightMap.value.key).toBe('lights');
+  textures.loadEarthDetails();
+  expect(batches).toHaveLength(2);
+});

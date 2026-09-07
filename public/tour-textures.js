@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────
-   Grand Tour procedural planet / ring textures.
+   Shared teaching planet textures and Earth lighting.
    Isolated from solar-system.html so the page script stays
    scene orchestration, not canvas paint routines.
    ───────────────────────────────────────────────────────── */
@@ -12,13 +12,12 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
   const seededRandom = SPACE.seededRandom;
 
   const loadingManager = new THREE.LoadingManager();
-  const earthTextures = loadEarthTextureSet(renderer, loadingManager, earthDetails ? ['day', 'normal', 'specular', 'lights'] : ['day'], { compact: true });
+  const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day'], { compact: true });
   const earthDay = earthTextures.day;
-  const earthNormal = earthTextures.normal;
-  const earthSpecular = earthTextures.specular;
-  const earthLights = earthTextures.lights;
+  const earthMaterials = new Set();
+  let detailsLoaded = false;
   const earthNightUniforms = {
-    nightMap: { value: earthLights },
+    nightMap: { value: null },
     sunDirView: { value: new THREE.Vector3(1, 0, 0) }
   };
 
@@ -46,12 +45,20 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
 
     const material = new THREE.MeshPhongMaterial({
       map: earthDay,
-      normalMap: earthNormal,
+      normalMap: earthTextures.normal ?? null,
       normalScale: new THREE.Vector2(0.45, 0.45),
-      specularMap: earthSpecular,
+      specularMap: earthTextures.specular ?? null,
       specular: new THREE.Color(0x52657a),
       shininess: 12
     });
+    earthMaterials.add(material);
+    if (detailsLoaded) applyEarthDetails(material);
+    return material;
+  }
+
+  function applyEarthDetails(material) {
+    material.normalMap = earthTextures.normal;
+    material.specularMap = earthTextures.specular;
     material.onBeforeCompile = shader => {
       shader.uniforms.nightMap = earthNightUniforms.nightMap;
       shader.uniforms.sunDirView = earthNightUniforms.sunDirView;
@@ -66,8 +73,18 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
         );
     };
     material.customProgramCacheKey = () => 'grand-tour-earth-night-v1';
-    return material;
+    material.needsUpdate = true;
   }
+
+  function loadEarthDetails() {
+    if (detailsLoaded) return;
+    detailsLoaded = true;
+    Object.assign(earthTextures, loadEarthTextureSet(renderer, loadingManager,
+      ['normal', 'specular', 'lights']));
+    earthNightUniforms.nightMap.value = earthTextures.lights;
+    earthMaterials.forEach(applyEarthDetails);
+  }
+  if (earthDetails) loadEarthDetails();
 
   function updateEarthLighting(sunDirectionView) {
     earthNightUniforms.sunDirView.value.copy(sunDirectionView);
@@ -96,7 +113,7 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
     return tex;
   }
 
-  return { loadingManager, makeRingTexture, planetMaterial, planetTexture, updateEarthLighting };
+  return { loadingManager, loadEarthDetails, makeRingTexture, planetMaterial, planetTexture, updateEarthLighting };
 }
 
 window.createTourTextures = createTourTextures;
