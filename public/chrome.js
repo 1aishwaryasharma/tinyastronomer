@@ -312,7 +312,13 @@ function initChrome() {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initChrome, { once: true });
+  // Initialize the page controls as soon as HTML is parsed, independently of
+  // large deferred 3D modules. DOMContentLoaded waits for those modules.
+  document.addEventListener('readystatechange', function onParsed() {
+    if (document.readyState === 'loading') return;
+    document.removeEventListener('readystatechange', onParsed);
+    initChrome();
+  });
 } else {
   initChrome();
 }

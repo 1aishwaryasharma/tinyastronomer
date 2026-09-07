@@ -90,12 +90,12 @@ export function createEarthAtmosphere(radius) {
   return atmosphere;
 }
 
-export function loadEarthTextureSet(renderer, loadingManager, keys) {
+export function loadEarthTextureSet(renderer, loadingManager, keys, { compact = false } = {}) {
   const loader = new THREE.TextureLoader(loadingManager);
   const anisotropy = renderer.capabilities.getMaxAnisotropy();
 
   return Object.fromEntries(keys.map(key => {
-    const path = EARTH_TEXTURE_PATHS[key];
+    const path = compact && key === 'day' ? 'assets/earth/day-2k.webp' : EARTH_TEXTURE_PATHS[key];
     if (!path) throw new Error(`Unknown Earth texture: ${key}`);
     const texture = loader.load(path);
     texture.wrapS = THREE.RepeatWrapping;

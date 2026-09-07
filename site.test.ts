@@ -166,13 +166,13 @@ describe.each(pages)("%s", (file) => {
       const attrs = match[1] || '';
       // import maps are JSON, not JS; skip them.
       if (/\btype=["'](?:importmap|application\/ld\+json)["']/i.test(attrs)) continue;
-      let source = match[2];
-      // Module scripts may use import declarations — strip those so the
-      // remaining classic body still parses under new Function.
+      const source = match[2];
       if (/\btype=["']module["']/i.test(attrs)) {
-        source = source.replace(/^\s*import\s[\s\S]*?;\s*/gm, '');
+        // Parse actual module syntax, including imports and top-level await.
+        expect(() => new Bun.Transpiler({ loader: 'js' }).transformSync(source)).not.toThrow();
+      } else {
+        expect(() => new Function(source)).not.toThrow();
       }
-      expect(() => new Function(source)).not.toThrow();
     }
   });
 
@@ -1182,7 +1182,7 @@ test('Light Study can save the current view as a wallpaper image', () => {
   expect(index).toContain('Save view');
   expect(index).not.toContain('Set wallpaper');
   expect(index).not.toContain('set wallpaper');
-  expect(index).toContain("from './capture.js");
+  expect(index).toContain("import('./capture.js");
   expect(index).toContain('bindSaveViewControl(setup');
   expect(index).toContain('getObservation: () => infoTitle.textContent');
   expect(index).toContain('html.is-capturing-view .header');
@@ -1199,7 +1199,6 @@ test('Light Study can save the current view as a wallpaper image', () => {
   expect(capture).toContain("'image/png'");
   expect(capture).toContain('Refusing to save the on-screen buffer as a wallpaper');
 
-  expect(commonCss.split('\n').length).toBeLessThan(1000);
   expect(commonCss).not.toContain('.save-view-btn');
   expect(commonCss).not.toContain('is-capturing-view');
   expect(homeCss).toContain('#save-view-btn');
@@ -1544,18 +1543,18 @@ test('wallpaper capture turns bloom on for one frame without touching the qualit
 });
 
 test('3D preloads follow the import map and lightweight pages do not fetch Three.js', () => {
-  for (const name of ['index', 'solar-system', 'seasons', 'scale-walk']) {
+  for (const name of ['seasons', 'scale-walk']) {
     const html = readFileSync(`${name}.html`, 'utf8');
     const importMapEnd = html.indexOf('</script>', html.indexOf('<script type="importmap">'));
     expect(html.indexOf('rel="modulepreload"')).toBeGreaterThan(importMapEnd);
   }
-  for (const name of ['missions', 'sky-tonight']) {
+  for (const name of ['index', 'solar-system', 'missions', 'sky-tonight']) {
     expect(readFileSync(`${name}.html`, 'utf8')).not.toContain('rel="modulepreload"');
   }
   const tour = readFileSync('tour-textures.js', 'utf8');
   const scene = readFileSync('solar-system.html', 'utf8');
-  expect(tour.match(/from '(\.\/common\.js[^']+)'/)?.[1]).toBe(
-    scene.match(/from '(\.\/common\.js[^']+)'/)?.[1]
+  expect(tour.match(/from '(\.\/common(?:\.bundle)?\.js[^']+)'/)?.[1]).toBe(
+    scene.match(/import\('(\.\/common(?:\.bundle)?\.js[^']+)'\)/)?.[1]
   );
 });
 

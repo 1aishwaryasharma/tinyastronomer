@@ -13,8 +13,6 @@
   }
 }
 </script>
-<link rel="modulepreload" href="vendor/three/three.module.min.js">
-<link rel="modulepreload" href="vendor/three/three.core.min.js">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/">
 <link rel="icon" href="favicon.svg?v=20260816-20" type="image/svg+xml">
@@ -41,12 +39,11 @@
   "url": "https://tinyastronomer.com/"
 }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=20260904-1">
-<link rel="stylesheet" href="common.css?v=20260906-1">
-<link rel="stylesheet" href="home.css?v=20260906-1">
+<link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="common.css?v=20260907-2">
+<link rel="stylesheet" href="home.css?v=20260907-2">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -100,14 +97,16 @@
       <p class="observatory-kicker">Interactive solar system · six studies</p>
       <h1 id="launch-title">A small observatory for our neighbourhood in space.</h1>
       <p class="observatory-lede">Turn the model. Pause time. Watch day and night, phases, tides, eclipses, and more unfold.</p>
-      <p class="observatory-hint"><span aria-hidden="true">↔</span> Drag the Earth to look around</p>
+      <p class="observatory-hint"><span aria-hidden="true">↔</span> Open a study to explore in 3D</p>
       <div class="observatory-actions">
         <a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>Start exploring <span aria-hidden="true">↗</span></a>
         <a class="observatory-hint observatory-scroll" href="#observations"><span aria-hidden="true">↓</span> All six studies</a>
       </div>
     </section>
 
-    <div class="observatory-viewport" id="home-earth-viewport" aria-label="Earth preview"></div>
+    <div class="observatory-viewport" id="home-earth-viewport" aria-label="Earth preview">
+      <img class="earth-preview" src="assets/earth/home-preview.webp" alt="Earth, with sunlit oceans and clouds" width="922" height="912" fetchpriority="high">
+    </div>
 
     <nav class="study-index" id="observations" aria-label="Interactive astronomy studies">
       <p class="study-index-label">Choose an observation</p>
@@ -304,11 +303,19 @@
 
 <script type="module" src="home-launch.js?v=20260904-1"></script>
 <script type="module">
-import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260907-1';
-import { bindSaveViewControl } from './capture.js?v=20260825-1';
-import { SPACE_DATA } from './data.js';
-import { createEarthGeometry, createEarthClouds, createEarthAtmosphere, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260907-1';
+let sceneStarted = false;
+async function startLightStudy() {
+  if (sceneStarted) return;
+  sceneStarted = true;
+  try {
+const [THREE, { SPACE }, { bindSaveViewControl }, { SPACE_DATA }, earthVisuals] = await Promise.all([
+  import('three'),
+  import('./common.bundle.js?v=20260907-2'),
+  import('./capture.js?v=20260825-1'),
+  import('./data.js'),
+  import('./earth-visuals.js?v=20260907-2')
+]);
+const { createEarthGeometry, createEarthClouds, createEarthAtmosphere, EARTH_SHAPE, loadEarthTextureSet } = earthVisuals;
 
 // ─────────────────────────────────────────────────────────
 // 1. SCENE SETUP
@@ -1360,6 +1367,17 @@ bindSaveViewControl(setup, {
 applyPreset('free', false);
 
 SPACE.buildNav('light');
+renderer.domElement.focus({ preventScroll: true });
+  } catch (error) {
+    console.error('Light Study could not start.', error);
+    const loader = document.getElementById('loader');
+    loader.classList.remove('hidden');
+    loader.setAttribute('role', 'alert');
+    loader.querySelector('.loader-text').textContent = 'The study could not load. Reload the page to try again.';
+  }
+}
+window.addEventListener('light-study-open', startLightStudy, { once: true });
+if (document.body.classList.contains('is-study-open')) startLightStudy();
 </script>
 </body>
 </html>

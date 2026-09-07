@@ -17,7 +17,7 @@ import {
   prefersReducedMotion,
   revealRailButton,
   setText
-} from './chrome.js?v=20260907-1';
+} from './chrome.js?v=20260907-2';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js';

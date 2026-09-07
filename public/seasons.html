@@ -13,6 +13,7 @@
   }
 }
 </script>
+<script type="module" async src="chrome.js?v=20260907-2"></script>
 <link rel="modulepreload" href="vendor/three/three.module.min.js">
 <link rel="modulepreload" href="vendor/three/three.core.min.js">
 <meta name="theme-color" content="#050810">
@@ -31,10 +32,9 @@
 <meta name="twitter:title" content="Why We Have Seasons | tinyastronomer">
 <meta name="twitter:description" content="tinyastronomer is a free, ad-free look at why Earth has seasons — it's the tilt, not the distance. Solstices, equinoxes, and both hemispheres.">
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260906-1">
+<link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="common.css?v=20260907-2">
 <style>
   .info-panel { top: 128px; width: 340px; }
   .info-title { font-size: 26px; line-height: 1.1; }
@@ -126,9 +126,9 @@
 
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260907-1';
+import { SPACE } from './common.bundle.js?v=20260907-2';
 import { SPACE_DATA } from './data.js';
-import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260907-1';
+import { createEarthGeometry, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260907-2';
 const clamp = SPACE.clamp;
 const DEG = THREE.MathUtils.degToRad;
 
@@ -169,7 +169,7 @@ earthPivot.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), northPole);
 scene.add(earthPivot);
 
 const loadingManager = new THREE.LoadingManager();
-const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day']);
+const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day'], { compact: true });
 const earth = new THREE.Mesh(createEarthGeometry(EARTH_R, 96, 96),
   new THREE.MeshStandardMaterial({ map: earthTextures.day, roughness: 1, metalness: 0 }));
 earthPivot.add(earth);

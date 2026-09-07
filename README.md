@@ -33,6 +33,11 @@ Missions and Sky Tonight import only `chrome.js` and never load Three.js.
 
 ## Verify
 
+The browser loads `public/common.bundle.js`, generated from `common.js` and
+its post-processing helpers. After editing those sources, rebuild with
+`bun run build.ts`. Three.js and the early-loading chrome module remain shared
+external dependencies.
+
 Run the repository checks with Bun:
 
 ```sh
@@ -125,6 +130,23 @@ Reference values come from [NASA Solar System facts](https://science.nasa.gov/so
 
 The claim-by-claim review, source matrix, volatile-data policy, and maintenance
 checklist are recorded in [the scientific audit](docs/scientific-audit.md).
+
+## Performance
+
+The home deck uses a captured Earth preview and loads the interactive Light
+Study on demand (including direct `#light-study` links). Grand Tour loads NASA
+models when a planet is selected; its overview keeps the neutral fallback
+globes. Earth's normal, specular, and night maps also load only when Earth is
+selected. Grand Tour initializes lightweight controls before loading the 3D
+modules and precompiles scene shaders before starting animation. Scale Walk uses
+pre-rendered illustrative textures. Fonts are hosted
+locally under their bundled SIL Open Font Licenses in `public/assets/fonts/`.
+Visible 3D animation is capped at 60 fps and decorative 2D animation at 30 fps;
+hidden tabs and offscreen canvases suspend their animation callbacks.
+
+Keep local profiling reports, screenshots, and recordings under `artifacts/`
+(ignored by Git). Source, tests, reusable QA flows, and asset provenance belong
+in the repository; one-off audit notes and personal IDE settings do not.
 
 ## Credits
 
