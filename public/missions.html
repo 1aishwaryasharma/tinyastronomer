@@ -240,7 +240,7 @@
 </main>
 
 <script type="module">
-import { SPACE } from './chrome.js?v=20260906-1';
+import { SPACE } from './chrome.js?v=20260907-1';
 
 // Live Voyager 1 distance: a linear estimate from a recent epoch. The probe
 // recedes at ~16.9 km/s, so the last digits visibly climb every second.
@@ -292,7 +292,6 @@ function resize(){
 }
 addEventListener('resize', resize); resize();
 function loop(){
-  requestAnimationFrame(loop);
   const t = SPACE.prefersReducedMotion ? 0 : performance.now()*0.001;
   ctx.clearRect(0,0,W,H);
   for (const s of stars){
@@ -301,7 +300,7 @@ function loop(){
     ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r, 0, 6.283); ctx.fill();
   }
 }
-loop();
+SPACE.createFrameLoop(loop, { fps: 30, animated: !SPACE.prefersReducedMotion, element: canvas });
 SPACE.buildNav('missions');
 </script>
 </body>

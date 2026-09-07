@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>tinyastronomer — Sol · Terra · Luna</title>
 <meta name="description" content="tinyastronomer is a free, ad-free 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, ocean tides, and eclipses unfold.">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.min.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+<link rel="modulepreload" href="vendor/three/three.module.min.js">
+<link rel="modulepreload" href="vendor/three/three.core.min.js">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/">
 <link rel="icon" href="favicon.svg?v=20260816-20" type="image/svg+xml">
@@ -291,21 +301,14 @@
 <div class="label-3d earth" id="label-earth" aria-hidden="true">Earth</div>
 <div class="label-3d moon" id="label-moon" aria-hidden="true">Moon</div>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "./vendor/three/three.module.min.js",
-    "three/addons/": "./vendor/three/addons/"
-  }
-}
-</script>
+
 <script type="module" src="home-launch.js?v=20260904-1"></script>
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260906-1';
+import { SPACE } from './common.js?v=20260907-1';
 import { bindSaveViewControl } from './capture.js?v=20260825-1';
 import { SPACE_DATA } from './data.js';
-import { createEarthGeometry, createEarthClouds, createEarthAtmosphere, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260904-1';
+import { createEarthGeometry, createEarthClouds, createEarthAtmosphere, EARTH_SHAPE, loadEarthTextureSet } from './earth-visuals.js?v=20260907-1';
 
 // ─────────────────────────────────────────────────────────
 // 1. SCENE SETUP
@@ -1207,19 +1210,15 @@ window.addEventListener('light-study-open', () => {
   cam.azimuthTarget = -0.3;
   cam.elevationTarget = 0.2;
 });
-let lastT = performance.now();
 const _sunDirView = new THREE.Vector3();
 const _orbitNodeAxis = new THREE.Vector3();
 const _orbitTiltQuat = new THREE.Quaternion();
 const _orbitNormal = new THREE.Vector3();
 const _moonBasePosition = new THREE.Vector3();
 
-function animate() {
-  requestAnimationFrame(animate);
-  const now = performance.now();
-  const rawDt = (now - lastT) / 1000;
+function animate(now, frameDt) {
+  const rawDt = frameDt;
   const dt = Math.min(rawDt, 0.05);
-  lastT = now;
   quality.frame(rawDt, cam.interacting);
 
   if (sim.playing) {
@@ -1345,7 +1344,7 @@ function animate() {
 }
 
 SPACE.createLoader(loadingManager);
-requestAnimationFrame(() => { animate(); });
+SPACE.createFrameLoop(animate, { element: renderer.domElement });
 
 function syncBloomOutputScale() {
   sunUniforms.uOutputScale.value = setup.bloomPass && setup.bloomPass.enabled ? Math.PI : 1;

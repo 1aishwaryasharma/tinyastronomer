@@ -307,7 +307,7 @@ test('Grand Tour uses traceable scientific surface assets', () => {
   expect(tour).toContain('createPlanetModelLoader');
   expect(textures).toContain('loadEarthTextureSet');
   expect(earthVisuals).toContain('assets/earth/day-4k.jpg');
-  expect(earthVisuals).toContain('assets/earth/lights-2k.png');
+  expect(earthVisuals).toContain('assets/earth/lights-2k.webp');
   expect(textures).toContain("p.key === 'eris'");
   for (const key of ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'ceres', 'pluto']) {
     expect(models).toContain(`assets/planet-models/${key}.glb`);
@@ -327,7 +327,7 @@ test('Earth visuals have one scientifically shaped asset seam', () => {
   for (const consumer of consumers) {
     expect(consumer).toContain('earth-visuals.js');
     expect(consumer).not.toContain('assets/earth/day-4k.jpg');
-    expect(consumer).not.toContain('assets/earth/lights-2k.png');
+    expect(consumer).not.toContain('assets/earth/lights-2k.webp');
   }
 });
 
@@ -1541,4 +1541,27 @@ test('wallpaper capture turns bloom on for one frame without touching the qualit
   expect(bloomDuringCapture).toBe(true);
   expect(bloomPass.enabled).toBe(false);
   expect(quality.tier).toBe(2);
+});
+
+test('3D preloads follow the import map and lightweight pages do not fetch Three.js', () => {
+  for (const name of ['index', 'solar-system', 'seasons', 'scale-walk']) {
+    const html = readFileSync(`${name}.html`, 'utf8');
+    const importMapEnd = html.indexOf('</script>', html.indexOf('<script type="importmap">'));
+    expect(html.indexOf('rel="modulepreload"')).toBeGreaterThan(importMapEnd);
+  }
+  for (const name of ['missions', 'sky-tonight']) {
+    expect(readFileSync(`${name}.html`, 'utf8')).not.toContain('rel="modulepreload"');
+  }
+  const tour = readFileSync('tour-textures.js', 'utf8');
+  const scene = readFileSync('solar-system.html', 'utf8');
+  expect(tour.match(/from '(\.\/common\.js[^']+)'/)?.[1]).toBe(
+    scene.match(/from '(\.\/common\.js[^']+)'/)?.[1]
+  );
+});
+
+test('the lossless night-lights asset is served as WebP', async () => {
+  const response = await handleRequest(new Request('http://localhost/assets/earth/lights-2k.webp'));
+  expect(response.status).toBe(200);
+  expect(response.headers.get('content-type')).toBe('image/webp');
+  expect((await response.arrayBuffer()).byteLength).toBeLessThan(410160);
 });

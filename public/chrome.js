@@ -1,3 +1,4 @@
+import { createFrameLoop } from './frame-loop.js?v=20260907-1';
 /* ─────────────────────────────────────────────────────────
    Chrome helpers shared by every page — navigation, mobile
    drawers, hints, and tiny DOM utilities. No Three.js here so
@@ -317,6 +318,7 @@ if (document.readyState === 'loading') {
 }
 
 const SPACE = {
+  createFrameLoop,
   buildNav,
   clamp,
   initDisplayMenus,
@@ -333,6 +335,7 @@ window.SPACE = SPACE;
 
 export {
   SPACE,
+  createFrameLoop,
   buildNav,
   clamp,
   initDisplayMenus,

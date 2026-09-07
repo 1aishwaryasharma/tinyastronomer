@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>How Far Apart? — A Space Walk | tinyastronomer</title>
 <meta name="description" content="tinyastronomer is a free, ad-free walk of average solar-system distances, with the Sun shrunk to a basketball.">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.min.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+<link rel="modulepreload" href="vendor/three/three.module.min.js">
+<link rel="modulepreload" href="vendor/three/three.core.min.js">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/scale-walk">
 <link rel="icon" href="favicon.svg?v=20260816-20" type="image/svg+xml">
@@ -94,19 +104,12 @@
 
 <div class="hint"><span class="key">Drag</span> to look around · <span class="key">Scroll</span> to zoom · <span class="key">← →</span> to travel</div>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "./vendor/three/three.module.min.js",
-    "three/addons/": "./vendor/three/addons/"
-  }
-}
-</script>
+
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260906-1';
+import { SPACE } from './common.js?v=20260907-1';
 import { SPACE_DATA } from './data.js';
-import { createTourTextures } from './tour-textures.js';
+import { createTourTextures } from './tour-textures.js?v=20260907-1';
 const clamp = SPACE.clamp;
 
 const setup = SPACE.createScene({
@@ -339,12 +342,7 @@ function place(obj, el) {
   if (el.style.display !== 'none') el.style.opacity = 0.85;
 }
 
-let lastT = performance.now();
-function animate() {
-  requestAnimationFrame(animate);
-  const now = performance.now();
-  const rawDt = (now - lastT) / 1000;
-  lastT = now;
+function animate(now, rawDt) {
   quality.frame(rawDt);
   const motionNow = SPACE.prefersReducedMotion ? 0 : now;
   cam.target.lerp(targetPos(), 0.06);
@@ -361,7 +359,7 @@ function animate() {
   setup.render();
 }
 render();
-animate();
+SPACE.createFrameLoop(animate, { element: renderer.domElement });
 SPACE.buildNav('scale');
 </script>
 </body>

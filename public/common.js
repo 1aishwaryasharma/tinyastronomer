@@ -8,6 +8,7 @@
    non-WebGL pages never pull Three.js.
    ───────────────────────────────────────────────────────── */
 import {
+  createFrameLoop,
   buildNav,
   clamp,
   initMobileHints,
@@ -16,7 +17,7 @@ import {
   prefersReducedMotion,
   revealRailButton,
   setText
-} from './chrome.js?v=20260906-1';
+} from './chrome.js?v=20260907-1';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js';
@@ -1016,6 +1017,7 @@ float fbm(vec3 p) {
 
   return {
     bindCameraKeys,
+    createFrameLoop,
     buildNav,
     clamp,
     createAurora,

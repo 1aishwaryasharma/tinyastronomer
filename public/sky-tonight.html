@@ -138,7 +138,7 @@
 </div>
 
 <script type="module">
-import { SPACE } from './chrome.js?v=20260906-1';
+import { SPACE } from './chrome.js?v=20260907-1';
 import { SPACE_DATA } from './data.js';
 const clamp = SPACE.clamp;
 
@@ -316,11 +316,13 @@ update();
 
 let t0 = performance.now();
 function loop(){
-  requestAnimationFrame(loop);
   const t=SPACE.prefersReducedMotion ? 0 : (performance.now()-t0)*0.001;
   draw(offset,t);
 }
-loop();
+const drawing = SPACE.createFrameLoop(loop, { fps: 30, animated: !SPACE.prefersReducedMotion, element: canvas });
+document.addEventListener('input', drawing.invalidate);
+document.addEventListener('change', drawing.invalidate);
+document.addEventListener('click', drawing.invalidate);
 SPACE.buildNav('sky');
 </script>
 </body>
