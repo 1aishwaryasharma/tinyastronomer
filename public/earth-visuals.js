@@ -16,7 +16,7 @@ export const EARTH_SHAPE = Object.freeze({
 
 const EARTH_TEXTURE_PATHS = Object.freeze({
   day: 'assets/earth/day-4k.jpg',
-  lights: 'assets/earth/lights-2k.png',
+  lights: 'assets/earth/lights-2k.webp',
   normal: 'assets/earth/normal.jpg',
   specular: 'assets/earth/specular.jpg',
   clouds: 'assets/earth/clouds-1k.png'

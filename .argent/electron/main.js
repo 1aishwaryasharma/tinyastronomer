@@ -57,7 +57,7 @@ const createWindow = () => {
     autoHideMenuBar: true,
     backgroundColor: '#050810',
     height: HEIGHT,
-    show: true,
+    show: false,
     useContentSize: true,
     webPreferences: {
       backgroundThrottling: false,
@@ -71,6 +71,7 @@ const createWindow = () => {
     width: WIDTH,
   });
   win.setMenuBarVisibility(false);
+  win.once('ready-to-show', () => win.show());
   win.loadURL(SITE_URL);
 };
 

@@ -137,16 +137,6 @@ canvas { display: block; }
   font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--ink-dim); margin-top: 6px;
 }
-.nav-link, .back-link {
-  display: inline-block; margin-top: 10px;
-  font-family: 'Fragment Mono', monospace;
-  font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--ink-dim); text-decoration: none; pointer-events: auto;
-  border-bottom: 1px solid transparent; padding-bottom: 2px;
-  transition: color 0.2s, border-color 0.2s;
-}
-.nav-link:hover, .back-link:hover { color: var(--accent); border-color: rgba(244, 197, 96, 0.4); }
-
 .header-meta {
   text-align: right;
   font-family: 'Fragment Mono', monospace;
@@ -205,8 +195,12 @@ canvas { display: block; }
   overflow: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--rail-fade-top), #000 calc(100% - var(--rail-fade-bottom)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--rail-fade-top), #000 calc(100% - var(--rail-fade-bottom)), transparent);
 }
 .side-rail.scroll::-webkit-scrollbar { display: none; }
+/* chrome.js measures the overflow on each edge; a 0px fade is fully opaque. */
+.side-rail { --rail-fade-start: 0px; --rail-fade-end: 0px; --rail-fade-top: 0px; --rail-fade-bottom: 0px; }
 .rail-btn {
   background: var(--panel);
   backdrop-filter: blur(20px);
@@ -438,6 +432,8 @@ canvas { display: block; }
   color: var(--accent); border-color: rgba(244, 197, 96, 0.4);
   background: rgba(244, 197, 96, 0.05);
 }
+/* Only short phones fold the toggles behind this button (see below). */
+.display-menu-btn { display: none; }
 
 /* ──── Hint ──── */
 .hint {
@@ -552,12 +548,6 @@ canvas { display: block; }
 .scene-menu a.scene-next:hover { color: #ffd47a; background: rgba(244, 197, 96, 0.06); }
 .scene-menu a.scene-next .arrow { margin-left: auto; }
 
-/* Explore menu is the sole cross-page nav; drop the redundant header links. */
-.nav-link,
-.back-link {
-  display: none !important;
-}
-
 /* Tablet: compact the header. Interactive scenes move live telemetry out of
    the title row so it no longer fights the Explore control. */
 @media (max-width: 1024px) {
@@ -671,6 +661,8 @@ canvas { display: block; }
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--rail-fade-start), #000 calc(100% - var(--rail-fade-end)), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 var(--rail-fade-start), #000 calc(100% - var(--rail-fade-end)), transparent);
   }
   .side-rail::-webkit-scrollbar,
   .side-rail.scroll::-webkit-scrollbar { display: none; }
@@ -888,6 +880,20 @@ canvas { display: block; }
   .rail-btn {
     min-height: 44px;
   }
+}
+
+/* Short phones: Play and Speed stay in the dock; the display toggles fold
+   behind one Display button that opens a popover above it. The dock drops a
+   row, so the drawer can sit lower and leave more of the scene uncovered. */
+@media (max-width: 820px) and (max-height: 700px), (max-height: 520px) and (orientation: landscape) {
+  .display-menu-btn { display: inline-flex; align-items: center; }
+  .controls .toggle-group.display-menu {
+    display: none; position: absolute; right: 0; bottom: calc(100% + 8px); left: 0;
+    flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px;
+    background: rgba(8, 12, 22, 0.96); border: 1px solid var(--line); border-radius: 2px;
+  }
+  .controls .toggle-group.display-menu.is-open { display: flex; }
+  .info-panel.mobile-info-panel { bottom: calc(132px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 
 @media (max-height: 520px) and (orientation: landscape) {

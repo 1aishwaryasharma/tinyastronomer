@@ -4,8 +4,8 @@
    scene orchestration, not canvas paint routines.
    ───────────────────────────────────────────────────────── */
 import * as THREE from 'three';
-import { SPACE } from './common.js';
-import { loadEarthTextureSet } from './earth-visuals.js?v=20260815-1';
+import { SPACE } from './common.js?v=20260907-1';
+import { loadEarthTextureSet } from './earth-visuals.js?v=20260907-1';
 
 export function createTourTextures(renderer) {
   const clamp = SPACE.clamp;

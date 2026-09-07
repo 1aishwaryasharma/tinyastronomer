@@ -307,7 +307,7 @@ test('Grand Tour uses traceable scientific surface assets', () => {
   expect(tour).toContain('createPlanetModelLoader');
   expect(textures).toContain('loadEarthTextureSet');
   expect(earthVisuals).toContain('assets/earth/day-4k.jpg');
-  expect(earthVisuals).toContain('assets/earth/lights-2k.png');
+  expect(earthVisuals).toContain('assets/earth/lights-2k.webp');
   expect(textures).toContain("p.key === 'eris'");
   for (const key of ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'ceres', 'pluto']) {
     expect(models).toContain(`assets/planet-models/${key}.glb`);
@@ -327,7 +327,7 @@ test('Earth visuals have one scientifically shaped asset seam', () => {
   for (const consumer of consumers) {
     expect(consumer).toContain('earth-visuals.js');
     expect(consumer).not.toContain('assets/earth/day-4k.jpg');
-    expect(consumer).not.toContain('assets/earth/lights-2k.png');
+    expect(consumer).not.toContain('assets/earth/lights-2k.webp');
   }
 });
 
@@ -476,7 +476,7 @@ test('Polar Lights cannot resize the framebuffer during an orbit drag', () => {
     `${governor}; return createQualityGovernor;`,
   )(
     { now: () => now },
-    { innerWidth: 1280, innerHeight: 800 },
+    { devicePixelRatio: 2, innerWidth: 1280, innerHeight: 800 },
   );
   const quality = createQualityGovernor({
     renderer: makeSurface('renderer'),
@@ -497,6 +497,22 @@ test('Polar Lights cannot resize the framebuffer during an orbit drag', () => {
   }
   expect(quality.tier).toBe(1);
   expect(resizeCalls.length).toBeGreaterThan(0);
+});
+
+test('attaching a shadow light does not clear or reallocate the live canvas', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const governor = common.slice(common.indexOf('function createQualityGovernor'), common.indexOf('// ── Keyboard camera control'));
+  const calls: string[] = [];
+  const surface = {
+    setPixelRatio() { calls.push('ratio'); },
+    setSize() { calls.push('size'); },
+  };
+  const createGovernor = new Function('performance', 'window', `${governor}; return createQualityGovernor;`)(
+    { now: () => 0 }, { devicePixelRatio: 2, innerWidth: 1280, innerHeight: 800 }
+  );
+  const quality = createGovernor({ renderer: surface, composer: surface });
+  quality.setShadowLight({ shadow: { mapSize: { x: 2048 } } });
+  expect(calls).toEqual([]);
 });
 
 test('adaptive quality follows the preview container and its expansion into a study', () => {
@@ -522,8 +538,9 @@ test('adaptive quality follows the preview container and its expansion into a st
     now += 50;
     quality.frame(0.05);
   }
-  expect(sizes.length).toBeGreaterThan(0);
-  expect(sizes.every(([w, h]) => w === 343 && h === 272)).toBe(true);
+  // DPR 1 tiers share the same resolution: a downgrade must not clear it.
+  expect(quality.tier).toBe(1);
+  expect(sizes).toEqual([]);
   sizes.length = 0;
   size = { width: 1280, height: 800 };
   for (let frame = 0; frame < 100; frame++) {
@@ -997,6 +1014,87 @@ test('mobile interaction hint is shown only once across pages', () => {
   expect(chromeJs).toContain("h.classList.add('is-dismissed')");
 });
 
+test('phone landing offers a first action above the fold and no drag hint', () => {
+  const home = readFileSync('index.html', 'utf8');
+  const homeCss = readFileSync('home.css', 'utf8');
+  // The primary action launches the first study in place, like card 01.
+  expect(home).toMatch(/<a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>/);
+  expect(home).toContain('class="observatory-hint observatory-scroll" href="#observations"');
+  const narrow = homeCss.slice(
+    homeCss.indexOf('@media not all and (min-width: 60rem)'),
+    homeCss.indexOf('@media (max-width: 39.999rem)')
+  );
+  expect(narrow).toMatch(/\.observatory-intro > p\.observatory-hint\s*\{\s*display:\s*none/);
+  expect(narrow).toMatch(/\.observatory-actions\s*\{\s*display:\s*flex/);
+  // The Earth preview yields height on short phones instead of pushing the
+  // study list a full screen down.
+  expect(narrow).toMatch(/\.observatory-viewport\s*\{\s*height:\s*clamp\([^)]*svh/);
+  // Wide screens keep the composition: the actions row exists only on phones.
+  expect(homeCss).toMatch(/\.observatory-actions,\s*\.observatory-scroll\s*\{\s*display:\s*none/);
+});
+
+test('short phones fold display toggles behind one Display button', () => {
+  const chrome = readFileSync('chrome.js', 'utf8');
+  const commonCss = readFileSync('common.css', 'utf8');
+  expect(chrome).toContain('function initDisplayMenus');
+  expect(chrome).toContain(".toggle-group[data-display-menu]");
+  expect(chrome).toContain("btn.setAttribute('aria-expanded', String(open))");
+  expect(readFileSync('index.html', 'utf8')).toContain('<div class="toggle-group" data-display-menu>');
+  expect(readFileSync('solar-system.html', 'utf8')).toContain('<div class="toggle-group" data-display-menu>');
+  // Seasons has two toggles and a one-row dock already; folding them would
+  // only add a tap.
+  expect(readFileSync('seasons.html', 'utf8')).not.toContain('data-display-menu');
+  expect(commonCss).toMatch(/\.display-menu-btn\s*\{\s*display:\s*none/);
+  const short = commonCss.slice(
+    commonCss.indexOf('@media (max-width: 820px) and (max-height: 700px)'),
+    commonCss.indexOf('@media (max-height: 520px) and (orientation: landscape) {\n  .header')
+  );
+  expect(short).toMatch(/\.display-menu-btn\s*\{\s*display:\s*inline-flex/);
+  expect(short).toMatch(/\.toggle-group\.display-menu\s*\{\s*display:\s*none;\s*position:\s*absolute/);
+  expect(short).toMatch(/\.toggle-group\.display-menu\.is-open\s*\{\s*display:\s*flex/);
+});
+
+test('scrollable chip rails fade the edge that still has stops', () => {
+  const chrome = readFileSync('chrome.js', 'utf8');
+  const commonCss = readFileSync('common.css', 'utf8');
+  expect(chrome).toContain('function initRailOverflow');
+  expect(chrome).toContain("rail.style.setProperty('--rail-fade-end'");
+  expect(chrome).toContain("observe(rail, { childList: true })");
+  expect(commonCss).toMatch(/\.side-rail\s*\{\s*--rail-fade-start:\s*0px/);
+  expect(commonCss).toContain('mask-image: linear-gradient(to right, transparent, #000 var(--rail-fade-start)');
+  expect(commonCss).toContain('mask-image: linear-gradient(to bottom, transparent, #000 var(--rail-fade-top)');
+});
+
+test('sky tonight can step the date by a day and pick one natively', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  expect(sky).toContain('id="date-prev" aria-label="Previous day"');
+  expect(sky).toContain('id="date-next" aria-label="Next day"');
+  expect(sky).toMatch(/<input type="date" class="date-input" id="date-input" aria-label="[^"]+">/);
+  expect(sky).toContain('prevBtn.onclick = () => setOffset(offset - 1)');
+  expect(sky).toContain('nextBtn.onclick = () => setOffset(offset + 1)');
+  // Local calendar dates, not toISOString, so the picker never drifts a day.
+  expect(sky).toContain('function isoLocal');
+  expect(sky).not.toContain('.toISOString(');
+  expect(sky).toContain('dateInput.min = isoLocal(dateAt(0))');
+  expect(sky).toContain('dateInput.max = isoLocal(dateAt(MAX_OFFSET))');
+});
+
+test('mission cards fold to their hook on phones and stay open without JavaScript', () => {
+  const missions = readFileSync('missions.html', 'utf8');
+  const cards = missions.match(/<article class="card"/g) ?? [];
+  const folds = missions.match(/<div class="more" id="more-[a-z-]+">/g) ?? [];
+  expect(cards.length).toBeGreaterThan(0);
+  expect(folds.length).toBe(cards.length);
+  // The fold is a JS enhancement: the stylesheet hides nothing until the
+  // script marks the body, so a no-JS read keeps every card complete.
+  expect(missions).toContain("document.body.classList.add('has-card-fold')");
+  expect(missions).toMatch(/body\.has-card-fold \.card:not\(\.is-open\) \.more\s*\{\s*display:\s*none/);
+  expect(missions).toMatch(/body\.has-card-fold \.card:not\(\.is-open\) \.blurb\s*\{[^}]*-webkit-line-clamp:\s*2/);
+  expect(missions).toMatch(/\.more-btn\s*\{\s*display:\s*none/);
+  expect(missions).toContain("btn.setAttribute('aria-controls', more.id)");
+  expect(missions).toContain("'Read more about '");
+});
+
 test('sky tonight uses the shared mobile drawer so the sky stays visible', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   const chromeJs = readFileSync('chrome.js', 'utf8');
@@ -1443,4 +1541,27 @@ test('wallpaper capture turns bloom on for one frame without touching the qualit
   expect(bloomDuringCapture).toBe(true);
   expect(bloomPass.enabled).toBe(false);
   expect(quality.tier).toBe(2);
+});
+
+test('3D preloads follow the import map and lightweight pages do not fetch Three.js', () => {
+  for (const name of ['index', 'solar-system', 'seasons', 'scale-walk']) {
+    const html = readFileSync(`${name}.html`, 'utf8');
+    const importMapEnd = html.indexOf('</script>', html.indexOf('<script type="importmap">'));
+    expect(html.indexOf('rel="modulepreload"')).toBeGreaterThan(importMapEnd);
+  }
+  for (const name of ['missions', 'sky-tonight']) {
+    expect(readFileSync(`${name}.html`, 'utf8')).not.toContain('rel="modulepreload"');
+  }
+  const tour = readFileSync('tour-textures.js', 'utf8');
+  const scene = readFileSync('solar-system.html', 'utf8');
+  expect(tour.match(/from '(\.\/common\.js[^']+)'/)?.[1]).toBe(
+    scene.match(/from '(\.\/common\.js[^']+)'/)?.[1]
+  );
+});
+
+test('the lossless night-lights asset is served as WebP', async () => {
+  const response = await handleRequest(new Request('http://localhost/assets/earth/lights-2k.webp'));
+  expect(response.status).toBe(200);
+  expect(response.headers.get('content-type')).toBe('image/webp');
+  expect((await response.arrayBuffer()).byteLength).toBeLessThan(410160);
 });

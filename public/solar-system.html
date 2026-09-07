@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Sun &amp; Its Planets — A Grand Tour | tinyastronomer</title>
 <meta name="description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — orbital relationships, moons, comets, and kid-friendly facts.">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.min.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+<link rel="modulepreload" href="vendor/three/three.module.min.js">
+<link rel="modulepreload" href="vendor/three/three.core.min.js">
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/solar-system">
 <link rel="icon" href="favicon.svg?v=20260816-20" type="image/svg+xml">
@@ -24,7 +34,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20260818-5">
+<link rel="stylesheet" href="common.css?v=20260906-1">
 <style>
   /* ── Page-specific styling for the grand tour; shared .facts / .fact-row /
      .fact-callout / .side-rail / .rail-btn live in common.css ── */
@@ -126,7 +136,7 @@
     <span class="speed-value" id="speed-value">1.0×</span>
   </div>
   <div class="divider"></div>
-  <div class="toggle-group">
+  <div class="toggle-group" data-display-menu>
     <button type="button" class="toggle-btn active" id="toggle-orbits" aria-pressed="true">Orbits</button>
     <button type="button" class="toggle-btn active" id="toggle-labels" aria-pressed="true">Labels</button>
     <button type="button" class="toggle-btn active" id="toggle-belts" aria-pressed="true">Belts</button>
@@ -157,20 +167,13 @@
   <span class="key">Drag</span> or <span class="key">Arrows</span> to rotate · <span class="key">Scroll</span> or <span class="key">+ −</span> to zoom · <span class="key">Tap</span> a world
 </div>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "./vendor/three/three.module.min.js",
-    "three/addons/": "./vendor/three/addons/"
-  }
-}
-</script>
+
 <script type="module">
 import * as THREE from 'three';
-import { SPACE } from './common.js?v=20260904-1';
+import { SPACE } from './common.js?v=20260907-1';
 import { SPACE_DATA } from './data.js';
-import { createEarthGeometry } from './earth-visuals.js?v=20260815-1';
-import { createTourTextures } from './tour-textures.js?v=20260815-4';
+import { createEarthGeometry } from './earth-visuals.js?v=20260907-1';
+import { createTourTextures } from './tour-textures.js?v=20260907-1';
 import { createPlanetModelLoader } from './planet-models.js?v=20260815-4';
 import { advanceTrackedCoordinate, relaxedPlanetDistance, sunAndPlanetFrame, updatedAutomaticDistance } from './tour-camera.js?v=20260815-1';
 const clamp = SPACE.clamp;
@@ -707,7 +710,6 @@ renderer.domElement.addEventListener('pointermove', (e) => {
 // ─────────────────────────────────────────────────────────
 // 14. ANIMATION LOOP
 // ─────────────────────────────────────────────────────────
-let lastT = performance.now();
 const _worldPos = new THREE.Vector3(), _focusTarget = new THREE.Vector3();
 const _previousFocusTarget = new THREE.Vector3(), _origin = new THREE.Vector3();
 const _earthWorldPos = new THREE.Vector3(), _earthSunDirView = new THREE.Vector3();
@@ -728,12 +730,9 @@ function selectedObject() {
   return null;
 }
 
-function animate() {
-  requestAnimationFrame(animate);
-  const now = performance.now();
-  const rawDt = (now - lastT) / 1000;
+function animate(now, frameDt) {
+  const rawDt = frameDt;
   const dt = Math.min(rawDt, 0.05);
-  lastT = now;
   quality.frame(rawDt);
   if (sim.playing) {
     sim.timeDays += dt * DAYS_PER_SEC * sim.speed;
@@ -814,7 +813,7 @@ function animate() {
 }
 
 SPACE.createLoader(loadingManager);
-requestAnimationFrame(() => { animate(); });
+SPACE.createFrameLoop(animate, { element: renderer.domElement });
 
 // ─────────────────────────────────────────────────────────
 // 17. GUIDED TOUR + QUIZ MODES
