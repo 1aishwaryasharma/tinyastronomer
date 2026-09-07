@@ -579,21 +579,32 @@ float fbm(vec3 p) {
     const FLAP_WINDOW_MS = 12000;
     const MAX_DWELL_S = 600;
 
+    const initialSize = opts.getSize
+      ? opts.getSize() : { width: window.innerWidth, height: window.innerHeight };
+    let appliedPR = basePR, appliedW = initialSize.width, appliedH = initialSize.height;
+
     function apply() {
       const pr = PR_STEPS[tier];
       const { width: w, height: h } = opts.getSize
         ? opts.getSize() : { width: window.innerWidth, height: window.innerHeight };
-      renderer.setPixelRatio(pr);
-      renderer.setSize(w, h);
-      if (composer) {
-        composer.setPixelRatio(pr);
-        composer.setSize(w, h);
+      const ratioChanged = pr !== appliedPR;
+      const sizeChanged = w !== appliedW || h !== appliedH;
+      // setPixelRatio already calls setSize internally. Repeating either
+      // resets the drawing buffer and reallocates every post-processing pass.
+      if (ratioChanged) {
+        renderer.setPixelRatio(pr);
+        if (composer) composer.setPixelRatio(pr);
       }
-      // composer.setSize already resizes FXAAPass; keep a direct path for
-      // scenes that wire FXAA without a composer reference.
-      if (fxaaPass && typeof fxaaPass.setSize === 'function' && !composer) {
+      if (sizeChanged) {
+        renderer.setSize(w, h);
+        if (composer) composer.setSize(w, h);
+      }
+      if ((ratioChanged || sizeChanged) && fxaaPass && typeof fxaaPass.setSize === 'function' && !composer) {
         fxaaPass.setSize(w * pr, h * pr);
       }
+      appliedPR = pr;
+      appliedW = w;
+      appliedH = h;
       if (bloomPass) bloomPass.enabled = tier < 2;
       if (shadowLight && shadowLight.shadow && shadowLight.shadow.mapSize.x !== SHADOW_STEPS[tier]) {
         shadowLight.shadow.mapSize.set(SHADOW_STEPS[tier], SHADOW_STEPS[tier]);
@@ -792,8 +803,7 @@ float fbm(vec3 p) {
     if (opts.composer !== false) {
       try {
         composer = new EffectComposer(renderer);
-        composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        composer.setSize(initialSize.width, initialSize.height);
+        // EffectComposer inherits the renderer's dimensions and pixel ratio.
         composer.addPass(new RenderPass(scene, camera));
         const b = opts.bloom || {};
         // Half-float composer buffers are HDR. Scale the bloom floor with the
@@ -839,12 +849,19 @@ float fbm(vec3 p) {
       renderer.setSize(w, h);
       if (composer) composer.setSize(w, h);
     }
-    window.addEventListener('resize', opts.onResize
-      ? function () { resize(); opts.onResize(); }
-      : resize);
-    if (opts.sizeToContainer) new ResizeObserver(resize).observe(container);
+    // Browser resize callbacks can run after the animation frame. Defer
+    // clearing the canvas until we can paint its replacement in the same task.
+    let resizePending = false;
+    const scheduleResize = () => { resizePending = true; };
+    window.addEventListener('resize', scheduleResize);
+    if (opts.sizeToContainer) new ResizeObserver(scheduleResize).observe(container);
 
     function render() {
+      if (resizePending) {
+        resizePending = false;
+        resize();
+        if (opts.onResize) opts.onResize();
+      }
       if (composer) composer.render();
       else renderer.render(scene, camera);
     }
