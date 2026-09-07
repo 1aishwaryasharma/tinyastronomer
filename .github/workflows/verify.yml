@@ -23,5 +23,10 @@ jobs:
         with:
           bun-version: 1.3.14
 
+      - name: Verify generated render helpers
+        run: |
+          bun run build.ts
+          git diff --exit-code -- public/common.bundle.js
+
       - name: Run repository checks
         run: bun test

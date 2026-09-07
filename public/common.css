@@ -1,3 +1,25 @@
+/* Local fonts retain the original families and variable optical sizing. */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('assets/fonts/newsreader-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fragment Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('assets/fonts/fragment-mono-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fragment Mono';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('assets/fonts/fragment-mono-italic-latin.woff2') format('woff2');
+}
 /* ─────────────────────────────────────────────────────────
    Shared design system for the solar-system scenes.
    Page-specific rules stay in each page's own <style> block.

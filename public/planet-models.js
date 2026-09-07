@@ -3,7 +3,6 @@
    and mission-derived texture composites; they are only transmission-
    compressed for this site. */
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const MODEL_PATHS = Object.freeze({
   mercury: 'assets/planet-models/mercury.glb',
@@ -18,7 +17,7 @@ const MODEL_PATHS = Object.freeze({
 });
 
 export function createPlanetModelLoader(renderer, loadingManager) {
-  const loader = new GLTFLoader(loadingManager);
+  let loaderPromise;
   const anisotropy = renderer.capabilities.getMaxAnisotropy();
 
   function prepare(root) {
@@ -55,7 +54,16 @@ export function createPlanetModelLoader(renderer, loadingManager) {
   function load(key, onLoad, onError) {
     const path = MODEL_PATHS[key];
     if (!path) return false;
-    loader.load(path, gltf => onLoad(prepare(gltf.scene)), undefined, onError);
+    // The overview uses small neutral globes; do not fetch or parse the GLTF
+    // loader until a detailed planet is actually requested.
+    loaderPromise ||= import('three/addons/loaders/GLTFLoader.js')
+      .then(({ GLTFLoader }) => new GLTFLoader(loadingManager));
+    loaderPromise.then(loader => {
+      loader.load(path, gltf => onLoad(prepare(gltf.scene)), undefined, onError);
+    }).catch(error => {
+      if (onError) onError(error);
+      else console.warn('Planet model loader unavailable.', error);
+    });
     return true;
   }
 
