@@ -9,3 +9,9 @@ artifacts/
 !.dev.vars.example
 .env*
 !.env.example
+
+# Personal IDE metadata and one-off local performance reports
+.idea/
+/docs/performance.md
+/docs/performance-fixes.md
+/docs/production-performance.md
