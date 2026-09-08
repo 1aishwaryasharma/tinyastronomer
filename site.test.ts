@@ -76,6 +76,11 @@ test("security headers cover every static response and authorize current inline 
   expect(scriptPolicy).toContain("frame-ancestors 'none'");
   expect(scriptPolicy).toContain("object-src 'none'");
 
+  const permissionsPolicy = headers.match(/^\s*Permissions-Policy:\s*(.+)$/m)?.[1] || "";
+  expect(permissionsPolicy).toBe(
+    "accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(), publickey-credentials-get=(), usb=()",
+  );
+
   const liveHashes = new Set<string>();
   for (const page of pages) {
     const html = readFileSync(page, "utf8");
