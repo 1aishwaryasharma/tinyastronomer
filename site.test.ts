@@ -254,6 +254,17 @@ test('interactive scenes expose canvas descriptions and live announcements', () 
   expect(readFileSync('missions.html', 'utf8')).toContain('<canvas id="bg" aria-hidden="true"></canvas>');
 });
 
+test('keyboard focus on an edge-to-edge scene uses a compact cue', () => {
+  const commonCss = readFileSync('common.css', 'utf8');
+
+  expect(commonCss).toMatch(
+    /canvas:focus-visible\s*\{[^}]*outline:\s*none/
+  );
+  expect(commonCss).toMatch(
+    /#canvas-container:has\(canvas:focus-visible\)::after\s*\{[^}]*content:\s*['"]Keyboard controls active['"]/
+  );
+});
+
 test('system reduced-motion preference uses play state as the animation policy', () => {
   const common = readFileSync('common.js', 'utf8');
   const chrome = readFileSync('chrome.js', 'utf8');

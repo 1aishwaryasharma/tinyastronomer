@@ -60,10 +60,10 @@ input:focus-visible {
   outline-offset: 3px;
 }
 
-/* inset so the ring stays visible on the edge-to-edge scene canvas */
+/* A full-viewport outline reads as a broken page border. Keep the keyboard
+   focus state visible with the compact scene cue below instead. */
 canvas:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -3px;
+  outline: none;
 }
 
 html, body {
@@ -78,6 +78,24 @@ html, body {
 }
 
 #canvas-container { position: fixed; inset: 0; z-index: 0; }
+#canvas-container:has(canvas:focus-visible)::after {
+  content: 'Keyboard controls active';
+  position: absolute;
+  right: calc(24px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 2;
+  padding: 7px 10px;
+  border: 1px solid rgba(244, 197, 96, 0.4);
+  border-radius: 2px;
+  background: var(--panel-bright);
+  color: var(--accent);
+  font-family: 'Fragment Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  pointer-events: none;
+}
 canvas { display: block; }
 
 /* ──── Header ──── */
