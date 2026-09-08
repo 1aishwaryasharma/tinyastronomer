@@ -175,12 +175,12 @@ horizon view and polish.
 Create `public/sky-forecast.js`. Pure functions only, no DOM, so `bun test` can
 exercise it directly.
 
-- [ ] `nightWindow(observer, localDate)` returns `{ sunset, civilDusk, astroDusk, astroDawn, sunrise, moonRise, moonSet }`
+- [x] `nightWindow(observer, localDate)` returns `{ sunset, civilDusk, astroDusk, astroDawn, sunrise, moonRise, moonSet }`
       as `Date`s. "Tonight" starts at the sunset on or after local noon of
       `localDate` and ends at the following sunrise. Handle polar cases where a
       search returns null: fall back to noon to noon and set a flag
       `polar: 'day' | 'night'` so the UI can say so.
-- [ ] `bodyReport(body, observer, window, sampleTime)` returns
+- [x] `bodyReport(body, observer, window, sampleTime)` returns
       `{ key, name, visible, bestTime, altitude, azimuth, compass, mag, brightness, rise, set, constellation, note }`.
       Rules:
       - `visible` is true if the body is above 5° altitude at any time between
@@ -196,19 +196,19 @@ exercise it directly.
         below 4 "faint, needs a dark sky", below 6 "binoculars", else "telescope".
         Uranus and Neptune keep their fixed optical-aid notes from the audit
         (Uranus "optical aid recommended", Neptune "telescope required").
-- [ ] `moonReport(observer, window)` returns phase name, illumination
+- [x] `moonReport(observer, window)` returns phase name, illumination
       percentage, rise, set, and whether it will wash out the sky (illumination
       above 60% and up during the dark window).
-- [ ] `conjunctions(observer, window)` returns pairs of bodies within 5° of each
+- [x] `conjunctions(observer, window)` returns pairs of bodies within 5° of each
       other at `astroDusk` or `astroDawn`, and any planet within 5° of the Moon.
       Use `A.AngleBetween` on equatorial vectors.
-- [ ] `meteorShowers(date)` from a static table in the module: Quadrantids,
+- [x] `meteorShowers(date)` from a static table in the module: Quadrantids,
       Lyrids, Eta Aquariids, Perseids, Orionids, Leonids, Geminids, Ursids with
       peak month/day and a NASA source link. Return the shower if the date is
       within 2 days of its peak.
-- [ ] `orbitPositions(date)` returns heliocentric ecliptic x, y in AU for the
+- [x] `orbitPositions(date)` returns heliocentric ecliptic x, y in AU for the
       orrery via `A.HelioVector`, so Phase 3 can drop `L0`/`n` maths.
-- [ ] Fixture test `sky-forecast.test.ts`. Use the observer
+- [x] Fixture test `sky-forecast.test.ts`. Use the observer
       `lat 37.77, lon -122.42, height 10` at `2026-09-08T03:00:00Z`. Expected
       values verified with the library on 2026-09-08:
 
@@ -219,7 +219,7 @@ exercise it directly.
       | Mars | -26.1 | 339.7 | 1.2 | 2026-09-08T23:37Z |
       | Moon | -21.2 | 320.8 | -7.6 | 2026-09-09T01:15Z |
 
-      Moon phase angle 320.6°, illumination 11%. Sunset 2026-09-09T02:28Z,
+      Moon phase angle 320.6°, illumination 11%. Sunset 2026-09-08T02:29Z,
       astronomical dusk 2026-09-08T03:59Z. Mars is in Gemini.
       Assert to one decimal for angles and to the minute for times.
       Also test: a polar observer (lat 80) in June returns `polar: 'day'`;
