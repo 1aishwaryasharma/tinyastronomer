@@ -163,11 +163,11 @@ horizon view and polish.
 
 ### Phase 0: vendor the library
 
-- [ ] Add `public/vendor/astronomy-engine/astronomy.min.js`, `LICENSE`, `VERSION`
+- [x] Add `public/vendor/astronomy-engine/astronomy.min.js`, `LICENSE`, `VERSION`
       using the commands in 4.1.
-- [ ] Add a test in `site.test.ts` next to the Three.js vendor test (line 295)
+- [x] Add a test in `site.test.ts` next to the Three.js vendor test (line 295)
       asserting the file exists and the page imports it.
-- [ ] Confirm `bun dev-server.ts` serves it with the right content type and the
+- [x] Confirm `bun dev-server.ts` serves it with the right content type and the
       CSP allows it (`script-src 'self'` covers it).
 
 ### Phase 1: pure forecast module

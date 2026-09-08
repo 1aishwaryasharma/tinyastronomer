@@ -308,6 +308,14 @@ test('Three.js is loaded as a local ES module', () => {
   }
 });
 
+test('Sky Tonight loads the vendored Astronomy Engine ES module', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  expect(existsSync('vendor/astronomy-engine/astronomy.min.js')).toBe(true);
+  expect(existsSync('vendor/astronomy-engine/LICENSE')).toBe(true);
+  expect(existsSync('vendor/astronomy-engine/VERSION')).toBe(true);
+  expect(sky).toContain("./vendor/astronomy-engine/astronomy.min.js");
+});
+
 test('Grand Tour uses traceable scientific surface assets', () => {
   const tour = readFileSync('solar-system.html', 'utf8');
   const models = readFileSync('planet-models.js', 'utf8');

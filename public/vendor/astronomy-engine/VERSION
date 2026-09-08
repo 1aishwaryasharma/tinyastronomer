@@ -1,0 +1,5 @@
+astronomy-engine 2.1.19
+
+Source: https://github.com/cosinekitty/astronomy
+Package: https://registry.npmjs.org/astronomy-engine/-/astronomy-engine-2.1.19.tgz
+Build: bun build package/esm/astronomy.js --minify --format=esm --outfile astronomy.min.js
