@@ -322,13 +322,36 @@ WORLDS.forEach((w, i) => {
   // Mission-derived NASA models retain the original globe UVs, proportions,
   // and observed detail. The neutral globe is a resilient loading fallback.
   w.loadDetail = () => {
-    if (w.detailRequested) return;
+    if (w.detailRequested || !hasScientificModel) return;
     w.detailRequested = true;
-    planetModels.load(w.key, model => {
+    // Track the deferred loader import as well as the eventual GLB request.
+    const item = `planet-detail:${w.key}`;
+    loadingManager.itemStart(item);
+    planetModels.load(w.key, async model => {
+      // Warm the new material against the live lighting without putting an
+      // uncompiled model into the animation loop. Restore the target before
+      // awaiting, because other frames continue rendering in the meantime.
+      const previousTarget = renderer.getRenderTarget();
+      let ready;
+      try {
+        if (composer) renderer.setRenderTarget(composer.readBuffer);
+        ready = renderer.compileAsync(model, camera, scene);
+      } catch (error) {
+        console.warn('Planet shader warmup unavailable.', error);
+      } finally {
+        renderer.setRenderTarget(previousTarget);
+      }
+      try { await ready; } catch (error) {
+        console.warn('Planet shader warmup unavailable.', error);
+      }
       w.mesh.add(model);
       fallbackMesh.visible = false;
       if (fallbackRing) fallbackRing.visible = false;
-    }, error => console.warn(`NASA model unavailable for ${w.key}; using neutral fallback.`, error));
+      loadingManager.itemEnd(item);
+    }, error => {
+      console.warn(`NASA model unavailable for ${w.key}; using neutral fallback.`, error);
+      loadingManager.itemEnd(item);
+    });
   };
 
   // moons orbit in a group centred on the planet (kept in the orbital plane)
@@ -966,6 +989,9 @@ try {
 animate(performance.now(), 0);
 loadingManager.itemEnd('scene-startup');
 SPACE.createFrameLoop(animate, { element: renderer.domElement });
+// Upgrade Saturn in the overview too, after the first frame. Its flattened
+// globe and observed rings must not stay placeholders until it is selected.
+WORLDS.find(w => w.key === 'saturn').loadDetail();
 </script>
 </body>
 </html>
