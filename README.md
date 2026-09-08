@@ -135,8 +135,9 @@ checklist are recorded in [the scientific audit](docs/scientific-audit.md).
 
 The home deck uses a captured Earth preview and loads the interactive Light
 Study on demand (including direct `#light-study` links). Grand Tour loads NASA
-models when a planet is selected; its overview keeps the neutral fallback
-globes. Earth's normal, specular, and night maps also load only when Earth is
+models when a planet is selected, except Saturn: its small model loads in the
+overview too, preserving its flattened globe and ring geometry. Other overview
+globes use neutral fallbacks. Earth's normal, specular, and night maps also load only when Earth is
 selected. Grand Tour initializes lightweight controls before loading the 3D
 modules and precompiles scene shaders before starting animation. Scale Walk uses
 pre-rendered illustrative textures. Fonts are hosted

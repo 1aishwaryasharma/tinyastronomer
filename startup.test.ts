@@ -107,3 +107,35 @@ test('Grand Tour defers Earth detail maps until selection and updates the existi
   textures.loadEarthDetails();
   expect(batches).toHaveLength(2);
 });
+
+test('Saturn upgrades its overview silhouette and tracks the deferred import through completion', async () => {
+  const html = read('solar-system.html');
+  const start = html.indexOf('  w.loadDetail = () => {');
+  const source = html.slice(start, html.indexOf('  // moons orbit', start));
+  for (const fail of [false, true]) {
+    const events: string[] = [];
+    let complete: (value?: object) => void = () => {};
+    const fallbackMesh = { visible: true }, fallbackRing = { visible: true };
+    const w = { key: 'saturn', mesh: { add: () => events.push('model added') }, loadDetail: () => {} };
+    new Function('w', 'hasScientificModel', 'loadingManager', 'planetModels',
+      'fallbackMesh', 'fallbackRing', 'console', 'renderer', 'composer', 'camera', 'scene', source)(
+      w, true,
+      { itemStart: () => events.push('start'), itemEnd: () => events.push('end') },
+      { load: (_key: string, onLoad: typeof complete, onError: typeof complete) => {
+        events.push('request'); complete = fail ? onError : onLoad;
+      } }, fallbackMesh, fallbackRing, { warn: () => {} },
+      { getRenderTarget: () => null, setRenderTarget: () => {}, compileAsync: () => Promise.resolve() },
+      null, {}, {}
+    );
+    expect(html).toContain("WORLDS.find(w => w.key === 'saturn').loadDetail();");
+    w.loadDetail();
+    expect(events).toEqual(['start', 'request']);
+    expect(fallbackRing.visible).toBe(true);
+    w.loadDetail();
+    expect(events).toEqual(['start', 'request']);
+    await complete({});
+    expect(events).toEqual(fail ? ['start', 'request', 'end'] : ['start', 'request', 'model added', 'end']);
+    expect(fallbackMesh.visible).toBe(fail);
+    expect(fallbackRing.visible).toBe(fail);
+  }
+});
