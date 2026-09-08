@@ -253,38 +253,38 @@ Create `public/sky-location.js`.
 Edit `public/sky-tonight.html`. Keep the structure the tests expect (see
 section 3). Suggested panel order, top to bottom:
 
-- [ ] `info-label`: `— Tonight from your location —`.
-- [ ] `info-title`: `What's in the sky tonight?`
-- [ ] **Location row.** Label with the active source, a `Use my location`
+- [x] `info-label`: `— Tonight from your location —`.
+- [x] `info-title`: `What's in the sky tonight?`
+- [x] **Location row.** Label with the active source, a `Use my location`
       button (`id="use-location"`), a `Change` disclosure that reveals the
       manual latitude and longitude inputs, and the one-sentence privacy note.
-- [ ] **Tonight's window.** Sunset, dark from (astronomical dusk), sunrise,
+- [x] **Tonight's window.** Sunset, dark from (astronomical dusk), sunrise,
       in the user's local time. Moon phase with illumination and rise/set.
       Add a moon-phase glyph drawn on a small inline canvas or as SVG.
-- [ ] **What to look for.** One line per visible body, sorted by best time:
+- [x] **What to look for.** One line per visible body, sorted by best time:
       `Venus · SW, 10° up at 8:05 pm · brighter than any star · sets 8:55 pm`.
       Then a collapsed "Not tonight" group listing the rest with the reason
       (below horizon all night, lost in twilight, needs a telescope).
-- [ ] **Tonight's highlights.** Conjunctions and meteor showers when present,
+- [x] **Tonight's highlights.** Conjunctions and meteor showers when present,
       otherwise omit the block.
-- [ ] Keep one `fact-callout` "Try it" with the twinkling sentence from the
+- [x] Keep one `fact-callout` "Try it" with the twinkling sentence from the
       audit. Keep the "End of the journey" framed callout.
-- [ ] Replace the `science-note` copy. New model label:
+- [x] Replace the `science-note` copy. New model label:
       `Local forecast · Positions from astronomy-engine (VSOP87-based), topocentric with refraction. Assumes a flat horizon and clear sky. Location precision: about 10 km from the device, about a city from the time zone.`
       Sources: keep JPL Horizons and NASA Skywatching, add
       `https://github.com/cosinekitty/astronomy`. Set `Reviewed` to the
       implementation date.
-- [ ] Date controls stay as they are. `offset` now shifts the local calendar
+- [x] Date controls stay as they are. `offset` now shifts the local calendar
       date passed to `nightWindow`. Keep `Today` meaning tonight.
-- [ ] `accessibility.announce` on date change and on location change, for
+- [x] `accessibility.announce` on date change and on location change, for
       example `Sky forecast updated for Chicago area, Sept 8.` Also add a
       visually hidden text summary of the horizon view for screen readers,
       regenerated with the list.
-- [ ] Update the inline script hash in `public/_headers` and remove the old
+- [x] Update the inline script hash in `public/_headers` and remove the old
       one. `bun test` reports the digest.
-- [ ] Rewrite `site.test.ts:1154` to assert the new model label, and update the
+- [x] Rewrite `site.test.ts:1154` to assert the new model label, and update the
       `sky` assertions in `site.test.ts:250` if the canvas markup changes.
-- [ ] Ensure everything works with `prefers-reduced-motion` (no twinkling,
+- [x] Ensure everything works with `prefers-reduced-motion` (no twinkling,
       static frame) as the existing loop already does.
 
 ### Phase 4: horizon view and time scrubber

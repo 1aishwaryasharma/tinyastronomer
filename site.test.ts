@@ -315,10 +315,12 @@ test('Three.js is loaded as a local ES module', () => {
 
 test('Sky Tonight loads the vendored Astronomy Engine ES module', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
+  const forecast = readFileSync('sky-forecast.js', 'utf8');
   expect(existsSync('vendor/astronomy-engine/astronomy.min.js')).toBe(true);
   expect(existsSync('vendor/astronomy-engine/LICENSE')).toBe(true);
   expect(existsSync('vendor/astronomy-engine/VERSION')).toBe(true);
-  expect(sky).toContain("./vendor/astronomy-engine/astronomy.min.js");
+  expect(sky).toContain("./sky-forecast.js");
+  expect(forecast).toContain("./vendor/astronomy-engine/astronomy.min.js");
 });
 
 test('Grand Tour uses traceable scientific surface assets', () => {
@@ -1103,6 +1105,22 @@ test('sky tonight can step the date by a day and pick one natively', () => {
   expect(sky).toContain('dateInput.max = isoLocal(dateAt(MAX_OFFSET))');
 });
 
+test('sky tonight builds a private local forecast before requesting precise location', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  for (const id of [
+    'use-location',
+    'location-form',
+    'night-window',
+    'sky-list',
+    'sky-hidden-list',
+    'sky-summary',
+  ]) {
+    expect(sky).toContain(`id="${id}"`);
+  }
+  expect(sky).toContain('Used only on this device. Nothing is sent anywhere.');
+  expect(sky.indexOf('requestDeviceLocation()')).toBeGreaterThan(sky.indexOf('useLocationButton.onclick'));
+});
+
 test('mission cards fold to their hook on phones and stay open without JavaScript', () => {
   const missions = readFileSync('missions.html', 'utf8');
   const cards = missions.match(/<article class="card"/g) ?? [];
@@ -1164,7 +1182,8 @@ test('model labels do not overclaim simulation fidelity', () => {
   expect(tour).not.toContain("'True scale'");
   expect(tour).toContain('Distance&nbsp;View');
   expect(scale).toContain('average distance');
-  expect(sky).toContain('not a local visibility forecast');
+  expect(sky).toContain('<span class="science-kind">Local forecast</span>');
+  expect(sky).toContain('topocentric with standard atmospheric refraction');
   expect(data).not.toContain('30&nbsp;kg kid would weigh');
   expect(tour).toContain("row('Gravity', f.gravity)");
 });
