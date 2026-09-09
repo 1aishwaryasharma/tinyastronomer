@@ -10,6 +10,14 @@ steps:
   - await:
       idle: true
   - await:
+      timeout: 10000
+      visible:
+        id: use-location
+  - await:
+      timeout: 10000
+      visible:
+        id: sky-list
+  - await:
       hidden:
         id: launch-title
       timeout: 10000

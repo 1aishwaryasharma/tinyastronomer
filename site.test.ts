@@ -76,6 +76,11 @@ test("security headers cover every static response and authorize current inline 
   expect(scriptPolicy).toContain("frame-ancestors 'none'");
   expect(scriptPolicy).toContain("object-src 'none'");
 
+  const permissionsPolicy = headers.match(/^\s*Permissions-Policy:\s*(.+)$/m)?.[1] || "";
+  expect(permissionsPolicy).toBe(
+    "accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(), publickey-credentials-get=(), usb=()",
+  );
+
   const liveHashes = new Set<string>();
   for (const page of pages) {
     const html = readFileSync(page, "utf8");
@@ -306,6 +311,16 @@ test('Three.js is loaded as a local ES module', () => {
     expect(html).not.toContain('type="importmap"');
     expect(html).not.toContain('common.js');
   }
+});
+
+test('Sky Tonight loads the vendored Astronomy Engine ES module', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  const forecast = readFileSync('sky-forecast.js', 'utf8');
+  expect(existsSync('vendor/astronomy-engine/astronomy.min.js')).toBe(true);
+  expect(existsSync('vendor/astronomy-engine/LICENSE')).toBe(true);
+  expect(existsSync('vendor/astronomy-engine/VERSION')).toBe(true);
+  expect(sky).toContain("./sky-forecast.js");
+  expect(forecast).toContain("./vendor/astronomy-engine/astronomy.min.js");
 });
 
 test('Grand Tour uses traceable scientific surface assets', () => {
@@ -876,9 +891,13 @@ test('pages name tinyastronomer in the signals Google uses for brand search', ()
   for (const file of pages) {
     const html = readFileSync(file, 'utf8');
     expect(html, `${file}: title`).toMatch(/<title>[^<]*tinyastronomer[^<]*<\/title>/);
-    expect(html, `${file}: description`).toMatch(
-      /<meta\s+name=["']description["']\s+content=["']tinyastronomer /i
-    );
+    if (file === 'sky-tonight.html') {
+      expect(html).toContain('<meta name="description" content="See which planets and the Moon are up tonight from your location, which direction to look, and when. Free, ad-free, works offline.">');
+    } else {
+      expect(html, `${file}: description`).toMatch(
+        /<meta\s+name=["']description["']\s+content=["']tinyastronomer /i
+      );
+    }
     expect(html, `${file}: og:site_name`).toMatch(
       /<meta\s+property=["']og:site_name["']\s+content=["']tinyastronomer["']/
     );
@@ -1090,6 +1109,33 @@ test('sky tonight can step the date by a day and pick one natively', () => {
   expect(sky).toContain('dateInput.max = isoLocal(dateAt(MAX_OFFSET))');
 });
 
+test('sky tonight builds a private local forecast before requesting precise location', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  for (const id of [
+    'use-location',
+    'location-form',
+    'night-window',
+    'sky-list',
+    'sky-hidden-list',
+    'sky-summary',
+  ]) {
+    expect(sky).toContain(`id="${id}"`);
+  }
+  expect(sky).toContain('Used only on this device. Nothing is sent anywhere.');
+  expect(sky.indexOf('requestDeviceLocation()')).toBeGreaterThan(sky.indexOf('useLocationButton.onclick'));
+});
+
+test('sky tonight offers one horizon canvas with time and orbit controls', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  expect(sky.match(/<canvas\b/g)?.length).toBe(1);
+  expect(sky).toContain('id="time-slider"');
+  expect(sky).toContain('id="now-btn"');
+  expect(sky).toContain('id="view-horizon" aria-pressed="true"');
+  expect(sky).toContain('id="view-orbit" aria-pressed="false"');
+  expect(sky).toContain("localStorage.setItem('sky.view', viewMode)");
+  expect(sky).toContain("if (viewMode === 'horizon') drawHorizon(time); else drawOrbit(time)");
+});
+
 test('mission cards fold to their hook on phones and stay open without JavaScript', () => {
   const missions = readFileSync('missions.html', 'utf8');
   const cards = missions.match(/<article class="card"/g) ?? [];
@@ -1151,7 +1197,8 @@ test('model labels do not overclaim simulation fidelity', () => {
   expect(tour).not.toContain("'True scale'");
   expect(tour).toContain('Distance&nbsp;View');
   expect(scale).toContain('average distance');
-  expect(sky).toContain('not a local visibility forecast');
+  expect(sky).toContain('<span class="science-kind">Local forecast</span>');
+  expect(sky).toContain('topocentric with standard atmospheric refraction');
   expect(data).not.toContain('30&nbsp;kg kid would weigh');
   expect(tour).toContain("row('Gravity', f.gravity)");
 });
