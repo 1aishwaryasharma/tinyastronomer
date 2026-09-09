@@ -1,4 +1,4 @@
-import{createFrameLoop as O0,buildNav as C0,clamp as m,initMobileHints as U0,initMobileInfoPanels as V0,initSceneAccessibility as E0,prefersReducedMotion as H0,revealRailButton as M0,setText as W0}from"./chrome.js?v=20260907-2";import*as N from"three";import{HalfFloatType as o2,NoBlending as t2,Timer as a2,Vector2 as z2,WebGLRenderTarget as s2}from"three";var t={name:"CopyShader",uniforms:{tDiffuse:{value:null},opacity:{value:1}},vertexShader:`
+import{createFrameLoop as O0,buildNav as C0,clamp as m,initMobileHints as U0,initMobileInfoPanels as V0,initSceneAccessibility as E0,prefersReducedMotion as H0,revealRailButton as M0,setText as W0}from"./chrome.js?v=20260909-2";import*as N from"three";import{HalfFloatType as o2,NoBlending as t2,Timer as a2,Vector2 as z2,WebGLRenderTarget as s2}from"three";var t={name:"CopyShader",uniforms:{tDiffuse:{value:null},opacity:{value:1}},vertexShader:`
 
 		varying vec2 vUv;
 

@@ -68,6 +68,11 @@ function initRailOverflow() {
     rail.style.setProperty('--rail-fade-bottom', maxY > 1 && rail.scrollTop < maxY - 1 ? FADE : '0px');
   };
   rails.forEach((rail) => {
+    rail.addEventListener('focusin', (event) => {
+      if (event.target.matches('button, a')) {
+        event.target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    });
     rail.addEventListener('scroll', () => update(rail), { passive: true });
     // Rails are filled by each study after this runs, and web fonts change
     // the chip widths once they arrive.
@@ -201,7 +206,6 @@ function buildNav(currentKey) {
   btn.type = 'button';
   btn.textContent = '✦ Explore';
   btn.setAttribute('aria-expanded', 'false');
-  btn.setAttribute('aria-haspopup', 'true');
   const menu = document.createElement('div');
   menu.className = 'scene-menu';
   menu.id = 'scene-menu';
@@ -304,8 +308,56 @@ function initMobileInfoPanels() {
   });
 }
 
+
+function initDesktopInfoPanels() {
+  const desktop = window.matchMedia('(min-width: 821px)');
+  document.querySelectorAll('.info-panel').forEach((panel, index) => {
+    if (panel.classList.contains('desktop-info-panel')) return;
+    panel.classList.add('desktop-info-panel');
+    if (!panel.id) panel.id = 'info-panel-' + (index + 1);
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'desktop-info-toggle';
+    toggle.setAttribute('aria-controls', panel.id);
+    const arrow = document.createElement('span');
+    arrow.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    toggle.append(arrow, label);
+    panel.after(toggle);
+    let collapsed = false;
+    function positionToggle() {
+      if (!desktop.matches) return;
+      const style = getComputedStyle(panel);
+      for (const element of [panel, toggle]) {
+        element.style.setProperty('--info-left', style.left);
+      }
+      toggle.style.setProperty('--info-top', style.top);
+      toggle.style.setProperty('--info-width', style.width);
+    }
+    function sync() {
+      const hidden = desktop.matches && collapsed;
+      if (hidden && panel.contains(document.activeElement)) toggle.focus();
+      panel.classList.toggle('is-collapsed', hidden);
+      panel.inert = hidden;
+      if (hidden) panel.setAttribute('aria-hidden', 'true');
+      else panel.removeAttribute('aria-hidden');
+      toggle.setAttribute('aria-expanded', String(!hidden));
+      toggle.setAttribute('aria-label', hidden ? 'Show information panel' : 'Hide information panel');
+      arrow.textContent = hidden ? '›' : '‹';
+      label.textContent = hidden ? 'Show info' : 'Hide info';
+      positionToggle();
+    }
+    toggle.addEventListener('click', () => { collapsed = !collapsed; sync(); });
+    desktop.addEventListener('change', sync);
+    window.addEventListener('resize', positionToggle);
+    new ResizeObserver(positionToggle).observe(panel);
+    sync();
+  });
+}
+
 function initChrome() {
   initMobileInfoPanels();
+  initDesktopInfoPanels();
   initMobileHints();
   initDisplayMenus();
   initRailOverflow();

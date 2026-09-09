@@ -13,7 +13,7 @@
   }
 }
 </script>
-<script type="module" async src="chrome.js?v=20260907-2"></script>
+<script type="module" async src="chrome.js?v=20260909-2"></script>
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/solar-system">
 <link rel="icon" href="favicon.svg?v=20260816-20" type="image/svg+xml">
@@ -32,7 +32,7 @@
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260908-1">
+<link rel="stylesheet" href="common.css?v=20260909-2">
 <style>
   /* ── Page-specific styling for the grand tour; shared .facts / .fact-row /
      .fact-callout / .side-rail / .rail-btn live in common.css ── */
@@ -168,16 +168,16 @@
 
 <script type="module">
 // Initialize navigation and mobile controls before requesting the 3D graph.
-import './chrome.js?v=20260907-2';
+import './chrome.js?v=20260909-2';
 const [THREE, { SPACE }, { SPACE_DATA }, { createEarthGeometry },
   { createTourTextures }, { createPlanetModelLoader },
   { advanceTrackedCoordinate, relaxedPlanetDistance, sunAndPlanetFrame, updatedAutomaticDistance }
 ] = await Promise.all([
   import('three'),
-  import('./common.bundle.js?v=20260907-2'),
+  import('./common.bundle.js?v=20260909-2'),
   import('./data.js'),
   import('./earth-visuals.js?v=20260907-2'),
-  import('./tour-textures.js?v=20260908-1'),
+  import('./tour-textures.js?v=20260909-2'),
   import('./planet-models.js?v=20260907-2'),
   import('./tour-camera.js?v=20260815-1'),
 ]);

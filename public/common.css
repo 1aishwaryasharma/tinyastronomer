@@ -27,14 +27,16 @@
 :root {
   --bg: #050810;
   --ink: #e8ecf4;
-  --ink-dim: #8893a8;
-  --ink-faint: #8a94a8;
+  --ink-dim: #aebbd0;
+  --ink-faint: #a5b3c9;
   --accent: #f4c560;
   --accent-warm: #e89248;
   --accent-cool: #6ab0ff;
   --line: rgba(232, 236, 244, 0.08);
-  --panel: rgba(8, 12, 22, 0.72);
-  --panel-bright: rgba(15, 22, 38, 0.85);
+  --panel: rgba(8, 12, 22, 0.96);
+  --panel-bright: #151e30;
+  --control-border: #7c8da8;
+  --control-active: #292319;
   --scroll-thumb: rgba(244, 197, 96, 0.24);
   --scroll-thumb-hover: rgba(244, 197, 96, 0.46);
 }
@@ -1021,3 +1023,68 @@ canvas { display: block; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Controls need a stable surface even when a bright planet moves behind them. */
+body :is(.rail-btn.active, .scene-nav-btn, .scene-nav.open .scene-nav-btn) {
+  background: var(--control-active);
+}
+body :is(.toggle-btn, .small-btn, .step-btn, .walk-btn, .stage-btn, .desktop-info-toggle, .scene-nav-btn, .mobile-info-toggle, .date-input, .manual-field input, .location-change summary) {
+  border-color: var(--control-border);
+}
+body :is(.toggle-btn, .small-btn, .desktop-info-toggle, .scene-nav-btn, .mobile-info-toggle) {
+  font-size: 11px;
+}
+body :is(.toggle-btn.active, .rail-btn.active, .toggle-btn:hover, .small-btn:hover, .step-btn:hover:not(:disabled), .walk-btn:hover:not(:disabled), .stage-btn:hover, .scene-nav-btn:hover, .location-change summary:hover) {
+  border-color: var(--accent);
+}
+body .toggle-btn.active { background: var(--control-active); }
+body .brand {
+  min-height: 24px;
+  background: var(--panel);
+  border-radius: 2px;
+}
+body :is(a, button, input, select, textarea, summary, [tabindex]:not(canvas)):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px var(--bg);
+}
+body .side-rail:focus-within { mask-image: none; -webkit-mask-image: none; }
+body .side-rail button:focus-visible { outline-offset: -3px; box-shadow: none; }
+body input[type="range"] {
+  background: linear-gradient(var(--control-border), var(--control-border)) center / 100% 3px no-repeat;
+}
+body .science-sources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  text-decoration: underline;
+}
+body .card :is(.go, .source) {
+  position: relative;
+  min-height: 24px;
+  padding-block: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+body .foot-next { display: inline-block; min-height: 24px; text-decoration: underline; }
+body .card .more-btn { font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 820px) {
+  body .date-controls .control-row { gap: 4px; }
+  body .date-controls .time-slider { flex: 1; min-width: 32px; width: 64px; }
+  body .date-controls .date-value { font-size: 11px; min-width: 52px; }
+}
+
+/* Desktop explanations slide aside while their restore button stays visible. */
+  .desktop-info-toggle { display: none; }
+  @media (min-width: 821px) {
+    .info-panel.desktop-info-panel { transition: transform 0.25s ease, visibility 0.25s; }
+    .info-panel.desktop-info-panel.is-collapsed { transform: translateX(calc(-100% - var(--info-left))); visibility: hidden; pointer-events: none; }
+    .desktop-info-toggle:not([hidden]) { display: inline-flex; position: fixed; top: var(--info-top); left: calc(var(--info-left) + var(--info-width)); z-index: 11; align-items: center; gap: 7px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 0 2px 2px 0; background: var(--panel); color: var(--ink-dim); font-family: 'Fragment Mono', monospace; font-size: 9px; letter-spacing: 0.08em; cursor: pointer; transition: left 0.25s ease, color 0.2s, border-color 0.2s; }
+    .desktop-info-toggle:hover { color: var(--accent); border-color: var(--accent); }
+    .desktop-info-toggle[aria-expanded="false"] { left: var(--info-left); border-radius: 2px; }
+    @media (prefers-reduced-motion: reduce) {
+      .info-panel.desktop-info-panel, .desktop-info-toggle:not([hidden]) { transition: none; }
+    }
+  }

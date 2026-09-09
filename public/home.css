@@ -230,7 +230,7 @@ body {
     margin-block-start: var(--space-md);
   }
 
-  .observatory-cta {
+  .launch-deck .observatory-cta {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
@@ -490,7 +490,10 @@ body:not(.is-study-open) #canvas-container canvas {
 }
 
 .observatory-credit-links a {
-  text-decoration-color: var(--color-rule);
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  text-decoration-color: currentColor;
   text-underline-offset: 0.2em;
 }
 
@@ -507,7 +510,7 @@ body:not(.is-study-open) #canvas-container canvas {
 }
 
 .launch-deck :focus-visible {
-  outline: var(--rule-hair) solid var(--color-focus);
+  outline: 3px solid var(--color-focus);
   outline-offset: var(--space-2xs);
 }
 

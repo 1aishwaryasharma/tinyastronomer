@@ -23,7 +23,7 @@
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260908-1">
+<link rel="stylesheet" href="common.css?v=20260909-2">
 <style>
   /* this page scrolls, unlike the fixed 3D scenes */
   html, body { overflow-x: hidden; overflow-y: auto; }
@@ -239,7 +239,7 @@
 </main>
 
 <script type="module">
-import { SPACE } from './chrome.js?v=20260907-2';
+import { SPACE } from './chrome.js?v=20260909-2';
 
 // Live Voyager 1 distance: a linear estimate from a recent epoch. The probe
 // recedes at ~16.9 km/s, so the last digits visibly climb every second.
@@ -263,6 +263,8 @@ setInterval(tick, 1000);
 document.querySelectorAll('.card').forEach((card) => {
   const more = card.querySelector('.more');
   const name = card.querySelector('h3')?.textContent.trim() || 'this mission';
+  const source = card.querySelector('.source');
+  if (source) source.setAttribute('aria-label', 'NASA mission source for ' + name);
   if (!more) return;
   const btn = document.createElement('button');
   btn.type = 'button';

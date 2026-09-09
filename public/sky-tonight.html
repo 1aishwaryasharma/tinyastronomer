@@ -24,7 +24,7 @@
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260908-1">
+<link rel="stylesheet" href="common.css?v=20260909-2">
 <style>
   #sky { position: fixed; inset: 0; z-index: 0; display: block; }
   .info-panel { top: 112px; width: 380px; max-height: calc(100dvh - 224px); overflow: auto; }
@@ -122,7 +122,7 @@
 </header>
 
 <main>
-<aside class="info-panel">
+<aside class="info-panel" id="sky-info-panel">
   <div class="info-label">— Tonight from your location —</div>
   <h2 class="info-title">What's in the sky tonight?</h2>
   <section class="location-card" aria-labelledby="location-heading">
@@ -193,7 +193,7 @@
 </div>
 
 <script type="module">
-import { SPACE } from './chrome.js?v=20260907-2';
+import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
 import { Astronomy, FORECAST_BODIES, bodyReport, conjunctions, meteorShowers, moonReport, nightWindow, orbitPositions, positionAt } from './sky-forecast.js';
 import { describeLocation, requestDeviceLocation, resolveLocation, setManualLocation } from './sky-location.js';

@@ -42,8 +42,8 @@
 <link rel="stylesheet" href="tokens.css?v=20260904-1">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260908-1">
-<link rel="stylesheet" href="home.css?v=20260907-2">
+<link rel="stylesheet" href="common.css?v=20260909-2">
+<link rel="stylesheet" href="home.css?v=20260909-2">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -71,6 +71,7 @@
      onto the sky. The PNG itself is the WebGL buffer, not a page screenshot. */
   html.is-capturing-view .header,
   html.is-capturing-view .info-panel,
+  html.is-capturing-view .desktop-info-toggle,
   html.is-capturing-view .side-rail,
   html.is-capturing-view .controls,
   html.is-capturing-view .hint,
@@ -310,7 +311,7 @@ async function startLightStudy() {
   try {
 const [THREE, { SPACE }, { bindSaveViewControl }, { SPACE_DATA }, earthVisuals] = await Promise.all([
   import('three'),
-  import('./common.bundle.js?v=20260907-2'),
+  import('./common.bundle.js?v=20260909-2'),
   import('./capture.js?v=20260825-1'),
   import('./data.js'),
   import('./earth-visuals.js?v=20260907-2')
