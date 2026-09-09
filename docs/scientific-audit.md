@@ -1,7 +1,7 @@
 # tinyastronomer scientific audit
 
-Audit date: 2026-08-16  
-Scope: `public/index.html`, `public/data.js`, `public/seasons.html`, `public/scale-walk.html`, `public/sky-tonight.html`, `public/missions.html`, and `public/solar-system.html` at commit `5cd293b`  
+Audit date: 2026-08-16; Sky Tonight re-audited 2026-09-08
+Scope: `public/index.html`, `public/data.js`, `public/seasons.html`, `public/scale-walk.html`, `public/sky-tonight.html`, `public/missions.html`, and `public/solar-system.html`; the original audit used commit `5cd293b`, and the Sky Tonight section reflects the current local-forecast implementation
 Source policy: primary sources only (NASA, NASA/JPL, NOAA, USNO, and IAU)
 
 ## Executive summary
@@ -10,7 +10,7 @@ The site's core astronomy is strong, but its labels sometimes promise more fidel
 
 1. Correct the ocean-tide lesson. The two-bulge picture is an introductory equilibrium model; not every coast receives two high and two low tides, real highs are often unequal, and coastlines, seafloor shape, basin geometry, and local conditions strongly alter the result.
 2. Replace the Grand Tour's August 2026 moon counts: Jupiter **115**, Saturn **293**, Uranus **29**, Neptune **16**. Always attach an “as of” date and a source because these counts change.
-3. Stop calling the Sky Tonight calculation a result from each planet's “real orbit.” It uses fixed-radius circular, coplanar mean-orbit approximations and arbitrary visibility thresholds; it is an elongation sketch, not a local observing forecast.
+3. Sky Tonight has been replaced with a local, topocentric forecast using Astronomy Engine. Keep its remaining limits visible: standard refraction, a flat unobstructed horizon, and no weather.
 4. Reserve “true scale” for a single consistent scale. The Grand Tour preserves planet-to-planet size ratios and orbit-to-orbit spacing ratios separately, but the planet-size scale is not the orbit-distance scale and the Sun remains enlarged. The Scale Walk uses average distances from the Sun, not current distances or current planet positions.
 5. Replace “weight in kg” with Earth-relative gravity language. Kilograms measure mass, and the four giant planets have no solid surface. Their values refer to a conventional atmospheric/cloud-top reference level.
 6. Make the generic comet either explicitly **Halley's Comet** or remove its 75-year orbit. Comet periods and rotations vary enormously.
@@ -26,7 +26,7 @@ The audit found no reason to change the site's child-friendly voice. Most correc
 | Shared catalog (`data.js`) | **Corrections required** | Gravity vs mass; giant-planet reference levels; current moon counts; Eris tilt/history; Halley vs generic comet; Sun rotation/plasma; Neptune color. | [JPL physical parameters](https://ssd.jpl.nasa.gov/planets/phys_par.html), [NASA Solar System](https://science.nasa.gov/solar-system/solar-system-facts/), body-specific NASA pages |
 | Seasons (`seasons.html`) | **Correct teaching model; limits required** | Circular/uniform orbit, approximate dates, sunlight vs weather, hemisphere wording. | [USNO seasons](https://aa.usno.navy.mil/data/Earth_Seasons), [USNO explanation](https://aa.usno.navy.mil/faq/seasons_orbit.html) |
 | Scale Walk (`scale-walk.html`) | **Numbers pass; label is too strong** | Values are mean distances; bodies are not currently aligned; screen markers are enlarged. | [IAU astronomical unit](https://www.iau.org/static/resolutions/IAU2012_English.pdf), [JPL physical parameters](https://ssd.jpl.nasa.gov/planets/phys_par.html) |
-| Sky Tonight (`sky-tonight.html`) | **Not valid as a visibility forecast** | Circular mean-orbit elongation only; thresholds are editorial; no observer, horizon, brightness, twilight, or weather. | [JPL approximate positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html), [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/), [USNO data services](https://aa.usno.navy.mil/data/) |
+| Sky Tonight (`sky-tonight.html`) | **Valid local planning forecast with stated limits** | Topocentric altitude/azimuth, twilight, rise/set, phase, and magnitude are computed locally; flat horizon, standard refraction, clear sky, and approximate location remain assumptions. | [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/), [NASA Skywatching](https://science.nasa.gov/solar-system/skywatching/), [Astronomy Engine](https://github.com/cosinekitty/astronomy) |
 | Missions (`missions.html`) | **Mostly correct; volatile claims need dates** | Voyager reference/method; Ingenuity first; Webb L2 language; Huygens credit; Enceladus plume; New Horizons speed; Hubble count. | NASA mission pages and [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) |
 | Grand Tour (`solar-system.html`) | **Correct relative periods; fidelity claims overstate** | Circular/coplanar non-current orbits; visual spin; selected moons; separate size/distance scales; Halley-like visitor. | [JPL physical parameters](https://ssd.jpl.nasa.gov/planets/phys_par.html), [JPL satellites](https://ssd.jpl.nasa.gov/sats/), [NASA comet facts](https://science.nasa.gov/solar-system/comets/facts/) |
 
@@ -159,41 +159,54 @@ Source disclosure: “[JPL planetary parameters](https://ssd.jpl.nasa.gov/planet
 
 ### Model audit
 
-This page is the largest mismatch between promise and calculation.
+The earlier circular mean-orbit sketch has been replaced. The page now uses
+the vendored Astronomy Engine library for VSOP87-based planetary positions,
+topocentric altitude and azimuth, standard atmospheric refraction, rise/set,
+constellation, visual magnitude, lunar phase, and twilight. Calculations run
+entirely in the browser. A time-zone centroid supplies a silent approximate
+location; device geolocation is opt-in and rounded to 0.1°, and manual latitude
+and longitude remain available.
 
-The algorithm advances one mean longitude at a constant rate on a circular, coplanar orbit at fixed AU, then computes geocentric ecliptic elongation. It does not solve Kepler's equation; include eccentricity, inclination, nodes, or perihelia; use light-time corrections; use a precise ephemeris; or compute a topocentric horizon. The wording “worked out from its real orbit” is therefore incorrect.
+“Visible tonight” is an observing aid, not a guarantee. The model samples the
+night every ten minutes and applies documented altitude, darkness, and optical-
+aid rules. It cannot know cloud, haze, light pollution, trees, buildings, or the
+shape of the user's horizon. It assumes zero elevation, a flat horizon, and a
+standard refraction model; actual near-horizon timing can differ.
 
-JPL explicitly distinguishes lower-accuracy Keplerian formulae from high-precision integrated ephemerides. Even JPL's published approximation uses six time-varying orbital elements and solves Kepler's equation; Horizons supplies the high-precision result. [JPL approximate planet positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html), [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/).
+### Reproducible JPL Horizons spot check
 
-A reproducible spot check at 2026-08-16 12:00 UTC illustrates the impact:
+The table compares the app with a fresh JPL Horizons observer-table query for
+2026-09-08 03:00 UTC at 37.77° N, 122.42° W and 10 m elevation. Horizons used
+topocentric center `coord@399`, refracted apparent azimuth/elevation (quantity
+4), and visual magnitude (quantity 9). Differences are app minus Horizons.
 
-| Planet | Site elongation | JPL Horizons geocentric solar elongation | Difference |
-|---|---:|---:|---:|
-| Mercury | 15.3° | 11.6° | 3.7°; crosses the site's own 12° “hidden” threshold |
-| Mars | 59.1° | 50.3° | 8.8° |
-| Jupiter | 18.7° | 13.3° | 5.4° |
+| Body | App altitude / azimuth | Horizons altitude / azimuth | Angular difference | App / Horizons magnitude |
+|---|---:|---:|---:|---:|
+| Venus | 9.644° / 242.503° | 9.645° / 242.501° | −0.001° / +0.002° | −4.700 / −4.698 |
+| Saturn | −8.274° / 79.477° | −8.219° / 79.474° | −0.055° / +0.002° | +0.306 / +0.445 |
+| Mars | −26.129° / 339.697° | −25.943° / 339.697° | −0.187° / +0.000° | +1.232 / +1.238 |
+| Moon | −21.203° / 320.798° | −21.053° / 320.799° | −0.150° / −0.001° | −7.591 / −7.595 |
 
-The Horizons comparison used observer center `500` (geocenter), quantity 23 (Sun–observer–target angle), and the timestamp above. It is a verification sample, not a full accuracy bound.
+This is a regression fixture, not a global error bound. The sub-degree position
+agreement is appropriate for the page's compass words and whole-degree height
+copy. Saturn's 0.14-magnitude difference does not cross a displayed brightness
+category. Horizons describes its observer tables as apparent, observer-specific
+ephemerides and notes that apparent azimuth/elevation can include an optional
+approximate refraction adjustment. [JPL Horizons manual](https://ssd.jpl.nasa.gov/horizons/manual.html),
+[Horizons API documentation](https://ssd-api.jpl.nasa.gov/doc/horizons.html).
 
-### Required copy changes
+### Residual assumptions and copy policy
 
-| Current claim | Finding | Recommended wording |
-|---|---|---|
-| “Which ones can I see?” / metadata “showing which planets are visible” | Without location, local time, horizon, altitude, brightness, twilight, obstructions, or weather, the page cannot determine visibility. | Rename the promise “Which planets are near or far from the Sun?” or “Approximate planet geometry.” |
-| “worked out from its real orbit” | False for the implemented circular mean-orbit model. | “estimated from a simplified circular mean-orbit model.” |
-| `<12° = hidden` | Editorial rule, not a universal visibility boundary. Mercury/bright Venus can behave differently; latitude, season, and twilight matter. | “Very near the Sun in this model; likely lost in twilight. This is not a local visibility test.” |
-| `>150° = all night` | Only exact/near opposition supports all-night visibility, and rise/set still depends on date/location. 150° can mean “much of the night,” not all night. | “Far from the Sun in our sky; may be visible for much of the night.” |
-| East of Sun = “west after sunset”; west = “east before dawn” | Broadly correct as a geometry teaching rule, but not a guarantee of altitude or visibility. | Add “when it is high and bright enough from your location.” |
-| Uranus `naked:false` → “Needs a telescope” | Too absolute. NASA says Uranus is barely visible to excellent unaided eyesight under dark skies when its location is known; binoculars/telescope are recommended. Neptune requires a telescope. | Uranus: “Optical aid recommended.” Neptune: “Telescope required.” [NASA skywatching tips.](https://science.nasa.gov/skywatching/) |
-| “it doesn't twinkle the way stars do” | Planets usually twinkle **less** because their disks average atmospheric fluctuations; near the horizon they can twinkle. | “Planets usually glow more steadily than stars, though they can twinkle when low in turbulent air.” [NASA explanation.](https://science.nasa.gov/solar-system/skywatching/whats-up-june-2024-skywatching-tips-from-nasa/) |
+- Say “forecast” or “observing guide,” never “weather forecast.”
+- Put compass words before whole-degree altitude and show times in the browser's
+  local time zone.
+- Treat Uranus as “optical aid recommended” and Neptune as “telescope required.”
+- Describe the location precision beside the control and never request device
+  location until the user presses the button.
+- Keep the visible model label explicit: positions are topocentric with standard
+  refraction, while horizon shape and weather are omitted.
 
-NASA notes that useful visibility depends on height above the horizon and twilight, while brightness changes as Earth and the planets move. [NASA planetary alignments guide](https://science.nasa.gov/solar-system/skywatching/planetary-alignments-and-planet-parades/). USNO and JPL services accept an observer location for rise/set or topocentric ephemerides. [USNO data services](https://aa.usno.navy.mil/data/), [JPL Horizons tutorial](https://ssd.jpl.nasa.gov/horizons/tutorial.html).
-
-Suggested visible label if the present algorithm remains:
-
-> **Approximate elongation guide** — Circular mean orbits show whether a planet lies east or west of the Sun. This is not a local sky forecast: precise orbit, observer location, horizon, brightness, twilight, weather, and obstructions are omitted.
-
-Source disclosure: “[JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) · [NASA skywatching](https://science.nasa.gov/skywatching/) · reviewed 2026-08-16.”
+Source disclosure: “[JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) · [NASA Skywatching](https://science.nasa.gov/solar-system/skywatching/) · [Astronomy Engine](https://github.com/cosinekitty/astronomy) · reviewed 2026-09-08.”
 
 ## `public/missions.html` — Missions
 

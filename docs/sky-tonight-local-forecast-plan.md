@@ -289,47 +289,47 @@ section 3). Suggested panel order, top to bottom:
 
 ### Phase 4: horizon view and time scrubber
 
-- [ ] Draw the horizon strip on the `sky` canvas as described in 4.3. Use the
+- [x] Draw the horizon strip on the `sky` canvas as described in 4.3. Use the
       existing `SPACE.createFrameLoop` at 30 fps and `drawing.invalidate` on
       input, as the page already does.
-- [ ] Add a time scrubber (`input type="range"`, `id="time-slider"`) from
+- [x] Add a time scrubber (`input type="range"`, `id="time-slider"`) from
       sunset to sunrise in 5-minute steps, plus a `Now` button that is enabled
       only while the current time is inside tonight's window. Show the chosen
       local time next to it. On the mobile layout it sits in the same fixed
       bottom bar as the date controls; on narrow screens stack the two rows.
-- [ ] Bodies are drawn as dots in their `data.js` colours with a label. Tap or
+- [x] Bodies are drawn as dots in their `data.js` colours with a label. Tap or
       hover a dot to highlight the matching list row.
-- [ ] View toggle `id="view-horizon"` / `id="view-orbit"` with `aria-pressed`.
+- [x] View toggle `id="view-horizon"` / `id="view-orbit"` with `aria-pressed`.
       The orbit view is the existing draw routine fed by `orbitPositions`.
-- [ ] The header `Date ·` meta gains `Time ·` showing the scrubbed time.
-- [ ] Test in `site.test.ts` that the scrubber and toggle ids exist and that
+- [x] The header `Date ·` meta gains `Time ·` showing the scrubbed time.
+- [x] Test in `site.test.ts` that the scrubber and toggle ids exist and that
       the page still has exactly one `canvas`.
 
 ### Phase 5: metadata, docs, QA
 
-- [ ] `<title>`: `What's in the Sky Tonight? Planets and Moon for your location | tinyastronomer`.
-- [ ] `<meta name="description">` and both `og:description` and
+- [x] `<title>`: `What's in the Sky Tonight? Planets and Moon for your location | tinyastronomer`.
+- [x] `<meta name="description">` and both `og:description` and
       `twitter:description`: `See which planets and the Moon are up tonight from your location, which direction to look, and when. Free, ad-free, works offline.`
-- [ ] Home card subtitle in `public/index.html:152`: change
+- [x] Home card subtitle in `public/index.html:152`: change
       `Evening · morning · horizon` to `Planets · Moon · where to look`.
-- [ ] `public/sitemap.xml`: bump `lastmod` for `/sky-tonight`.
-- [ ] `docs/scientific-audit.md`: replace the Sky Tonight row in the summary
+- [x] `public/sitemap.xml`: bump `lastmod` for `/sky-tonight`.
+- [x] `docs/scientific-audit.md`: replace the Sky Tonight row in the summary
       table (line 29) and rewrite section 158 onward to describe the new model,
       its residual assumptions (flat horizon, standard refraction, no weather),
       and the spot-check table from Phase 1 with a fresh JPL Horizons
       comparison for the same instant.
-- [ ] `README.md`: update the Sky Tonight bullet and the sentence that says the
+- [x] `README.md`: update the Sky Tonight bullet and the sentence that says the
       page imports only `chrome.js`.
-- [ ] `.argent/flows/qa-home-open-sky-tonight.yaml`: after the header await,
+- [x] `.argent/flows/qa-home-open-sky-tonight.yaml`: after the header await,
       add an await for `id: use-location` visible, and an await that the
       forecast list container (`id="sky-list"`) is visible. Do not tap the
       location button in CI. Run the flow twice on Chromium as `.argent/qa.md`
       requires.
-- [ ] Add a second flow `qa-sky-tonight-manual-location.yaml`: open the page,
+- [x] Add a second flow `qa-sky-tonight-manual-location.yaml`: open the page,
       open `Change`, type `51.5` and `-0.1`, tap `Set`, await the header meta
       containing `51.5°N`. This proves the manual tier without a permission
       prompt.
-- [ ] Run `bun test`, `bun run build.ts` (unchanged output expected), and
+- [x] Run `bun test`, `bun run build.ts` (unchanged output expected), and
       `bun dev-server.ts` plus a manual check on a phone-width viewport.
 
 ## 6. Copy rules
@@ -343,19 +343,19 @@ section 3). Suggested panel order, top to bottom:
 
 ## 7. Acceptance checklist
 
-- [ ] Loading the page with no stored location shows a forecast within one
+- [x] Loading the page with no stored location shows a forecast within one
       frame after the module imports, with no permission prompt.
-- [ ] Tapping `Use my location` triggers the browser prompt once. Denying it
+- [x] Tapping `Use my location` triggers the browser prompt once. Denying it
       leaves the timezone forecast in place with a short message.
-- [ ] Manual entry of Sydney (`-33.9, 151.2`) flips the horizon strip so that
+- [x] Manual entry of Sydney (`-33.9, 151.2`) flips the horizon strip so that
       planets near the ecliptic appear in the northern half, and times update.
-- [ ] Venus is reported with `brighter than any star` whenever its magnitude
+- [x] Venus is reported with `brighter than any star` whenever its magnitude
       is below -3.
-- [ ] `bun test` passes, including the new fixture test and the hash test.
-- [ ] Both Argent Chromium flows for the page pass twice in a row.
-- [ ] Lighthouse or the existing `startup.test.ts` budget is not regressed.
+- [x] `bun test` passes, including the new fixture test and the hash test.
+- [x] Both Argent Chromium flows for the page pass twice in a row.
+- [x] Lighthouse or the existing `startup.test.ts` budget is not regressed.
       The new import is about 44 KB gzipped, on a page that loads no Three.js.
-- [ ] No request leaves the origin. Check the network panel on the dev server.
+- [x] No request leaves the origin. Check the network panel on the dev server.
 
 ## 8. Open questions for the owner
 

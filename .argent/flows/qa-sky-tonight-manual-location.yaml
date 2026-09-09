@@ -1,0 +1,50 @@
+steps:
+  - run: ../fragments/boot-electron.yaml
+  - echo: On launch deck. Open Sky Tonight and set a manual London location.
+  - tap:
+      id: launch-sky-tonight
+  - await:
+      timeout: 20000
+      visible:
+        id: sky-tonight-header
+  - await:
+      idle: true
+  - await:
+      timeout: 10000
+      visible:
+        id: use-location
+  - await:
+      timeout: 10000
+      visible:
+        id: sky-list
+  - echo: On the local forecast. Open Change and enter London coordinates without
+      requesting device location.
+  - tap:
+      text: Change
+  - await:
+      visible:
+        id: latitude
+  - type:
+      into:
+        id: latitude
+      text: "51.5"
+      submit: false
+  - type:
+      into:
+        id: longitude
+      text: "-0.1"
+      submit: false
+  - tap:
+      id: set-location
+  - await:
+      timeout: 10000
+      text:
+        in:
+          id: meta-location
+        contains: 51.5°N
+  - await:
+      timeout: 10000
+      text:
+        in:
+          id: location-source
+        equals: Manual coordinates

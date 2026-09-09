@@ -891,9 +891,13 @@ test('pages name tinyastronomer in the signals Google uses for brand search', ()
   for (const file of pages) {
     const html = readFileSync(file, 'utf8');
     expect(html, `${file}: title`).toMatch(/<title>[^<]*tinyastronomer[^<]*<\/title>/);
-    expect(html, `${file}: description`).toMatch(
-      /<meta\s+name=["']description["']\s+content=["']tinyastronomer /i
-    );
+    if (file === 'sky-tonight.html') {
+      expect(html).toContain('<meta name="description" content="See which planets and the Moon are up tonight from your location, which direction to look, and when. Free, ad-free, works offline.">');
+    } else {
+      expect(html, `${file}: description`).toMatch(
+        /<meta\s+name=["']description["']\s+content=["']tinyastronomer /i
+      );
+    }
     expect(html, `${file}: og:site_name`).toMatch(
       /<meta\s+property=["']og:site_name["']\s+content=["']tinyastronomer["']/
     );
@@ -1119,6 +1123,17 @@ test('sky tonight builds a private local forecast before requesting precise loca
   }
   expect(sky).toContain('Used only on this device. Nothing is sent anywhere.');
   expect(sky.indexOf('requestDeviceLocation()')).toBeGreaterThan(sky.indexOf('useLocationButton.onclick'));
+});
+
+test('sky tonight offers one horizon canvas with time and orbit controls', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  expect(sky.match(/<canvas\b/g)?.length).toBe(1);
+  expect(sky).toContain('id="time-slider"');
+  expect(sky).toContain('id="now-btn"');
+  expect(sky).toContain('id="view-horizon" aria-pressed="true"');
+  expect(sky).toContain('id="view-orbit" aria-pressed="false"');
+  expect(sky).toContain("localStorage.setItem('sky.view', viewMode)");
+  expect(sky).toContain("if (viewMode === 'horizon') drawHorizon(time); else drawOrbit(time)");
 });
 
 test('mission cards fold to their hook on phones and stay open without JavaScript', () => {

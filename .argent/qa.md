@@ -19,6 +19,7 @@ Local simulator and emulator QA is agent-device, not Argent. See `.agent-device/
 | `qa-home-open-scale-walk` | Home deck opens Scale Walk |
 | `qa-home-open-missions` | Home deck opens Missions |
 | `qa-home-open-sky-tonight` | Home deck opens Sky Tonight |
+| `qa-sky-tonight-manual-location` | Sky Tonight accepts a private manual London location |
 | `qa-explore-next-stop` | Light Study Explore menu goes to Seasons |
 
 ```sh

@@ -6,7 +6,7 @@ An accessible, responsive collection of interactive solar-system experiences:
 - **Grand Tour** — the planets, dwarf planets, belts, moons, and a comet
 - **Seasons** — Earth's tilt, sunlight, solstices, and equinoxes
 - **Scale Walk** — proportional planetary distances and size analogies
-- **Sky Tonight** — a rough elongation-based guide to planetary visibility
+- **Sky Tonight** — a private local forecast for the Moon, planets, and where to look
 - **Missions** — notable spacecraft and their discoveries
 
 ## Run locally
@@ -29,7 +29,8 @@ For full fidelity — Workers runtime included — use `bunx wrangler dev` inste
 Three.js (r185, ES modules) is vendored under `vendor/three/`, so the 3D
 scenes work fully offline once the site is served. WebGL pages load it
 through an import map (`three` → `vendor/three/three.module.min.js`).
-Missions and Sky Tonight import only `chrome.js` and never load Three.js.
+Missions imports only `chrome.js`. Sky Tonight adds small local forecast and
+location modules plus the vendored Astronomy Engine; neither page loads Three.js.
 
 ## Verify
 
@@ -118,9 +119,10 @@ complete system legible on one screen. That model uses:
 - Angular eclipse tests that are independent of the compressed display scale
 
 Small effects such as lunar libration, nutation, and short-period orbital
-perturbations are intentionally omitted. The Sky Tonight
-page uses circular mean-orbit approximations and is a general guide rather than
-a location-specific observing forecast.
+perturbations are intentionally omitted from the Light Study. Sky Tonight uses
+Astronomy Engine's VSOP87-based, topocentric calculations with standard
+refraction to make a location-specific forecast. It still assumes a flat,
+unobstructed horizon and clear weather.
 
 Reference values come from [NASA Solar System facts](https://science.nasa.gov/solar-system/),
 [NASA Earth facts](https://science.nasa.gov/earth/facts/),
