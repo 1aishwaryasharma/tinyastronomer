@@ -9,6 +9,21 @@ Local simulator and emulator QA is agent-device, not Argent. See `.agent-device/
 1. `bun dev-server.ts` so `http://127.0.0.1:8765/` matches production routing.
 2. Drive the Electron shell (`argent flow run … --platform chromium`). Vendoring it (`npm ci` in `.argent/electron`) and installing Argent need Node 22 or 24; CI runs the suite on both.
 
+CI pins Argent to `0.21.0` and applies
+`.github/scripts/patch-argent-capture.cjs` after installation. With Electron
+33, Argent's quarter-scale readiness captures can leave the compositor scaled
+down, corrupting subsequent screenshots. The workaround captures readiness at
+native scale and keeps pixel-idle checks and snapshot tolerances intact. It
+fails on another Argent version or an unexpected source shape, so upgrades
+must re-evaluate it. To apply the same workaround to a local global install:
+
+```sh
+node .github/scripts/patch-argent-capture.cjs "$(npm root -g)/@swmansion/argent"
+```
+
+Apply it before starting the Argent server. An already running server retains
+the old code until restarted; coordinate a restart with anyone sharing it.
+
 The dev server reads `public/_headers` once at startup. After any change to `_headers` or to an inline `<script>` (which changes its CSP hash), restart the dev server before replaying. A stale server blocks the new inline scripts, every scene script dies silently, and the home-open flows fail on their content asserts while the header awaits still pass.
 
 ## Suite
@@ -122,8 +137,12 @@ Keep local current images in `artifacts/`; do not seed or commit macOS images
 as CI baselines. A local run that stops at a missing baseline has verified
 only its preceding steps, not subsequent snapshots or the complete flow.
 
-Phase 1 remains pending until the Ubuntu candidates have been reviewed and
-committed and the two unchanged CI passes have completed.
+The five committed Ubuntu baselines come from
+[generation run 34436943847](https://github.com/1aishwaryasharma/tinyastronomer/actions/runs/34436943847).
+All five images were visually reviewed; Node 22 and Node 24 produced
+byte-identical sets. Earlier candidates were rejected for blank or scaled
+content, which the native-scale readiness capture workaround corrected.
+Generation does not count toward the required two unchanged regression passes.
 
 Local implementation check (2026-09-09): 163 Bun tests passed and the build
 left `common.bundle.js` unchanged. All five flows without snapshots passed;
