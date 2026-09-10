@@ -1,4 +1,4 @@
-name: Argent QA
+name: Seed visual baselines
 
 # The deterministic flows in .argent/flows are the merge gate. This job runs
 # them in the Electron shell under SwiftShader and posts one per-flow table on
@@ -8,15 +8,8 @@ name: Argent QA
 # Node 24 leg posts the comment. See .argent/qa.md.
 
 on:
-  pull_request:
   push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      update_baselines:
-        description: Generate candidate visual baselines for human review (not a regression pass)
-        type: boolean
-        default: false
+    branches: [qa/seed-visual-baselines]
 
 permissions:
   contents: read
@@ -48,7 +41,7 @@ jobs:
       - name: Run Argent QA flows
         id: flows
         env:
-          UPDATE_BASELINES: ${{ github.event_name == 'workflow_dispatch' && inputs.update_baselines }}
+          UPDATE_BASELINES: "true"
         run: |
           mkdir -p artifacts
           options=()
@@ -100,8 +93,7 @@ jobs:
 
       - name: Upload candidate visual baselines
         if: >-
-          github.event_name == 'workflow_dispatch' && inputs.update_baselines
-          && steps.flows.outputs.status == '0'
+          steps.flows.outputs.status == '0'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: error
