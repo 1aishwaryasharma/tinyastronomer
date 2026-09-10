@@ -34,3 +34,11 @@ steps:
       hidden:
         id: launch-title
       timeout: 10000
+  - snapshot:
+      name: light-info-panel
+      cropOn:
+        id: light-info-panel
+  - snapshot:
+      name: observation-presets
+      cropOn:
+        id: presets

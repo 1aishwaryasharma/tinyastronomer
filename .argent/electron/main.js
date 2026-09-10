@@ -6,6 +6,12 @@ const ALLOWED_SITE_HOSTS = new Set(['127.0.0.1', 'localhost']);
 const HEIGHT = 800;
 const SITE_URL = process.env.SITE_URL || 'http://127.0.0.1:8765/';
 const WIDTH = 1280;
+const visualBaselines = process.argv.includes('--visual-baselines');
+if (visualBaselines) {
+  process.env.TZ = 'UTC';
+  app.commandLine.appendSwitch('lang', 'en-US');
+  app.commandLine.appendSwitch('force-prefers-reduced-motion');
+}
 const useSwiftShader = process.env.ARGENT_ELECTRON_SWIFTSHADER === '1'
   || process.platform === 'linux';
 
@@ -52,7 +58,7 @@ if (useSwiftShader) {
   app.commandLine.appendSwitch('use-gl', 'angle');
 }
 
-const createWindow = () => {
+const createWindow = async () => {
   const win = new BrowserWindow({
     autoHideMenuBar: true,
     backgroundColor: '#050810',
@@ -61,6 +67,7 @@ const createWindow = () => {
     useContentSize: true,
     webPreferences: {
       backgroundThrottling: false,
+      additionalArguments: visualBaselines ? ['--visual-baselines'] : [],
       contextIsolation: true,
       nodeIntegration: false,
       partition: 'argent-qa',
@@ -72,11 +79,14 @@ const createWindow = () => {
   });
   win.setMenuBarVisibility(false);
   win.once('ready-to-show', () => win.show());
-  win.loadURL(SITE_URL);
+  await win.loadURL(SITE_URL);
 };
 
 app.on('web-contents-created', (_event, contents) => {
   contents.setWindowOpenHandler(() => ({ action: 'deny' }));
 });
-app.whenReady().then(createWindow);
+app.whenReady().then(createWindow).catch((error) => {
+  console.error(error);
+  app.exit(1);
+});
 app.on('window-all-closed', () => app.quit());

@@ -4,6 +4,7 @@ steps:
       chromium:
         args:
           - --no-sandbox
+          - --visual-baselines
         path: ../electron
   - await:
       timeout: 15000

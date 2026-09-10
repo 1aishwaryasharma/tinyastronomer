@@ -54,3 +54,37 @@ steps:
         in:
           id: moon-summary
         matches: '% lit'
+  - echo: The visual QA clock starts on September 8, 2026. Advance the date input's month to October, then verify the committed date.
+  - assert:
+      text:
+        in:
+          id: meta-date
+        equals: Sep 8, 2026
+  - tap:
+      id: date-input
+  - tool: run-sequence
+    args:
+      steps:
+        - tool: keyboard
+          args:
+            key: arrow-left
+        - tool: keyboard
+          args:
+            key: arrow-up
+        - tool: keyboard
+          args:
+            key: tab
+  - await:
+      text:
+        in:
+          id: meta-date
+        equals: Oct 8, 2026
+  - await:
+      visible:
+        id: night-window
+  - await:
+      idle: true
+  - snapshot:
+      name: london-night-window
+      cropOn:
+        id: night-window

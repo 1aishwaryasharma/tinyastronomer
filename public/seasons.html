@@ -52,6 +52,11 @@
     text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 4px;
   }
   .hemi .h-season { color: var(--ink); font-size: 15px; }
+  @media (min-width: 821px) and (min-height: 521px) {
+    /* Give the keyboard hint a row below the controls, clear of the slider. */
+    #seasons-controls { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+    .hint { left: 50%; transform: translateX(-50%); white-space: nowrap; }
+  }
   @media (max-width: 820px) {
     .info-title { font-size: 20px; }
   }
@@ -106,7 +111,7 @@
 
 <div class="side-rail" id="picker" role="group" aria-label="Seasons"></div>
 
-<div class="controls">
+<div class="controls" id="seasons-controls">
   <button type="button" class="play-btn" id="play-btn" aria-label="Pause simulation">
     <svg id="play-icon" viewBox="0 0 12 12" fill="currentColor"><path d="M2 1 L4.5 1 L4.5 11 L2 11 Z M7.5 1 L10 1 L10 11 L7.5 11 Z"/></svg>
   </button>
