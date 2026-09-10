@@ -1,5 +1,12 @@
 name: Argent QA
 
+# The deterministic flows in .argent/flows are the merge gate. This job runs
+# them in the Electron shell under SwiftShader and posts one per-flow table on
+# the pull request (comment marker <!-- argent-qa -->), updated in place on
+# every push. Pushes to main run the flows and keep the artifacts but post
+# nothing. The job runs once per supported Node major (22 and 24); only the
+# Node 24 leg posts the comment. See .argent/qa.md.
+
 on:
   pull_request:
   push:
@@ -8,67 +15,79 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
+
+concurrency:
+  group: argent-qa-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   flows:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
     steps:
       - name: Check out the repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
-      - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: Boot the Argent shell and the site
+        uses: ./.github/actions/argent-shell
         with:
-          bun-version: 1.3.14
-
-      - name: Install Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-
-      - name: Install Electron system libraries
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends \
-            xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
-
-      - name: Start Xvfb
-        run: |
-          Xvfb :99 -screen 0 1280x1024x24 >/tmp/xvfb.log 2>&1 &
-          echo 'DISPLAY=:99' >> "$GITHUB_ENV"
-
-      - name: Vendor the Electron shell
-        run: npm ci
-        working-directory: .argent/electron
-
-      - name: Install Argent
-        run: npm install -g @swmansion/argent@0.21.0
-
-      - name: Start the site
-        run: |
-          bun dev-server.ts 8765 &
-          for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:8765/ >/dev/null && exit 0
-            sleep 1
-          done
-          echo 'dev-server did not become ready'
-          exit 1
+          node-version: ${{ matrix.node }}
 
       - name: Run Argent QA flows
-        env:
-          ARGENT_ELECTRON_SWIFTSHADER: '1'
-          SITE_URL: http://127.0.0.1:8765/
+        id: flows
         run: |
           mkdir -p artifacts
-          argent flow run .argent/flows --platform chromium --output artifacts
+          set +e
+          argent flow run .argent/flows --platform chromium --output artifacts --json > artifacts/flows.json
+          status=$?
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "argent flow run exited with $status"
+
+      - name: Write the report
+        if: always() && steps.flows.outcome != 'skipped'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          bun tools/flow-report.ts artifacts/flows.json \
+            --sha "$HEAD_SHA" --run-url "$RUN_URL" --artifacts artifacts \
+            --platform "chromium (Electron, SwiftShader, Node ${{ matrix.node }})" > artifacts/flows.md
+          cat artifacts/flows.md
+          cat artifacts/flows.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post the report on the pull request
+        # Same-repo pull requests only. A fork's token is read-only, and a
+        # push to main has no pull request to comment on. One leg posts so
+        # the two legs do not race for the same comment.
+        if: >-
+          always() && steps.flows.outcome != 'skipped'
+          && matrix.node == 24
+          && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: .github/scripts/upsert-pr-comment.sh '<!-- argent-qa -->' artifacts/flows.md
 
       - name: Upload evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: warn
-          name: argent-qa
+          name: argent-qa-node${{ matrix.node }}
           path: artifacts/
+
+      - name: Fail the job if any flow failed
+        if: steps.flows.outputs.status != '0'
+        run: |
+          echo "argent flow run exited with ${{ steps.flows.outputs.status }}; see the report above"
+          exit 1

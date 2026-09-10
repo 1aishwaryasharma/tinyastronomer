@@ -48,3 +48,9 @@ steps:
         in:
           id: location-source
         equals: Manual coordinates
+  - echo: Forecast re-rendered for London. Expect the Moon phase line to be filled in.
+  - assert:
+      text:
+        in:
+          id: moon-summary
+        matches: '% lit'

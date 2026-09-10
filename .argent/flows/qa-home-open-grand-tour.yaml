@@ -9,6 +9,15 @@ steps:
         id: grand-tour-header
   - await:
       idle: true
+  - echo: Grand Tour scene is running. Expect the overview title and the Explore button.
+  - assert:
+      text:
+        in:
+          id: info-title
+        equals: Meet the neighbourhood
+  - assert:
+      visible:
+        id: scene-nav-btn
   - await:
       hidden:
         id: launch-title
