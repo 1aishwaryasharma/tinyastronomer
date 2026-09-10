@@ -37,6 +37,7 @@ const requiredIds: Record<string, string[]> = {
     'moon-summary',
     'night-window',
     'date-input',
+    'date-next',
     'meta-date',
   ],
   'solar-system.html': ['grand-tour-header', 'info-title'],

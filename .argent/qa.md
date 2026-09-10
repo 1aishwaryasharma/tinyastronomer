@@ -78,12 +78,12 @@ the translucent DOM crops; these snapshots do not verify 3D rendering.
 | `qa-home-open-light-study` | `observation-presets` | `#presets`, seven labels, free observation selected |
 | `qa-home-open-seasons` | `season-picker` | `#picker`, four stops, initial selection |
 | `qa-home-open-seasons` | `season-controls` | `#seasons-controls`, initial slider and buttons |
-| `qa-sky-tonight-manual-location` | `london-night-window` | `#night-window`, London (51.5, -0.1), October 8, 2026, UTC |
+| `qa-sky-tonight-manual-location` | `london-night-window` | `#night-window`, London (51.5, -0.1), September 9, 2026, UTC |
 
 The forecast snapshot belongs to the manual-location flow, so the silent
-timezone-location flow retains its original purpose. The date-input sequence
-selects the month and advances September to October; hard checks prove both
-the initial and committed dates. The frozen clock prevents the input's
+timezone-location flow retains its original purpose. The Next day button advances September 8 to September 9; hard checks prove
+both the initial and committed dates. Native date-field segments differ
+between macOS and Ubuntu, so the flow does not depend on their hit targets. The frozen clock prevents the input's
 today-to-one-year range from invalidating this fixture as calendar time passes.
 
 All snapshots use Argent's default 0.5% mismatch tolerance. A crop-size change
@@ -105,8 +105,8 @@ the crops; a missing baseline fails instead of silently adopting an image.
    `argent-baselines-node24`. The workflow never commits images.
 3. Download the artifacts and review all five images in each leg for correct
    text, spacing, active states, closed science note, and no scene pixels.
-   In the London window expect sunset **5:22 pm**, dark from **7:13 pm**,
-   sunrise **6:14 am**, and **Waning crescent · 4% lit** (all times UTC).
+   In the London window expect sunset **6:28 pm**, dark from **8:27 pm**,
+   sunrise **5:27 am**, and **New Moon · 2% lit** (all times UTC).
    Reject incorrect, clipped, incomplete, or inconsistent candidates.
 4. After human approval, place one reviewed set under
    `.argent/flows/__baselines__/`, preserving each flow's subdirectory, and
