@@ -12,6 +12,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: Generate candidate visual baselines for human review (not a regression pass)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,10 +47,17 @@ jobs:
 
       - name: Run Argent QA flows
         id: flows
+        env:
+          UPDATE_BASELINES: ${{ github.event_name == 'workflow_dispatch' && inputs.update_baselines }}
         run: |
           mkdir -p artifacts
+          options=()
+          if [ "$UPDATE_BASELINES" = 'true' ]; then
+            options+=(--update-baselines)
+            echo 'Baseline generation only; this run is not a visual regression pass.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           set +e
-          argent flow run .argent/flows --platform chromium --output artifacts --json > artifacts/flows.json
+          argent flow run .argent/flows --platform chromium --output artifacts --json "${options[@]}" > artifacts/flows.json
           status=$?
           set -e
           echo "status=$status" >> "$GITHUB_OUTPUT"
@@ -85,6 +97,17 @@ jobs:
           if-no-files-found: warn
           name: argent-qa-node${{ matrix.node }}
           path: artifacts/
+
+      - name: Upload candidate visual baselines
+        if: >-
+          github.event_name == 'workflow_dispatch' && inputs.update_baselines
+          && steps.flows.outputs.status == '0'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          if-no-files-found: error
+          name: argent-baselines-node${{ matrix.node }}
+          path: .argent/flows/__baselines__/
+          include-hidden-files: true
 
       - name: Fail the job if any flow failed
         if: steps.flows.outputs.status != '0'

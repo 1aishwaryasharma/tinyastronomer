@@ -22,3 +22,11 @@ steps:
       hidden:
         id: launch-title
       timeout: 10000
+  - snapshot:
+      name: season-picker
+      cropOn:
+        id: picker
+  - snapshot:
+      name: season-controls
+      cropOn:
+        id: seasons-controls

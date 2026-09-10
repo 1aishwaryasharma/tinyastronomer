@@ -70,7 +70,9 @@ runs:
 
     - name: Install Argent
       shell: bash
-      run: npm install -g "@swmansion/argent@${{ inputs.argent-version }}"
+      run: |
+        npm install -g "@swmansion/argent@${{ inputs.argent-version }}"
+        node .github/scripts/patch-argent-capture.cjs "$(npm root -g)/@swmansion/argent"
 
     - name: Reset the SwiftShader profile
       shell: bash
