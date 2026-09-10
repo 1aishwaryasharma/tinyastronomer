@@ -9,6 +9,15 @@ steps:
         id: missions-header
   - await:
       idle: true
+  - echo: Missions page script is running. Expect the live Voyager 1 distance in km.
+  - assert:
+      text:
+        in:
+          id: voyager-dist
+        matches: '^\d{2},\d{3},\d{3},\d{3}$'
+  - assert:
+      visible:
+        id: scene-nav-btn
   - await:
       hidden:
         id: launch-title

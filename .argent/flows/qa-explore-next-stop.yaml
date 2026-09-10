@@ -27,6 +27,12 @@ steps:
         id: seasons-header
   - await:
       idle: true
+  - echo: Seasons rail is built by the scene script. Expect four stops in order.
+  - assert:
+      text:
+        in:
+          id: picker
+        matches: 'March equinox[\s\S]*June solstice[\s\S]*Sept equinox[\s\S]*December solstice'
   - await:
       hidden:
         id: launch-title

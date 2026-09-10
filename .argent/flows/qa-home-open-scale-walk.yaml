@@ -9,6 +9,15 @@ steps:
         id: scale-walk-header
   - await:
       idle: true
+  - echo: Scale Walk rail is built by the scene script. Expect the Sun first and Neptune last.
+  - assert:
+      text:
+        in:
+          id: stops
+        matches: 'The Sun[\s\S]*Mercury[\s\S]*Neptune$'
+  - assert:
+      visible:
+        id: scene-nav-btn
   - await:
       hidden:
         id: launch-title

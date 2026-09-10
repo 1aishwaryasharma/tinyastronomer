@@ -3,6 +3,9 @@
   "devDependencies": {
     "electron": "33.4.11"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "main": "main.js",
   "name": "tinyastronomer-argent-shell",
   "private": true,

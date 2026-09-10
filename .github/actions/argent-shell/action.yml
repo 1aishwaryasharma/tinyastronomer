@@ -1,0 +1,101 @@
+name: Argent shell
+description: >-
+  Boots everything an Argent Chromium run needs on an Ubuntu runner: Bun,
+  Node, the Electron system libraries, Xvfb, the vendored Electron shell, the
+  pinned Argent CLI, a clean SwiftShader profile, and the tinyastronomer dev
+  server. Every job that drives the Electron shell uses it so they boot
+  identically. Needs Node 22 or 24.
+
+inputs:
+  argent-version:
+    description: Argent CLI version to install. Keep in step with .argent/qa.md.
+    required: false
+    default: '0.21.0'
+  bun-version:
+    description: Bun version. Keep in step with verify.yml.
+    required: false
+    default: '1.3.14'
+  node-version:
+    description: Node major used to vendor Electron and install Argent. 22 or 24.
+    required: false
+    default: '24'
+  port:
+    description: Port for bun dev-server.ts. The Electron shell only accepts 127.0.0.1 or localhost.
+    required: false
+    default: '8765'
+
+outputs:
+  site-url:
+    description: URL the Electron shell loads. Also exported as SITE_URL.
+    value: ${{ steps.site.outputs.url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      with:
+        bun-version: ${{ inputs.bun-version }}
+
+    - name: Install Node
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install Electron system libraries
+      shell: bash
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends \
+          xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+
+    - name: Start Xvfb
+      shell: bash
+      run: |
+        Xvfb :99 -screen 0 1280x1024x24 >/tmp/xvfb.log 2>&1 &
+        echo 'DISPLAY=:99' >> "$GITHUB_ENV"
+
+    - name: Restore the vendored Electron shell
+      id: electron-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .argent/electron/node_modules
+        key: electron-shell-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.argent/electron/package-lock.json') }}
+
+    - name: Vendor the Electron shell
+      if: steps.electron-cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: .argent/electron
+      run: npm ci
+
+    - name: Install Argent
+      shell: bash
+      run: npm install -g "@swmansion/argent@${{ inputs.argent-version }}"
+
+    - name: Reset the SwiftShader profile
+      shell: bash
+      run: |
+        # .argent/electron/main.js keeps SwiftShader and GPU user data apart
+        # under os.tmpdir(). A fresh profile per run keeps localStorage
+        # (journey progress, saved location, the mobile hint) out of the
+        # evidence.
+        rm -rf "${TMPDIR:-/tmp}/tinyastronomer-argent-electron-swiftshader"
+        echo 'ARGENT_ELECTRON_SWIFTSHADER=1' >> "$GITHUB_ENV"
+
+    - name: Start the site
+      id: site
+      shell: bash
+      run: |
+        url="http://127.0.0.1:${{ inputs.port }}/"
+        bun dev-server.ts "${{ inputs.port }}" >/tmp/dev-server.log 2>&1 &
+        for i in $(seq 1 30); do
+          if curl -sf "$url" >/dev/null; then
+            echo "url=$url" >> "$GITHUB_OUTPUT"
+            echo "SITE_URL=$url" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo 'dev-server did not become ready'
+        cat /tmp/dev-server.log
+        exit 1

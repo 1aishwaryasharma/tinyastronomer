@@ -17,6 +17,20 @@ steps:
       timeout: 10000
       visible:
         id: sky-list
+  - echo: Sky Tonight forecast rendered from the time-zone location, with no device location request.
+  - assert:
+      text:
+        in:
+          id: location-source
+        matches: '^(From your time zone|Approximate from UTC offset)$'
+  - assert:
+      text:
+        in:
+          id: moon-summary
+        matches: '% lit'
+  - assert:
+      visible:
+        id: scene-nav-btn
   - await:
       hidden:
         id: launch-title

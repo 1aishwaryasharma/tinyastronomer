@@ -21,6 +21,15 @@ steps:
       timeout: 10000
       visible:
         id: save-view-btn
+  - echo: Light Study scene is running. Expect the free preset title and the Explore button.
+  - assert:
+      text:
+        in:
+          id: info-title
+        equals: A world half-lit
+  - assert:
+      visible:
+        id: scene-nav-btn
   - await:
       hidden:
         id: launch-title
