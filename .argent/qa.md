@@ -83,9 +83,11 @@ calendar arithmetic, timers, and `performance.now()` still work normally.
 The plain `npm start` shell keeps the real clock and visible scenes.
 
 The visual mode adds `data-qa-visual-baselines` to the document and hides
-canvas pixels and projected `.label-3d` overlays. The scenes still initialize
-and the content assertions still run. This keeps moving scene pixels out of
-the translucent DOM crops; these snapshots do not verify 3D rendering.
+canvas pixels and projected `.label-3d` overlays. The scenes initialize and
+draw once, then their shared frame loops pause until an explicit invalidation.
+Content assertions and control-driven redraws still run. This keeps moving
+scene pixels out of the translucent DOM crops and frees the Chromium
+compositor for readiness captures; these snapshots do not verify 3D rendering.
 
 | Flow | Snapshot | Crop / expected state |
 | --- | --- | --- |
@@ -138,13 +140,15 @@ as CI baselines. A local run that stops at a missing baseline has verified
 only its preceding steps, not subsequent snapshots or the complete flow.
 
 The five committed Ubuntu baselines come from
-[generation run 34436943847](https://github.com/1aishwaryasharma/tinyastronomer/actions/runs/34436943847).
+[generation run 34557935919](https://github.com/1aishwaryasharma/tinyastronomer/actions/runs/34557935919).
 All five images were visually reviewed; Node 22 and Node 24 produced
-byte-identical sets. Earlier candidates were rejected for blank or scaled
-content, which the native-scale readiness capture workaround corrected.
+byte-identical sets. The generated set remained byte-identical after pausing
+the visual fixture's continuous scene loops. Earlier candidates were rejected
+for blank or scaled content, which the native-scale readiness capture
+workaround corrected.
 Generation does not count toward the required two unchanged regression passes.
 
-Local implementation check (2026-09-09): 163 Bun tests passed and the build
+Local implementation check (2026-09-10): 164 Bun tests passed and the build
 left `common.bundle.js` unchanged. All five flows without snapshots passed;
 the other three reached their first snapshot with their content checks
 passing and failed only for missing macOS baselines. Separate diagnostic
