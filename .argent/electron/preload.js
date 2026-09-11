@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('taQa', true);
 // Keep Date arithmetic intact; freeze only the implicit clock. performance.now()
 // and timers still advance so loading, animations, and Argent waits can finish.
 function installVisualFixture() {
+  window.taVisualBaselines = true;
   const NativeDate = Date;
   const now = NativeDate.parse('2026-09-08T12:00:00Z');
   window.Date = new Proxy(NativeDate, {

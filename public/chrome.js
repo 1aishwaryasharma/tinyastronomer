@@ -1,4 +1,4 @@
-import { createFrameLoop } from './frame-loop.js?v=20260907-1';
+import { createFrameLoop } from './frame-loop.js?v=20260910-1';
 /* ─────────────────────────────────────────────────────────
    Chrome helpers shared by every page — navigation, mobile
    drawers, hints, and tiny DOM utilities. No Three.js here so
