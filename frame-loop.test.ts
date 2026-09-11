@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
-function harness(options = {}) {
+function harness(options = {}, visualBaselines = false) {
   const pending = new Map<number, FrameRequestCallback>();
   const document = Object.assign(new EventTarget(), { hidden: false });
   const window = new EventTarget();
@@ -9,12 +9,13 @@ function harness(options = {}) {
   let intersection: (entries: { isIntersecting: boolean }[]) => void;
   const frames: { now: number; dt: number }[] = [];
   const source = readFileSync(new URL('./public/frame-loop.js', import.meta.url), 'utf8');
-  const create = new Function('document', 'window', 'requestAnimationFrame', 'cancelAnimationFrame', 'IntersectionObserver',
+  const create = new Function('document', 'window', 'requestAnimationFrame', 'cancelAnimationFrame', 'IntersectionObserver', 'globalThis',
     source.replace('export function', 'function') + '; return createFrameLoop;')(
     document, window,
     (fn: FrameRequestCallback) => { pending.set(++id, fn); return id; },
     (key: number) => pending.delete(key),
     class { constructor(fn: typeof intersection) { intersection = fn; } observe() {} disconnect() {} },
+    { taVisualBaselines: visualBaselines },
   );
   const loop = create((now: number, dt: number) => frames.push({ now, dt }), options);
   return {
@@ -23,6 +24,17 @@ function harness(options = {}) {
     tick(now: number) { const callbacks = [...pending.values()]; pending.clear(); callbacks.forEach(fn => fn(now)); },
   };
 }
+
+test('visual baseline canvases draw once and retain explicit invalidation', () => {
+  const h = harness({}, true);
+  h.tick(0);
+  expect(h.frames.length).toBe(1);
+  expect(h.pending.size).toBe(0);
+  h.loop.invalidate();
+  h.tick(10);
+  expect(h.frames.length).toBe(2);
+  expect(h.pending.size).toBe(0);
+});
 
 test('decorative canvas draws 30 times rather than 120 per second', () => {
   const h = harness({ fps: 30 });

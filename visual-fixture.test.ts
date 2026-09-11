@@ -29,6 +29,7 @@ test('visual clock freezes implicit dates while preserving astronomy date arithm
   expect(evaluate('new Date("2026-10-08T12:00:00Z").toISOString()')).toBe('2026-10-08T12:00:00.000Z');
   expect(evaluate('Date.UTC(2026, 8, 8, 12)')).toBe(epoch);
   expect(evaluate('Date.parse("2026-09-08T12:00:00Z")')).toBe(epoch);
+  expect(evaluate('window.taVisualBaselines')).toBe(true);
   expect(evaluate('new Date(NaN).getTime()')).toBeNaN();
   expect(evaluate(`(() => {
     class ObservationDate extends Date {}
@@ -45,4 +46,5 @@ test('plain Electron shell retains the real browser clock', () => {
   expect(now).toBeGreaterThanOrEqual(before);
   expect(now).toBeLessThanOrEqual(Date.now());
   expect(evaluate('Date === window.Date')).toBe(true);
+  expect(evaluate('window.taVisualBaselines')).toBeUndefined();
 });
