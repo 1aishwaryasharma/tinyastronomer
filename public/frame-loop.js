@@ -26,7 +26,7 @@ export function createFrameLoop(draw, {
       dirty = false;
       draw(now, dt);
     }
-    if (animated) schedule();
+    if (animated && !globalThis.taVisualBaselines) schedule();
   }
   function invalidate() {
     dirty = true;
