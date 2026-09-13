@@ -73,6 +73,26 @@ The flows job runs the directory with `--json`, keeps the report at `artifacts/f
 
 The runner boots through `.github/actions/argent-shell`, which also wipes the SwiftShader user-data directory so no `localStorage` (journey progress, saved location, the mobile hint) survives between runs. The job is a two-leg matrix, Node 22 and Node 24; the Node 24 leg posts the comment and each leg uploads its own `argent-qa-node<major>` artifact.
 
+## Behavior review (advisory)
+
+`.github/workflows/behavior-review.yml` adds the bounded third QA layer. It
+runs on same-repository pull requests that touch `public/**`, when the
+`qa-review` label is present, or from `workflow_dispatch` with a pull-request
+number. The contract is `.argent/review.md`: one study, the highest-signal
+mapped flow, no more than 12 UI-changing actions, and three to six named
+screenshots. The job uploads the `behavior-review` artifact and updates one
+`<!-- behavior-review -->` pull-request comment. It remains advisory during
+the Phase 2 trial.
+
+Runtime reviews require the Actions secret `ANTHROPIC_API_KEY`. If it is not
+configured, the comment records an environment failure instead of silently
+skipping. A labelled docs-, tests-, workflow-, or QA-only pull request gets a
+deterministic “no runtime behavior changed” report without spending an agent
+run. Sonnet 5 performs the bounded review; a saved-flow failure alone triggers
+an Opus 5 diagnosis of that failure. Neither model can edit the checkout, and
+the write-capable pull-request token exists only in the separate reporting
+job.
+
 ## Visual baselines
 
 The shared launch fragment passes `--visual-baselines` to the Electron shell.
