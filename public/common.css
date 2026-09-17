@@ -731,7 +731,7 @@ canvas { display: block; }
   .info-panel.mobile-info-panel {
     top: auto !important;
     right: 10px !important;
-    bottom: calc(152px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(var(--dock-height, 132px) + 20px + env(safe-area-inset-bottom, 0px)) !important;
     left: 10px !important;
     width: auto !important;
     max-width: none !important;
@@ -756,11 +756,11 @@ canvas { display: block; }
     clip-path: inset(0 0 calc(100% - 64px) 0 round 2px);
     pointer-events: none;
   }
-  .info-panel.mobile-info-panel > :not(.info-label):not(.info-title):not(.mobile-info-toggle) {
+  .info-panel.mobile-info-panel > :not(.info-label):not(.info-title):not(.mobile-peek-line):not(.mobile-info-toggle) {
     visibility: visible;
     transition: visibility 0s linear 0s;
   }
-  .info-panel.mobile-info-panel:not(.is-expanded) > :not(.info-label):not(.info-title):not(.mobile-info-toggle) {
+  .info-panel.mobile-info-panel:not(.is-expanded) > :not(.info-label):not(.info-title):not(.mobile-peek-line):not(.mobile-info-toggle) {
     visibility: hidden;
     transition-delay: 0.32s;
   }
@@ -770,6 +770,18 @@ canvas { display: block; }
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .info-panel.mobile-info-panel > .mobile-peek-line {
+    margin: 0 0 19px;
+    color: var(--accent);
+    font-family: 'Fragment Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .info-panel.mobile-info-panel > .mobile-peek-line:empty { display: none; }
   .info-panel.mobile-info-panel > .info-title {
     margin-bottom: 12px;
     font-size: 18px;
@@ -935,7 +947,6 @@ canvas { display: block; }
     background: rgba(8, 12, 22, 0.96); border: 1px solid var(--line); border-radius: 2px;
   }
   .controls .toggle-group.display-menu.is-open { display: flex; }
-  .info-panel.mobile-info-panel { bottom: calc(132px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 
 @media (max-height: 520px) and (orientation: landscape) {
@@ -989,7 +1000,7 @@ canvas { display: block; }
   .info-panel.mobile-info-panel {
     top: auto !important;
     right: 8px !important;
-    bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(var(--dock-height, 42px) + 14px + env(safe-area-inset-bottom, 0px)) !important;
     left: 8px !important;
     width: auto !important;
     max-height: min(40svh, calc(100svh - 120px)) !important;
@@ -1078,7 +1089,7 @@ body .card .more-btn { font-size: 11px; text-decoration: underline; text-underli
 
 /* Desktop explanations slide aside while their restore button stays visible. */
   .desktop-info-toggle { display: none; }
-  @media (min-width: 821px) {
+  @media (min-width: 821px) and (min-height: 521px) {
     .info-panel.desktop-info-panel { transition: transform 0.25s ease, visibility 0.25s; }
     .info-panel.desktop-info-panel.is-collapsed { transform: translateX(calc(-100% - var(--info-left))); visibility: hidden; pointer-events: none; }
     .desktop-info-toggle:not([hidden]) { display: inline-flex; position: fixed; top: var(--info-top); left: calc(var(--info-left) + var(--info-width)); z-index: 11; align-items: center; gap: 7px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 0 2px 2px 0; background: var(--panel); color: var(--ink-dim); font-family: 'Fragment Mono', monospace; font-size: 9px; letter-spacing: 0.08em; cursor: pointer; transition: left 0.25s ease, color 0.2s, border-color 0.2s; }
