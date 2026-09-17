@@ -72,13 +72,27 @@ for (const rule of headerRules) {
   }
 }
 
+// Cloudflare's _headers patterns: one `*` splat anywhere in the path matches
+// greedily (`/static/*`, `/*.js`), `:name` placeholders match a single path
+// segment, everything else is literal.
+const patternToRegExp = (pattern: string) =>
+  new RegExp(
+    `^${pattern
+      .split(/(\*|:[A-Za-z]\w*)/)
+      .map((part) => {
+        if (part === "*") return ".*";
+        if (/^:[A-Za-z]\w*$/.test(part)) return "[^/]+";
+        return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      })
+      .join("")}$`,
+  );
+
 const headersFor = (pathname: string) => {
   const headers = new Headers();
   for (const rule of headerRules) {
-    const matches = rule.pattern.endsWith("/*")
-      ? pathname.startsWith(rule.pattern.slice(0, -1))
-      : rule.pattern === pathname;
-    if (matches) for (const [name, value] of rule.headers) headers.set(name, value);
+    if (patternToRegExp(rule.pattern).test(pathname)) {
+      for (const [name, value] of rule.headers) headers.set(name, value);
+    }
   }
   return headers;
 };

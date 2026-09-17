@@ -994,19 +994,53 @@ test('every .html URL permanently redirects to its canonical', () => {
     expect(rule!.to, `/${page} must redirect to its absolute canonical`).toBe(canonical);
     expect(rule!.status, `/${page} must redirect permanently, not temporarily`).toBe('301');
 
-    // handleRequest already applies _redirects before html_handling, so
-    // /index.html is not an untested Cloudflare-only path.
-    for (const origin of ['https://tinyastronomer.com', 'http://tinyastronomer.com']) {
-      const response = handleRequest(new Request(`${origin}/${page}`));
-      expect(response.status, `GET ${origin}/${page} must 301, not 200 or 404`).toBe(301);
-      expect(response.headers.get('Location'), `GET ${origin}/${page} Location`).toBe(canonical);
+    // The trailing-slash form is Cloudflare's other temporary redirect: with
+    // drop-trailing-slash it answers /missions/ with a 307, which Google reads
+    // as "the slashed URL is still the real one". A 301 of our own retires it.
+    const variants = page === 'index.html' ? [`/${page}`] : [`/${page}`, `/${page.slice(0, -'.html'.length)}/`];
+    for (const from of variants) {
+      const rule = rules.get(from);
+      expect(rule, `${from} has no redirect rule`).toBeDefined();
+      expect(rule!.to, `${from} must redirect to its absolute canonical`).toBe(canonical);
+      expect(rule!.status, `${from} must redirect permanently, not temporarily`).toBe('301');
+
+      // handleRequest already applies _redirects before html_handling, so
+      // these are not untested Cloudflare-only paths.
+      for (const origin of ['https://tinyastronomer.com', 'http://tinyastronomer.com']) {
+        const response = handleRequest(new Request(`${origin}${from}`));
+        expect(response.status, `GET ${origin}${from} must 301, not 307 or 200`).toBe(301);
+        expect(response.headers.get('Location'), `GET ${origin}${from} Location`).toBe(canonical);
+      }
     }
   }
 
   expect(handleRequest(new Request('https://tinyastronomer.com/')).status).toBe(200);
 
   for (const from of rules.keys()) {
-    expect(pages, `${from} redirects from a page that no longer exists`).toContain(from.slice(1));
+    const page = from.endsWith('/') ? `${from.slice(1, -1)}.html` : from.slice(1);
+    expect(pages, `${from} redirects from a page that no longer exists`).toContain(page);
+  }
+});
+
+test('scripts and stylesheets are marked noindex, pages are not', () => {
+  // Google fetches every script it needs to render a page and then lists the
+  // ones it kept as "Crawled - currently not indexed". X-Robots-Tag tells it
+  // they were never candidates. It must not leak onto the HTML responses.
+  const headers = readFileSync('_headers', 'utf8');
+  for (const pattern of ['/*.js', '/*.css', '/vendor/*']) {
+    expect(headers, `${pattern} block must exist`).toMatch(
+      new RegExp(`^${pattern.replace(/[.*]/g, '\\$&')}\\n\\s+X-Robots-Tag: noindex`, 'm'),
+    );
+  }
+
+  for (const path of ['/common.js', '/common.js?v=1', '/common.css', '/vendor/three/three.module.js']) {
+    const response = handleRequest(new Request(`https://tinyastronomer.com${path}`));
+    expect(response.headers.get('X-Robots-Tag'), `${path} must be noindex`).toBe('noindex');
+  }
+  for (const path of ['/', '/missions', '/sitemap.xml', '/robots.txt', '/assets/og-cover.png']) {
+    const response = handleRequest(new Request(`https://tinyastronomer.com${path}`));
+    expect(response.status, `${path} must serve`).toBe(200);
+    expect(response.headers.get('X-Robots-Tag'), `${path} must stay indexable`).toBeNull();
   }
 });
 
