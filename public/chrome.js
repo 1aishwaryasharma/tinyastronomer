@@ -302,9 +302,15 @@ function initMobileInfoPanels() {
       );
     });
 
+    const peek = document.createElement('p');
+    peek.className = 'mobile-peek-line';
+    peek.id = panel.id + '-peek';
+
     // First child so position:sticky can pin Close to the top of the
     // same overflow box the finger actually scrolls.
     panel.insertBefore(toggle, panel.firstChild);
+    const label = panel.querySelector('.info-label');
+    if (label) label.after(peek); else panel.insertBefore(peek, toggle.nextSibling);
   });
 }
 
@@ -355,12 +361,58 @@ function initDesktopInfoPanels() {
   });
 }
 
+// The chrome (header, rail, drawer peek, dock) covers a quarter of a phone
+// viewport. Publish the band it leaves free so a canvas can lay out inside it
+// instead of guessing a fraction of the whole screen.
+const sceneInsets = { top: 0, bottom: 0 };
+
+function initSceneMetrics() {
+  const root = document.documentElement;
+  const dock = document.querySelector('.controls, .date-controls, .walk-controls');
+  const panel = document.querySelector('.info-panel');
+  const header = document.querySelector('.header');
+
+  function sync() {
+    // The drawer is anchored to --dock-height, so publish that first and let
+    // it settle before reading back where the drawer actually landed.
+    if (dock) root.style.setProperty('--dock-height', Math.ceil(dock.getBoundingClientRect().height) + 'px');
+
+    const rail = document.querySelector('.side-rail');
+    sceneInsets.top = Math.round(Math.max(
+      header ? header.getBoundingClientRect().bottom : 0,
+      rail ? rail.getBoundingClientRect().bottom : 0
+    ));
+
+    let bottom = window.innerHeight;
+    if (panel && panel.classList.contains('mobile-info-panel')) {
+      // Derive the peek from the resolved offset, not the live rect: the rect
+      // slides during the open and close transition and the scene must not
+      // reflow with it.
+      const offset = parseFloat(getComputedStyle(panel).bottom) || 0;
+      bottom = Math.min(bottom, Math.round(window.innerHeight - offset - 64));
+    }
+    if (dock) bottom = Math.min(bottom, Math.round(dock.getBoundingClientRect().top));
+    sceneInsets.bottom = bottom;
+
+    root.style.setProperty('--scene-top', sceneInsets.top + 'px');
+    root.style.setProperty('--scene-bottom', sceneInsets.bottom + 'px');
+    window.dispatchEvent(new CustomEvent('space:scene-metrics', { detail: { ...sceneInsets } }));
+  }
+
+  sync();
+  addEventListener('resize', sync);
+  addEventListener('orientationchange', sync);
+  // Docks wrap to a second row as content changes; the reserved space follows.
+  if (dock) new ResizeObserver(sync).observe(dock);
+}
+
 function initChrome() {
   initMobileInfoPanels();
   initDesktopInfoPanels();
   initMobileHints();
   initDisplayMenus();
   initRailOverflow();
+  initSceneMetrics();
 }
 
 if (document.readyState === 'loading') {
@@ -386,6 +438,7 @@ const SPACE = {
   prefersReducedMotion,
   initSceneAccessibility,
   revealRailButton,
+  sceneInsets,
   setText
 };
 
@@ -403,5 +456,6 @@ export {
   initSceneAccessibility,
   prefersReducedMotion,
   revealRailButton,
+  sceneInsets,
   setText
 };

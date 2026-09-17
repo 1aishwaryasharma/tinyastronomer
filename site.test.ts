@@ -1163,6 +1163,54 @@ test('sky tonight uses the shared mobile drawer so the sky stays visible', () =>
   expect(chromeJs).toContain('initMobileInfoPanels');
 });
 
+test('the mobile drawer clears whatever dock the page actually renders', () => {
+  const commonCss = readFileSync('common.css', 'utf8');
+  const chromeJs = readFileSync('chrome.js', 'utf8');
+  // Docks differ per page — one row on solar system, two on sky tonight — so the
+  // drawer offset is measured at runtime instead of being tuned to the tallest.
+  expect(chromeJs).toContain('function initSceneMetrics');
+  expect(chromeJs).toContain("root.style.setProperty('--dock-height'");
+  expect(commonCss).toMatch(
+    /\.info-panel\.mobile-info-panel\s*\{[^}]*bottom:\s*calc\(var\(--dock-height,\s*132px\)\s*\+\s*20px/
+  );
+  // A dock that wraps to a second row has to carry the drawer with it.
+  expect(chromeJs).toContain('new ResizeObserver(sync).observe(dock)');
+  // The old single literal was tuned for the tallest dock and left up to 80px of
+  // dead space under every shorter one.
+  expect(commonCss).not.toContain('152px');
+});
+
+test('the scene band is read from the resolved offset, not the sliding rect', () => {
+  const chromeJs = readFileSync('chrome.js', 'utf8');
+  // The panel's rect animates while the drawer opens. Reading it there makes the
+  // scene reflow mid-transition, so the peek is derived from computed `bottom`.
+  expect(chromeJs).toContain("parseFloat(getComputedStyle(panel).bottom)");
+  expect(chromeJs).toContain('window.innerHeight - offset - 64');
+  expect(chromeJs).toContain("root.style.setProperty('--scene-bottom'");
+  expect(chromeJs).toContain("new CustomEvent('space:scene-metrics'");
+});
+
+test('sky tonight drops its horizon to the published band, not a fixed fraction', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  // The compass row and the three "below" label lanes hang under the horizon, so
+  // the line needs a gutter above the chrome rather than a share of the screen.
+  expect(sky).toContain('const HORIZON_GUTTER = 56');
+  expect(sky).toContain('clamp(sceneBottom - HORIZON_GUTTER');
+  // Falls back to the full height when nothing publishes a band (no JS chrome).
+  expect(sky).toContain('SPACE.sceneInsets.bottom || height');
+  expect(sky).toContain("addEventListener('space:scene-metrics'");
+  // The fraction put the horizon inside the drawer peek on every phone measured.
+  expect(sky).not.toContain('height * 0.76');
+});
+
+test('landscape phones get the drawer or the desktop toggle, never both', () => {
+  const commonCss = readFileSync('common.css', 'utf8');
+  // Phones wider than 820px in landscape (844, 915, 932) matched the desktop
+  // rule and rendered a "Hide info" button on top of the mobile drawer.
+  expect(commonCss).toContain('@media (min-width: 821px) and (min-height: 521px)');
+  expect(commonCss).not.toMatch(/@media \(min-width: 821px\)\s*\{/);
+});
+
 test("current mission figures remain current", () => {
   const missions = readFileSync("missions.html", "utf8");
   expect(missions).toContain("<b>nearly 24 hours</b>");

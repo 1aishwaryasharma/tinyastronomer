@@ -224,6 +224,11 @@ function resize() {
 }
 addEventListener('resize', resize); resize();
 
+// The compass row and the three "below the horizon" label lanes hang under the
+// horizon line, so the line has to sit at least this far above the chrome.
+const HORIZON_GUTTER = 56;
+addEventListener('space:scene-metrics', () => { if (typeof drawing !== 'undefined') drawing.invalidate(); });
+
 function orbitRadiusPx(au, maxRadius) { return 34 + (maxRadius - 34) * Math.sqrt(au / 30.11); }
 function drawOrbit(time) {
   if (!currentOrbitPositions) return;
@@ -266,7 +271,12 @@ function drawHorizon(time) {
   ctx.fillStyle = background; ctx.fillRect(0, 0, width, height);
 
   const left = Math.max(26, width * 0.04), right = width - left;
-  const top = Math.max(92, height * 0.14), horizonY = height * 0.76;
+  // Drop the horizon as low as it can go while keeping its own labels clear of
+  // the drawer and the dock. Falls back to the old fraction when nothing
+  // reports a band (no JS chrome, or a viewport with no bottom furniture).
+  const sceneBottom = SPACE.sceneInsets.bottom || height;
+  const horizonY = clamp(sceneBottom - HORIZON_GUTTER, height * 0.5, height * 0.82);
+  const top = Math.max(92, Math.min(height * 0.14, horizonY - 120));
   const plotWidth = right - left, plotHeight = horizonY - top;
   const starAlpha = 1 - twilight * 0.82;
   for (const star of stars) {
@@ -495,6 +505,13 @@ function updateTimeState() {
     ? visibleNow.map((body) => `${body.name} ${body.compass}, ${Math.round(body.altitude)} degrees up`).join('; ')
     : 'the Moon and planets are below the horizon';
   skySummary.textContent = `At ${formatTime(selectedTime)} from ${location.label}: ${summary}.`;
+  const peek = document.getElementById('sky-info-panel-peek');
+  if (peek) {
+    const best = visibleNow.slice().sort((a, b) => b.altitude - a.altitude).slice(0, 2);
+    peek.textContent = best.length
+      ? best.map((body) => `${body.name} ${body.compass} ${Math.round(body.altitude)}°`).join('  ·  ')
+      : 'Nothing up yet — slide the time forward';
+  }
   timeValue.textContent = formatTime(selectedTime);
   timeSlider.setAttribute('aria-valuetext', formatTime(selectedTime));
   metaTime.textContent = formatTime(selectedTime);
