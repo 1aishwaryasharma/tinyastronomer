@@ -208,6 +208,7 @@ import { SPACE_DATA } from './data.js';
 import { Astronomy, FORECAST_BODIES, bodyReport, conjunctions, meteorShowers, moonReport, nightWindow, orbitPositions, positionAt } from './sky-forecast.js';
 import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js';
 import { describeLocation, requestDeviceLocation, resolveLocation, setManualLocation } from './sky-location.js';
+import { layoutSkyLabels } from './sky-labels.js';
 
 const clamp = SPACE.clamp;
 const BODIES = SPACE_DATA.planets();
@@ -277,10 +278,12 @@ function drawHorizon(time) {
   ctx.clearRect(0, 0, width, height);
   const sun = currentHorizonPositions.find((body) => body.key === 'sun');
   const twilight = sun ? clamp((sun.altitude + 18) / 18, 0, 1) : 0;
+  // Blend opaque sky colors so faint twilight neither jumps nor builds up.
+  const skyColor = (night, dusk) => `rgb(${night.map((channel, index) => channel + (dusk[index] - channel) * twilight).join(',')})`;
   const background = ctx.createLinearGradient(0, 0, 0, height);
   background.addColorStop(0, '#030610');
-  background.addColorStop(0.7, twilight ? `rgba(36,48,78,${0.5 + twilight * 0.35})` : '#080d19');
-  background.addColorStop(1, twilight ? `rgba(116,75,61,${0.22 + twilight * 0.38})` : '#101622');
+  background.addColorStop(0.7, skyColor([8,13,25], [36,48,78]));
+  background.addColorStop(1, skyColor([16,22,34], [116,75,61]));
   ctx.fillStyle = background; ctx.fillRect(0, 0, width, height);
 
   const left = Math.max(26, width * 0.04), right = width - left;
@@ -328,7 +331,7 @@ function drawHorizon(time) {
     const sunX = horizonX(sun.azimuth, left, plotWidth);
     const sunY = horizonY - Math.max(0, sun.altitude) / 90 * plotHeight;
     const glow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 150 + twilight * 100);
-    glow.addColorStop(0, `rgba(244,197,96,${0.26 + twilight * 0.35})`);
+    glow.addColorStop(0, `rgba(244,197,96,${twilight * 0.61})`);
     glow.addColorStop(1, 'rgba(244,197,96,0)');
     ctx.fillStyle = glow; ctx.fillRect(sunX - 260, sunY - 260, 520, 520);
   }
@@ -351,9 +354,16 @@ function drawHorizon(time) {
   }
 
   horizonTargets = [...starLabels];
+  const mobile = width <= 820;
+  ctx.font = "11px 'Fragment Mono', monospace";
+  const mobileLabels = mobile ? layoutSkyLabels(currentHorizonPositions.filter(body => body.altitude >= 0).map(body => ({
+    ...body, x: horizonX(body.azimuth, left, plotWidth), y: horizonY - clamp(body.altitude, 0, 90) / 90 * plotHeight,
+  })), { left, right, top: top + 12, bottom: horizonY - 10 }, name => ctx.measureText(name).width) : [];
   const belowLabelLaneEnds = [-Infinity, -Infinity, -Infinity, -Infinity];
   ctx.textAlign = 'left';
   for (const body of currentHorizonPositions) {
+    // Every object remains in the forecast panel; mobile charts show only what's up.
+    if (mobile && body.altitude < 0) continue;
     if (body.key === 'sun' && body.altitude <= -18) continue;
     const x = horizonX(body.azimuth, left, plotWidth);
     const y = body.altitude >= 0
@@ -385,11 +395,23 @@ function drawHorizon(time) {
       ctx.beginPath(); ctx.moveTo(x, y + 5); ctx.lineTo(x, labelY - 9); ctx.stroke();
       ctx.textAlign = alignRight ? 'right' : 'left'; ctx.fillText(label, labelX, labelY);
       ctx.textAlign = 'left';
-    } else {
+    } else if (!mobile) {
       ctx.fillText(body.name, x + 9, y - 7);
     }
     ctx.restore();
     if (body.key !== 'sun') horizonTargets.push({ key: body.key, x, y });
+  }
+  for (const label of mobileLabels) {
+    const anchorX = clamp(label.x, label.labelX, label.labelX + label.width);
+    const anchorY = label.labelY - 4;
+    const distance = Math.hypot(anchorX - label.x, anchorY - label.y);
+    ctx.strokeStyle = 'rgba(232,236,244,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(label.x + (anchorX - label.x) * 8 / Math.max(8, distance), label.y + (anchorY - label.y) * 8 / Math.max(8, distance));
+    ctx.lineTo(anchorX, anchorY); ctx.stroke();
+    ctx.font = "11px 'Fragment Mono', monospace";
+    ctx.fillStyle = 'rgba(232,236,244,0.9)';
+    ctx.fillText(label.name, label.labelX, label.labelY);
   }
 }
 
