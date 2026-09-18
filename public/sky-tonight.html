@@ -638,11 +638,23 @@ function update() {
 }
 function commitDate() { update(); accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}.`); }
 function setOffset(next) { offset = clamp(Math.round(next), 0, MAX_OFFSET); slider.value = offset; commitDate(); }
+function applyDateInput(announce) {
+  const next = offsetFromIso(dateInput.value);
+  if (next === null) { update(); return; }
+  offset = clamp(Math.round(next), 0, MAX_OFFSET);
+  slider.value = offset;
+  if (announce) commitDate();
+  else update();
+}
 
 dateInput.min = isoLocal(dateAt(0)); dateInput.max = isoLocal(dateAt(MAX_OFFSET));
 slider.oninput = () => { offset = parseInt(slider.value, 10); update(); }; slider.onchange = commitDate;
 prevBtn.onclick = () => setOffset(offset - 1); nextBtn.onclick = () => setOffset(offset + 1);
-dateInput.onchange = () => { const next = offsetFromIso(dateInput.value); if (next === null) { update(); return; } setOffset(next); };
+// Mobile hides the 800-day slider, so the native picker is the precise control.
+// WebKit often fires `input` without a matching `change`; listen to both, as the
+// slider already does, so the forecast cannot stay on the previous date.
+dateInput.oninput = () => applyDateInput(false);
+dateInput.onchange = () => applyDateInput(true);
 document.getElementById('today-btn').onclick = () => setOffset(0);
 timeSlider.oninput = () => {
   selectedTime = new Date(activeWindow.start.getTime() + Number(timeSlider.value) * 60000);

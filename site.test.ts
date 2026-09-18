@@ -1141,6 +1141,11 @@ test('sky tonight can step the date by a day and pick one natively', () => {
   expect(sky).not.toContain('.toISOString(');
   expect(sky).toContain('dateInput.min = isoLocal(dateAt(0))');
   expect(sky).toContain('dateInput.max = isoLocal(dateAt(MAX_OFFSET))');
+  // Phones hide the slider; WebKit date pickers often fire `input` without `change`.
+  expect(sky).toContain('function applyDateInput');
+  expect(sky).toContain('dateInput.oninput = () => applyDateInput(false)');
+  expect(sky).toContain('dateInput.onchange = () => applyDateInput(true)');
+  expect(sky).toContain('if (announce) commitDate()');
 });
 
 test('sky tonight builds a private local forecast before requesting precise location', () => {
