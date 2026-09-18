@@ -1123,6 +1123,10 @@ test('sky tonight builds a private local forecast before requesting precise loca
   }
   expect(sky).toContain('Used only on this device. Nothing is sent anywhere.');
   expect(sky.indexOf('requestDeviceLocation()')).toBeGreaterThan(sky.indexOf('useLocationButton.onclick'));
+  // sky-list must stay above the bright-star block. Argent Chromium omits
+  // off-viewport ids, and the 1280×800 QA window cannot show both at once.
+  expect(sky.indexOf('id="night-window"')).toBeLessThan(sky.indexOf('id="sky-list"'));
+  expect(sky.indexOf('id="sky-list"')).toBeLessThan(sky.indexOf('id="star-list"'));
 });
 
 test('sky tonight offers one horizon canvas with time and orbit controls', () => {
