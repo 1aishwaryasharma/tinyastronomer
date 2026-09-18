@@ -12,3 +12,13 @@
 /seasons.html      https://tinyastronomer.com/seasons        301
 /sky-tonight.html  https://tinyastronomer.com/sky-tonight    301
 /solar-system.html https://tinyastronomer.com/solar-system   301
+
+# Trailing-slash variants. html_handling "drop-trailing-slash" already sends
+# /missions/ to /missions, but with a temporary 307, so Google keeps the
+# slashed URL around as an "alternative page" instead of retiring it. Declared
+# here so the status is a 301 we own.
+/missions/         https://tinyastronomer.com/missions       301
+/scale-walk/       https://tinyastronomer.com/scale-walk     301
+/seasons/          https://tinyastronomer.com/seasons        301
+/sky-tonight/      https://tinyastronomer.com/sky-tonight    301
+/solar-system/     https://tinyastronomer.com/solar-system   301

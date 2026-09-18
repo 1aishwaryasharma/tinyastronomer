@@ -77,13 +77,17 @@ not `/seasons.html` or `/seasons/`. One URL per page, and `<link rel=canonical>`
   serves `seasons.html` at `/seasons`. Trailing slashes matter beyond tidiness:
   pages import `./chrome.js`, which resolves to `/chrome.js` from `/seasons` but
   to `/seasons/chrome.js` — a 404 — from `/seasons/`.
-- `public/_redirects` sends each `.html` URL to its absolute https canonical
+- `public/_redirects` sends each `.html` URL *and* each trailing-slash URL
+  (`/missions.html`, `/missions/`) to its absolute https canonical
   (`https://tinyastronomer.com/`, `https://tinyastronomer.com/missions`, …)
-  with a **301**. Cloudflare would redirect them anyway, but only temporarily,
-  which leaves the old URLs sitting in Google's index rather than folding them
-  into the canonical.
+  with a **301**. Cloudflare would redirect them anyway, but only temporarily
+  (301 for `.html`, 307 for the slash), which leaves the old URLs sitting in
+  Google's index rather than folding them into the canonical.
 - `not_found_handling: "none"` keeps unknown paths a real 404 instead of a
   soft 404 serving `index.html` with a 200.
+- `public/_headers` marks `*.js`, `*.css`, and `vendor/*` with
+  `X-Robots-Tag: noindex`. Google still fetches them to render pages, but no
+  longer reports them as pages it "crawled but did not index".
 
 Adding a page means adding it to `sitemap.xml` and `_redirects` too; the checks
 in `site.test.ts` fail if you skip either.

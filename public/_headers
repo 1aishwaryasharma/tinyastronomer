@@ -6,3 +6,14 @@
   Strict-Transport-Security: max-age=31536000
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
+
+# Google crawls script, stylesheet, and vendor files to render pages and then
+# reports them as "Crawled - currently not indexed". They are not pages;
+# say so, so they drop out of the report rather than compete for crawl budget.
+# (X-Robots-Tag does not stop Googlebot fetching them for rendering.)
+/*.js
+  X-Robots-Tag: noindex
+/*.css
+  X-Robots-Tag: noindex
+/vendor/*
+  X-Robots-Tag: noindex
