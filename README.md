@@ -6,7 +6,7 @@ An accessible, responsive collection of interactive solar-system experiences:
 - **Grand Tour** — the planets, dwarf planets, belts, moons, and a comet
 - **Seasons** — Earth's tilt, sunlight, solstices, and equinoxes
 - **Scale Walk** — proportional planetary distances and size analogies
-- **Sky Tonight** — a private local forecast for the Moon, planets, and where to look
+- **Sky Tonight** — a private local forecast for stars, the Moon, planets, and where to look
 - **Missions** — notable spacecraft and their discoveries
 
 ## Run locally
@@ -170,3 +170,5 @@ Original code (the HTML, CSS, JavaScript, and shaders in this repository) is
 released under the [MIT License](LICENSE). Bundled third-party assets in
 `assets/` retain the terms of their original sources, noted under Credits and in
 the `LICENSE` file.
+
+Sky Tonight includes a [925-star HYG subset](public/assets/stars/README.md) by David Nash / Astronexus (CC BY-SA 4.0), computed locally for the selected time and location. See [the research and implementation rationale](docs/sky-tonight-stars-research.md).

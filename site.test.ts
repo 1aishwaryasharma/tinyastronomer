@@ -892,7 +892,7 @@ test('pages name tinyastronomer in the signals Google uses for brand search', ()
     const html = readFileSync(file, 'utf8');
     expect(html, `${file}: title`).toMatch(/<title>[^<]*tinyastronomer[^<]*<\/title>/);
     if (file === 'sky-tonight.html') {
-      expect(html).toContain('<meta name="description" content="See which planets and the Moon are up tonight from your location, which direction to look, and when. Free, ad-free, works offline.">');
+      expect(html).toContain('<meta name="description" content="See which stars, planets and the Moon are up tonight from your location, which direction to look, and when. Free, ad-free, works offline.">');
     } else {
       expect(html, `${file}: description`).toMatch(
         /<meta\s+name=["']description["']\s+content=["']tinyastronomer /i
