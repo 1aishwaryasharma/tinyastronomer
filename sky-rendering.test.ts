@@ -39,7 +39,7 @@ function scene(altitude: number, width = 402, bodies = []) {
   const draw = runInNewContext(renderer + '; drawHorizon', {
     ctx, width, height: 714, HORIZON_GUTTER: 56, layoutSkyLabels,
     currentHorizonPositions: [{ key: 'sun', name: 'Sun', dot: '#f4c560', azimuth: 280, altitude }, ...bodies],
-    stars: [], highlightedBody: null,
+    stars: [], currentStars: [], featuredStars: [], highlightedBody: null,
     clamp: (value: number, min: number, max: number) => Math.max(min, Math.min(max, value)),
     SPACE: { prefersReducedMotion: true, sceneInsets: { bottom: 600 } },
   });
