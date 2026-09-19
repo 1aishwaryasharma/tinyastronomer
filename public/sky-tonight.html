@@ -205,7 +205,7 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, bodyReport, conjunctions, meteorShowers, moonReport, nightWindow, orbitPositions, positionAt } from './sky-forecast.js';
+import { Astronomy, FORECAST_BODIES, bodyReport, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, timeInNight } from './sky-forecast.js';
 import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js';
 import { describeLocation, requestDeviceLocation, resolveLocation, setManualLocation } from './sky-location.js';
 import { layoutSkyLabels } from './sky-labels.js';
@@ -470,17 +470,17 @@ function offsetFromIso(value) {
 function formatTime(date) { return date ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).toLowerCase() : '—'; }
 function insideWindow(date, window) { return date >= window.start && date <= window.end; }
 
-function setDefaultTime(window) {
-  const now = new Date();
-  selectedTime = offset === 0 && insideWindow(now, window)
-    ? now
-    : window.astroDusk ?? window.civilDusk ?? window.start;
-  const minutes = Math.round((selectedTime - window.start) / 300000) * 5;
-  const maxMinutes = Math.max(5, Math.round((window.end - window.start) / 60000));
+function applyNightMinutes(window, minutes) {
+  const maxMinutes = nightSpanMinutes(window);
+  const next = clamp(Math.round(Number(minutes) / 5) * 5, 0, maxMinutes);
   timeSlider.max = String(maxMinutes);
-  timeSlider.value = String(clamp(minutes, 0, maxMinutes));
-  selectedTime = new Date(window.start.getTime() + Number(timeSlider.value) * 60000);
+  timeSlider.value = String(next);
+  selectedTime = timeInNight(window, next);
+  const now = new Date();
   nowButton.disabled = !(offset === 0 && insideWindow(now, window));
+}
+function setDefaultTime(window) {
+  applyNightMinutes(window, defaultNightMinutes(window, new Date(), offset === 0));
 }
 function sourceDescription() {
   if (location.source === 'geo') return 'Device · rounded to about 10 km';
@@ -615,7 +615,8 @@ function renderHighlights(observer, window) {
 function renderForecast() {
   const observer = new Astronomy.Observer(location.lat, location.lon, 0);
   activeWindow = nightWindow(observer, dateAt(offset));
-  setDefaultTime(activeWindow);
+  if (selectedTime) applyNightMinutes(activeWindow, timeSlider.value);
+  else setDefaultTime(activeWindow);
   const sampleTime = selectedTime;
   const reports = FORECAST_BODIES.map((body) => bodyReport(body, observer, activeWindow, sampleTime));
   const visible = reports.filter((report) => report.visible).sort((a, b) => a.bestTime - b.bestTime);
