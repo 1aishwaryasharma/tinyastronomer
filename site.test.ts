@@ -1146,6 +1146,10 @@ test('sky tonight can step the date by a day and pick one natively', () => {
   expect(sky).toContain('dateInput.oninput = () => applyDateInput(false)');
   expect(sky).toContain('dateInput.onchange = () => applyDateInput(true)');
   expect(sky).toContain('if (announce) commitDate()');
+  // Date steps remap the existing time-within-window; they must not reset the slider.
+  expect(sky).toContain('if (selectedTime) applyNightMinutes(activeWindow, timeSlider.value)');
+  expect(sky).toContain('else setDefaultTime(activeWindow)');
+  expect(sky).toContain('function applyNightMinutes');
 });
 
 test('sky tonight builds a private local forecast before requesting precise location', () => {

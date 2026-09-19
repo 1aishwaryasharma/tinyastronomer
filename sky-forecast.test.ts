@@ -4,9 +4,12 @@ import {
   bodyReport,
   brightnessDescription,
   compassDirection,
+  defaultNightMinutes,
   moonReport,
+  nightSpanMinutes,
   nightWindow,
   positionAt,
+  timeInNight,
 } from './public/sky-forecast.js';
 
 const observer = new Astronomy.Observer(37.77, -122.42, 10);
@@ -80,4 +83,29 @@ test('brightness descriptions switch at the documented thresholds', () => {
   expect(brightnessDescription(2)).toBe('faint, needs a dark sky');
   expect(brightnessDescription(4)).toBe('binoculars');
   expect(brightnessDescription(6)).toBe('telescope');
+});
+
+describe('Sky Tonight time-within-window', () => {
+  const nextNight = nightWindow(observer, new Date(2026, 8, 8, 12));
+  const duskMinutes = defaultNightMinutes(window, new Date('2026-09-08T12:00:00Z'), false);
+
+  test('defaults to astronomical dusk when the clock is outside the window', () => {
+    expect(duskMinutes).toBeGreaterThan(0);
+    const dusk = timeInNight(window, duskMinutes);
+    expect(Math.abs(dusk.getTime() - window.astroDusk.getTime())).toBeLessThan(5 * 60 * 1000);
+    expect(positionAt('Sun', observer, dusk).altitude).toBeLessThan(-6);
+  });
+
+  test('the slider ends are sunset and sunrise, so night→day on drag is expected', () => {
+    expect(positionAt('Sun', observer, timeInNight(window, 0)).altitude).toBeGreaterThan(-6);
+    expect(positionAt('Sun', observer, timeInNight(window, nightSpanMinutes(window))).altitude).toBeGreaterThan(-6);
+  });
+
+  test('the same slider minutes stay in the same part of the next night', () => {
+    const dusk = timeInNight(nextNight, duskMinutes);
+    const dawn = timeInNight(nextNight, nightSpanMinutes(window));
+    expect(positionAt('Sun', observer, dusk).altitude).toBeLessThan(-6);
+    expect(positionAt('Sun', observer, dawn).altitude).toBeGreaterThan(-6);
+    expect(dusk.getTime() - nextNight.start.getTime()).toBe(duskMinutes * 60 * 1000);
+  });
 });

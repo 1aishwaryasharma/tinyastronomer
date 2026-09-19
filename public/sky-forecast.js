@@ -141,6 +141,24 @@ export function nightWindow(observer, localDate) {
   };
 }
 
+export function nightSpanMinutes(window) {
+  if (!window?.start || !window?.end) return 5;
+  return Math.max(5, Math.round((window.end - window.start) / 60000));
+}
+
+export function timeInNight(window, minutesFromStart) {
+  const maxMinutes = nightSpanMinutes(window);
+  const minutes = Math.max(0, Math.min(maxMinutes, Number(minutesFromStart) || 0));
+  return new Date(window.start.getTime() + minutes * 60000);
+}
+
+export function defaultNightMinutes(window, now, isToday) {
+  const pick = isToday && now >= window.start && now <= window.end
+    ? now
+    : window.astroDusk ?? window.civilDusk ?? window.start;
+  return Math.round((pick - window.start) / 300000) * 5;
+}
+
 function samplesBetween(start, end) {
   if (!start || !end || end <= start) return [];
   const samples = [];
