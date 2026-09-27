@@ -136,3 +136,29 @@ export function setManualLocation(latitude, longitude, env = globalThis) {
   location.label = describeLocation(location);
   return storeLocation(location, env);
 }
+
+// The IANA zone whose reference city is closest to the coordinates. Borders
+// do not follow distance exactly, so callers should say which zone they used.
+export function nearestTimeZone(latitude, longitude) {
+  const toRadians = Math.PI / 180;
+  let best = null, bestDistance = Infinity;
+  for (const [timeZone, [lat, lon]] of Object.entries(TZ_COORDS)) {
+    const dLat = (lat - latitude) * toRadians, dLon = (lon - longitude) * toRadians;
+    const h = Math.sin(dLat / 2) ** 2
+      + Math.cos(latitude * toRadians) * Math.cos(lat * toRadians) * Math.sin(dLon / 2) ** 2;
+    if (h < bestDistance) { bestDistance = h; best = timeZone; }
+  }
+  return best;
+}
+
+// Time-zone and device locations are where the device is, so its clock fits.
+// Manual coordinates may be anywhere, so their times use the nearest zone.
+export function locationTimeZone(location, env = globalThis) {
+  const deviceZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
+  if (location.source !== 'manual') return deviceZone;
+  return nearestTimeZone(location.lat, location.lon) ?? deviceZone;
+}
+
+export function timeZoneLabel(timeZone) {
+  return timeZone ? `${timezoneLabel(timeZone).replace(/ area$/, '')} time` : '';
+}
