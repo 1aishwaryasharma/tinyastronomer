@@ -47,7 +47,7 @@ steps:
       text:
         in:
           id: location-source
-        equals: Manual coordinates
+        equals: Manual coordinates · times in London time
   - echo: Forecast re-rendered for London. Expect the Moon phase line to be filled in.
   - assert:
       text:
@@ -70,6 +70,12 @@ steps:
   - await:
       visible:
         id: night-window
+  - echo: The QA clock runs in UTC; London times must read in London's own clock (BST).
+  - assert:
+      text:
+        in:
+          id: sunset-time
+        equals: 7:28 pm
   - await:
       idle: true
   - snapshot:

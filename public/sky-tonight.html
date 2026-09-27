@@ -174,7 +174,7 @@
     <p>Positions come from astronomy-engine's VSOP87-based model and are topocentric with standard atmospheric refraction. This guide assumes a flat horizon and clear sky. Location precision is about 10 km from the device, or about a city from the time zone.</p>
     <p>Stars use a local HYG catalog of 925 bright stars, with proper motion, precession, nutation and standard refraction. Magnitudes are catalog values. Fainter stars and small astrometric effects are omitted; twilight fading is illustrative. Orbit-view background stars are decorative.</p>
     <p class="science-sources"><a href="https://github.com/astronexus/HYG-Database">HYG · David Nash / Astronexus</a><a href="https://creativecommons.org/licenses/by-sa/4.0/">Star data: CC BY-SA 4.0 (filtered subset)</a></p>
-    <p class="science-sources"><span>Sources</span><a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a><a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a><a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a><span>Reviewed Sep 8, 2026</span></p>
+    <p class="science-sources"><span>Sources</span><a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a><a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a><a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a><span>Reviewed Sep 27, 2026</span></p>
   </details>
   <div class="fact-callout framed"><span class="fact-tag">✦ End of the journey</span>You've watched Earth spin, toured every planet, walked the distances, and met the robot explorers. This last stop is the real one: <strong>go outside tonight and look up</strong>. Everything you explored is really there.</div>
 </aside>
@@ -207,7 +207,7 @@ import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
 import { Astronomy, FORECAST_BODIES, bodyReport, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, timeInNight } from './sky-forecast.js';
 import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js';
-import { describeLocation, requestDeviceLocation, resolveLocation, setManualLocation } from './sky-location.js';
+import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js';
 import { layoutSkyLabels } from './sky-labels.js';
 
 const clamp = SPACE.clamp;
@@ -467,7 +467,17 @@ function offsetFromIso(value) {
   if (!year || !month || !day) return null;
   return Math.round((Date.UTC(year, month - 1, day) - Date.UTC(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate())) / DAY_MS);
 }
-function formatTime(date) { return date ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).toLowerCase() : '—'; }
+// Times are read at the observing site: a manual location abroad uses its own clock.
+let displayTimeZone;
+function formatTime(date) {
+  if (!date) return '—';
+  try { return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone }).toLowerCase(); }
+  catch { return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).toLowerCase(); }
+}
+function zoneOffset(timeZone, date) {
+  try { return new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' }).formatToParts(date).find(part => part.type === 'timeZoneName')?.value; }
+  catch { return null; }
+}
 function insideWindow(date, window) { return date >= window.start && date <= window.end; }
 
 function applyNightMinutes(window, minutes) {
@@ -484,7 +494,11 @@ function setDefaultTime(window) {
 }
 function sourceDescription() {
   if (location.source === 'geo') return 'Device · rounded to about 10 km';
-  if (location.source === 'manual') return 'Manual coordinates';
+  if (location.source === 'manual') {
+    const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone, now = new Date();
+    return zoneOffset(displayTimeZone, now) === zoneOffset(deviceZone, now)
+      ? 'Manual coordinates' : `Manual coordinates · times in ${timeZoneLabel(displayTimeZone)}`;
+  }
   return location.approximate ? 'Approximate from UTC offset' : 'From your time zone';
 }
 function locationMeta() {
@@ -494,6 +508,7 @@ function locationMeta() {
 }
 function updateLocationCopy() {
   location.label = describeLocation(location);
+  displayTimeZone = locationTimeZone(location);
   locationLabel.textContent = location.label; locationSource.textContent = sourceDescription(); metaLocation.textContent = locationMeta();
   latitudeInput.value = location.lat.toFixed(1); longitudeInput.value = location.lon.toFixed(1);
 }
@@ -514,7 +529,7 @@ function setView(mode, announce = true) {
   if (announce) accessibility.announce(viewMode === 'horizon' ? 'Horizon view.' : 'Orbit view.');
 }
 
-function moonPath(angle) {
+function moonPath(angle, southern) {
   const radius = 10.5, center = 12, points = [], waxing = angle < 180;
   for (let index = 0; index <= 24; index += 1) {
     const y = -radius + radius * 2 * index / 24, limb = Math.sqrt(Math.max(0, radius * radius - y * y));
@@ -525,11 +540,13 @@ function moonPath(angle) {
     const terminator = waxing ? Math.cos(angle * Math.PI / 180) * limb : -Math.cos(angle * Math.PI / 180) * limb;
     points.push([center + terminator, center + y]);
   }
+  // Seen from the southern hemisphere the Moon is upside down: the lit side flips.
+  if (southern) for (const point of points) point[0] = 2 * center - point[0];
   return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`).join(' ') + ' Z';
 }
 function updateMoon(window, sampleTime) {
   const moon = moonReport(new Astronomy.Observer(location.lat, location.lon, 0), window, sampleTime);
-  moonLit.setAttribute('d', moonPath(moon.phaseAngle)); moonGlyphTitle.textContent = `${moon.phase}, ${moon.illuminationPercent}% illuminated`;
+  moonLit.setAttribute('d', moonPath(moon.phaseAngle, location.lat < 0)); moonGlyphTitle.textContent = `${moon.phase}, ${moon.illuminationPercent}% illuminated`;
   const rise = moon.rise && moon.rise <= window.end ? `rises ${formatTime(moon.rise)}` : 'already up or rises later';
   const set = moon.set && moon.set <= window.end ? `sets ${formatTime(moon.set)}` : 'up past sunrise';
   moonSummary.innerHTML = `<strong>${moon.phase} · ${moon.illuminationPercent}% lit</strong><br>${rise} · ${set}${moon.washesOutSky ? ' · bright enough to wash out faint objects' : ''}`;
@@ -604,8 +621,7 @@ function updateTimeState() {
 function renderHighlights(observer, window) {
   const items = [];
   for (const pair of conjunctions(observer, window)) {
-    const moment = window.astroDusk && pair.time.getTime() === window.astroDusk.getTime() ? 'dusk' : 'dawn';
-    items.push(`${pair.bodies[0]} and ${pair.bodies[1]} are ${pair.degrees.toFixed(1)}° apart near ${moment}.`);
+    items.push(`${pair.bodies[0]} and ${pair.bodies[1]} are ${pair.degrees.toFixed(1)}° apart around ${formatTime(pair.time)}.`);
   }
   for (const shower of meteorShowers(dateAt(offset))) items.push(`${shower.name} meteor shower peaks within two nights. Look from a dark place after midnight.`);
   highlightsEl.hidden = items.length === 0;

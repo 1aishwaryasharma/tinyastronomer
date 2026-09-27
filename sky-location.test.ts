@@ -3,9 +3,12 @@ import { TZ_COORDS } from './public/tz-coords.js';
 import {
   LOCATION_STORAGE_KEY,
   describeLocation,
+  locationTimeZone,
+  nearestTimeZone,
   requestDeviceLocation,
   resolveLocation,
   setManualLocation,
+  timeZoneLabel,
 } from './public/sky-location.js';
 import { buildModule, parseIso6709 } from './tools/build-tz-coords.ts';
 
@@ -97,4 +100,21 @@ test('manual locations validate, round, describe, and store', () => {
   expect(() => setManualLocation(91, 0, env)).toThrow('Latitude must be between');
   expect(() => setManualLocation(0, -181, env)).toThrow('Longitude must be between');
   expect(() => setManualLocation('', '', env)).toThrow('Enter both');
+});
+
+describe('location time zones', () => {
+  test('manual coordinates use the nearest zone', () => {
+    expect(nearestTimeZone(35.7, 139.7)).toBe('Asia/Tokyo');
+    expect(nearestTimeZone(-33.9, 151.2)).toBe('Australia/Sydney');
+    expect(nearestTimeZone(21.3, -157.9)).toBe('Pacific/Honolulu');
+    const env = fakeEnvironment('Europe/London');
+    expect(locationTimeZone({ lat: 35.7, lon: 139.7, source: 'manual' }, env)).toBe('Asia/Tokyo');
+    expect(timeZoneLabel('Asia/Tokyo')).toBe('Tokyo time');
+  });
+
+  test('device and time-zone locations keep the device clock', () => {
+    const env = fakeEnvironment('Europe/London');
+    expect(locationTimeZone({ lat: 35.7, lon: 139.7, source: 'geo' }, env)).toBe('Europe/London');
+    expect(locationTimeZone({ lat: 51.5, lon: -0.1, source: 'tz' }, env)).toBe('Europe/London');
+  });
 });

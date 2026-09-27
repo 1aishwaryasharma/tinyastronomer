@@ -115,7 +115,7 @@ compositor for readiness captures; these snapshots do not verify 3D rendering.
 | `qa-home-open-light-study` | `observation-presets` | `#presets`, seven labels, free observation selected |
 | `qa-home-open-seasons` | `season-picker` | `#picker`, four stops, initial selection |
 | `qa-home-open-seasons` | `season-controls` | `#seasons-controls`, initial slider and buttons |
-| `qa-sky-tonight-manual-location` | `london-night-window` | `#night-window`, London (51.5, -0.1), September 9, 2026, UTC |
+| `qa-sky-tonight-manual-location` | `london-night-window` | `#night-window`, London (51.5, -0.1), September 9, 2026, device in UTC, times in London time |
 
 The forecast snapshot belongs to the manual-location flow, so the silent
 timezone-location flow retains its original purpose. The Next day button advances September 8 to September 9; hard checks prove
@@ -142,8 +142,9 @@ the crops; a missing baseline fails instead of silently adopting an image.
    `argent-baselines-node24`. The workflow never commits images.
 3. Download the artifacts and review all five images in each leg for correct
    text, spacing, active states, closed science note, and no scene pixels.
-   In the London window expect sunset **6:28 pm**, dark from **8:27 pm**,
-   sunrise **5:27 am**, and **New Moon · 2% lit** (all times UTC).
+   In the London window expect sunset **7:28 pm**, dark from **9:27 pm**,
+   sunrise **6:27 am**, and **New Moon · 2% lit** (all times London/BST:
+   manual locations read in the site's own clock, not the UTC device).
    Reject incorrect, clipped, incomplete, or inconsistent candidates.
 4. After human approval, place one reviewed set under
    `.argent/flows/__baselines__/`, preserving each flow's subdirectory, and
