@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>How Far Apart? — A Space Walk | tinyastronomer</title>
-<meta name="description" content="tinyastronomer is a free, ad-free walk of average solar-system distances, with the Sun shrunk to a basketball.">
+<title>How Far Apart Are the Planets? Scale Model | tinyastronomer</title>
+<meta name="description" content="If the Sun were a basketball, Earth would be a peppercorn 26 m away and Neptune a pea 776 m away. Walk a free solar system scale model made for kids.">
 <script type="importmap">
 {
   "imports": {
@@ -22,19 +22,19 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260816-20">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="tinyastronomer">
-<meta property="og:title" content="How Far Apart? — A Space Walk | tinyastronomer">
-<meta property="og:description" content="tinyastronomer is a free, ad-free walk of average solar-system distances, with the Sun shrunk to a basketball.">
+<meta property="og:title" content="How Far Apart Are the Planets? Scale Model | tinyastronomer">
+<meta property="og:description" content="If the Sun were a basketball, Earth would be a peppercorn 26 m away and Neptune a pea 776 m away. Walk a free solar system scale model made for kids.">
 <meta property="og:url" content="https://tinyastronomer.com/scale-walk">
 <meta property="og:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="How Far Apart? — A Space Walk | tinyastronomer">
-<meta name="twitter:description" content="tinyastronomer is a free, ad-free walk of average solar-system distances, with the Sun shrunk to a basketball.">
+<meta name="twitter:title" content="How Far Apart Are the Planets? Scale Model | tinyastronomer">
+<meta name="twitter:description" content="If the Sun were a basketball, Earth would be a peppercorn 26 m away and Neptune a pea 776 m away. Walk a free solar system scale model made for kids.">
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260909-2">
+<link rel="stylesheet" href="common.css?v=20260927-1">
 <style>
   .info-panel { top: 128px; width: 350px; }
   .info-title { font-size: 26px; line-height: 1.1; }
@@ -70,7 +70,7 @@
 <header class="header" id="scale-walk-header" aria-label="Scale Walk controls">
   <div>
     <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
-    <h1 class="title">How Far Apart?</h1>
+    <h1 class="title">How Far Apart Are the Planets?</h1>
   </div>
   <div class="header-meta">
     <div>Scale · <span>Mean orbit distances</span></div>
@@ -92,6 +92,7 @@
       <span>Reviewed Aug 16, 2026</span>
     </p>
   </details>
+  <button type="button" class="guide-open" data-guide-open><span class="science-kind">Guide</span><span>For kids, parents &amp; teachers</span></button>
 </aside>
 
 <div class="side-rail scroll" id="stops" role="group" aria-label="Scale walk stops"></div>
@@ -362,5 +363,81 @@ render();
 SPACE.createFrameLoop(animate, { element: renderer.domElement });
 SPACE.buildNav('scale');
 </script>
+<dialog class="page-guide" id="page-guide" aria-labelledby="guide-title" tabindex="-1">
+  <div class="guide-bar">
+    <span class="guide-kicker">Guide · kids, parents &amp; teachers</span>
+    <button type="button" data-guide-print>Print</button>
+    <button type="button" data-guide-close aria-label="Close the guide">✕</button>
+  </div>
+  <article class="guide">
+    <h2 id="guide-title">How far apart are the planets? A solar system scale model</h2>
+    <p class="guide-lede">Pictures of the solar system squeeze the planets close together. Really, they are tiny specks spread across enormous empty space. Shrink the Sun to a <strong>24&nbsp;cm basketball</strong>, shrink everything else by the same amount, and here is what you get:</p>
+
+    <table class="guide-table">
+      <caption>The solar system with the Sun shrunk to a 24&nbsp;cm basketball (average distances from the Sun)</caption>
+      <thead><tr><th scope="col">Planet</th><th scope="col">Size</th><th scope="col">Distance from the Sun</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Mercury</th><td>0.8&nbsp;mm, a grain of salt</td><td>10&nbsp;m</td></tr>
+        <tr><th scope="row">Venus</th><td>2.1&nbsp;mm, a peppercorn</td><td>19&nbsp;m</td></tr>
+        <tr><th scope="row">Earth</th><td>2.2&nbsp;mm, a peppercorn</td><td>26&nbsp;m</td></tr>
+        <tr><th scope="row">Mars</th><td>1.2&nbsp;mm, a pinhead</td><td>39&nbsp;m</td></tr>
+        <tr><th scope="row">Jupiter</th><td>24&nbsp;mm, a walnut</td><td>134&nbsp;m</td></tr>
+        <tr><th scope="row">Saturn</th><td>20&nbsp;mm, a large marble</td><td>246&nbsp;m</td></tr>
+        <tr><th scope="row">Uranus</th><td>8.7&nbsp;mm, a pea</td><td>495&nbsp;m</td></tr>
+        <tr><th scope="row">Neptune</th><td>8.5&nbsp;mm, a pea</td><td>776&nbsp;m</td></tr>
+      </tbody>
+    </table>
+    <p>So on a school field, Earth is a peppercorn about 26&nbsp;m from the ball, and Neptune is a pea almost 800&nbsp;m away. Everything in between is almost completely empty.</p>
+
+    <h3>How far away is the nearest star on this scale?</h3>
+    <p>The nearest star to the Sun, Proxima Centauri, would be about <strong>7,000&nbsp;km</strong> away. If the basketball Sun sat in New York, the nearest star would be somewhere near Rome.</p>
+
+    <h3>How long does sunlight take to reach each planet?</h3>
+    <p>Light is the fastest thing there is, about 300,000&nbsp;km every second. Even so, sunlight takes about <strong>8 minutes</strong> to reach Earth, about 43 minutes to reach Jupiter, and more than <strong>4 hours</strong> to reach Neptune. When you see the Sun, you are seeing light that left it about 8 minutes ago.</p>
+
+    <h3>Why do books show the planets so close together?</h3>
+    <p>Because a true-scale picture would not fit. If Earth were drawn as a dot you could see, Neptune would be hundreds of metres off the edge of the page. Books and most 3D models squeeze the distances, which is fine, as long as we remember that they do.</p>
+
+    <h3>How to use the Scale Walk</h3>
+    <p>Press <strong>Travel</strong> to move outward from the Sun one planet at a time, or pick a stop from the list. Each stop shows the average distance from the Sun, how long sunlight takes to get there, the planet’s size, and its basketball-scale comparison. Planet markers on screen are enlarged so you can see them, and the planets are lined up in a row rather than where they are tonight.</p>
+
+    <section class="guide-teach" aria-labelledby="guide-teach-title">
+      <h3 id="guide-teach-title">For teachers</h3>
+      <dl class="guide-meta">
+        <div><dt>Ages</dt><dd>8–14 (grades 3–8)</dd></div>
+        <div><dt>Time</dt><dd>20 minutes, or an hour with the outdoor walk</dd></div>
+        <div><dt>Standards</dt><dd>NGSS MS-ESS1-3, 5-ESS1-1</dd></div>
+      </dl>
+      <h4>Learning goals</h4>
+      <ul>
+        <li>Use one scale to compare the sizes of planets and the distances between them.</li>
+        <li>Recognise that the solar system is mostly empty space.</li>
+        <li>Use light travel time as another way to describe distance.</li>
+      </ul>
+      <h4>Try this in class</h4>
+      <ol>
+        <li>Before opening the page, ask students to draw the Sun and planets “to scale” on one sheet of paper. Keep the drawings.</li>
+        <li>Travel through the Scale Walk stop by stop and record each scaled distance.</li>
+        <li>Go outside with a ball for the Sun and seeds or beads for the planets. Pace out Mercury (10&nbsp;m) to Mars (39&nbsp;m). A large field can reach Jupiter at 134&nbsp;m.</li>
+        <li>Back inside, compare the walk with the drawings from step 1. What surprised students most?</li>
+      </ol>
+      <h4>Discussion questions</h4>
+      <ul>
+        <li>Jupiter is the biggest planet, yet on this scale it is only 2.4&nbsp;cm across. What does that tell you about space?</li>
+        <li>Why do spacecraft take years to reach the outer planets?</li>
+        <li>The Sun is a star. Why does it look so much brighter than the stars we see at night?</li>
+        <li>Why do textbook diagrams squeeze the planets together?</li>
+      </ul>
+    </section>
+
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://ssd.jpl.nasa.gov/planets/phys_par.html">JPL Planet sizes</a>
+      <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">JPL Planet orbits</a>
+      <a href="https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/v/voyagescalemodelss.pdf">NASA scale model activity</a>
+      <span>Reviewed Sep 27, 2026</span>
+    </p>
+  </article>
+</dialog>
+<script type="module" src="guide.js?v=20260927-1"></script>
 </body>
 </html>

@@ -92,6 +92,23 @@ not `/seasons.html` or `/seasons/`. One URL per page, and `<link rel=canonical>`
 Adding a page means adding it to `sitemap.xml` and `_redirects` too; the checks
 in `site.test.ts` fail if you skip either.
 
+## Search and teaching guides
+
+Each page's title and description lead with the question people search for
+("Why Do We Have Seasons?", "How Far Apart Are the Planets?") and keep
+`| tinyastronomer` at the end. Descriptions open with the answer, not the brand,
+and stay within 110–160 characters so search snippets aren't cut short.
+
+Every page also carries a plain-language guide with a **For teachers** box
+(ages, time, NGSS / England KS2 links, a class activity, and discussion
+questions). The scene pages keep it in a `<dialog id="page-guide">` so their
+full-screen layout is untouched; `guide.js` opens it from any
+`[data-guide-open]` control or from a `#guide` link (`/seasons#guide`), and
+prints it as a clean handout. Missions, which already scrolls, shows the guide
+inline at `#guide`. The text is in the HTML either way, so crawlers and screen
+readers get it without a click. `site.test.ts` fails if a page loses its guide
+or its teacher notes.
+
 ## Technology
 
 - Three.js 0.185.1

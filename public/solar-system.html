@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>The Sun &amp; Its Planets — A Grand Tour | tinyastronomer</title>
-<meta name="description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — orbital relationships, moons, comets, and kid-friendly facts.">
+<title>Solar System for Kids: The 8 Planets in 3D | tinyastronomer</title>
+<meta name="description" content="Fly to the Sun, all eight planets, Pluto and a comet in 3D. Kid-friendly planet facts, a guided tour, a quiz and teacher notes. Free and ad-free.">
 <script type="importmap">
 {
   "imports": {
@@ -20,19 +20,19 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260816-20">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="tinyastronomer">
-<meta property="og:title" content="The Sun &amp; Its Planets — A Grand Tour | tinyastronomer">
-<meta property="og:description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — orbital relationships, moons, comets, and kid-friendly facts.">
+<meta property="og:title" content="Solar System for Kids: The 8 Planets in 3D | tinyastronomer">
+<meta property="og:description" content="Fly to the Sun, all eight planets, Pluto and a comet in 3D. Kid-friendly planet facts, a guided tour, a quiz and teacher notes. Free and ad-free.">
 <meta property="og:url" content="https://tinyastronomer.com/solar-system">
 <meta property="og:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="The Sun &amp; Its Planets — A Grand Tour | tinyastronomer">
-<meta name="twitter:description" content="tinyastronomer is a free, ad-free grand tour of all eight planets — orbital relationships, moons, comets, and kid-friendly facts.">
+<meta name="twitter:title" content="Solar System for Kids: The 8 Planets in 3D | tinyastronomer">
+<meta name="twitter:description" content="Fly to the Sun, all eight planets, Pluto and a comet in 3D. Kid-friendly planet facts, a guided tour, a quiz and teacher notes. Free and ad-free.">
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260909-2">
+<link rel="stylesheet" href="common.css?v=20260927-1">
 <style>
   /* ── Page-specific styling for the grand tour; shared .facts / .fact-row /
      .fact-callout / .side-rail / .rail-btn live in common.css ── */
@@ -93,7 +93,7 @@
 <header class="header" id="grand-tour-header" aria-label="Grand Tour controls">
   <div>
     <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
-    <h1 class="title">The Sun &amp; Its Planets</h1>
+    <h1 class="title">Planets of the Solar System</h1>
   </div>
   <div class="header-meta">
     <div>Scale · <span id="meta-scale">Made to fit</span></div>
@@ -120,6 +120,7 @@
       <span>Reviewed Aug 16, 2026</span>
     </p>
   </details>
+  <button type="button" class="guide-open" data-guide-open><span class="science-kind">Guide</span><span>For kids, parents &amp; teachers</span></button>
 </aside>
 
 <div class="side-rail scroll" id="bodies" role="group" aria-label="Bodies"></div>
@@ -993,5 +994,80 @@ SPACE.createFrameLoop(animate, { element: renderer.domElement });
 // globe and observed rings must not stay placeholders until it is selected.
 WORLDS.find(w => w.key === 'saturn').loadDetail();
 </script>
+<dialog class="page-guide" id="page-guide" aria-labelledby="guide-title" tabindex="-1">
+  <div class="guide-bar">
+    <span class="guide-kicker">Guide · kids, parents &amp; teachers</span>
+    <button type="button" data-guide-print>Print</button>
+    <button type="button" data-guide-close aria-label="Close the guide">✕</button>
+  </div>
+  <article class="guide">
+    <h2 id="guide-title">The planets of the solar system: a guide for kids</h2>
+    <p class="guide-lede">Our solar system is the Sun and everything that travels around it: <strong>eight planets</strong>, their moons, dwarf planets like Pluto, and huge numbers of asteroids and comets. The Grand Tour lets you fly to each one.</p>
+
+    <h3>What are the eight planets, in order from the Sun?</h3>
+    <ol>
+      <li><a href="#mercury"><strong>Mercury</strong></a>: the smallest planet and the closest to the Sun. A year there lasts just 88 Earth days.</li>
+      <li><a href="#venus"><strong>Venus</strong></a>: the hottest planet, hot enough to melt lead, because its thick clouds trap heat. It is almost the same size as Earth.</li>
+      <li><a href="#earth"><strong>Earth</strong></a>: our home, and the only planet known to have life and liquid water oceans on its surface.</li>
+      <li><a href="#mars"><strong>Mars</strong></a>: a cold, red, dusty desert with the tallest volcano in the solar system.</li>
+      <li><a href="#jupiter"><strong>Jupiter</strong></a>: the biggest planet. More than 1,300 Earths could fit inside it, and its Great Red Spot is a storm bigger than Earth.</li>
+      <li><a href="#saturn"><strong>Saturn</strong></a>: famous for its rings of ice and rock. It is so light for its size that it would float in a big enough bathtub.</li>
+      <li><a href="#uranus"><strong>Uranus</strong></a>: an ice giant tipped right over, so it rolls around the Sun on its side.</li>
+      <li><a href="#neptune"><strong>Neptune</strong></a>: the farthest planet, with the fastest winds in the solar system. One trip around the Sun takes about 165 Earth years.</li>
+    </ol>
+    <p>A sentence to remember the order: <strong>M</strong>y <strong>V</strong>ery <strong>E</strong>ducated <strong>M</strong>other <strong>J</strong>ust <strong>S</strong>erved <strong>U</strong>s <strong>N</strong>achos.</p>
+
+    <h3>Rocky planets and giant planets</h3>
+    <p>The four inner planets (Mercury, Venus, Earth and Mars) are small and rocky. The four outer planets are giants. Jupiter and Saturn are <strong>gas giants</strong>, made mostly of hydrogen and helium. Uranus and Neptune are <strong>ice giants</strong>, with lots of water, methane and ammonia beneath their clouds. Between Mars and Jupiter lies the <strong>asteroid belt</strong>, and far beyond Neptune is the icy <strong>Kuiper Belt</strong>.</p>
+
+    <h3>Why isn’t Pluto a planet any more?</h3>
+    <p>In 2006, astronomers agreed on what counts as a planet. A planet goes around the Sun, is big enough to be pulled into a round shape, and has cleared its path of other objects. Pluto is round and goes around the Sun, but it shares its region, the Kuiper Belt, with many other icy worlds. So it is called a <strong>dwarf planet</strong>. The tour also visits <a href="#ceres">Ceres</a>, the biggest object in the asteroid belt, and faraway <a href="#eris">Eris</a>.</p>
+
+    <h3>What is a comet?</h3>
+    <p>A comet is a chunk of ice and dust. When its orbit brings it near the Sun, some of the ice turns to gas and glows as a fuzzy cloud with long tails that point away from the Sun. Visit the <a href="#comet">Halley-like comet</a> in the tour.</p>
+
+    <h3>How to use the Grand Tour</h3>
+    <p>Tap any world, or choose it from the list, to see its facts. Press <strong>Tour</strong> for a guided trip, then <strong>Quiz</strong> to test what you spotted. <strong>Distance View</strong> spaces the orbits by each planet’s average distance from the Sun. To feel how far apart the planets really are, take the <a href="/scale-walk">Scale Walk</a>.</p>
+
+    <section class="guide-teach" aria-labelledby="guide-teach-title">
+      <h3 id="guide-teach-title">For teachers</h3>
+      <dl class="guide-meta">
+        <div><dt>Ages</dt><dd>7–14 (grades 2–8)</dd></div>
+        <div><dt>Time</dt><dd>20–45 minutes</dd></div>
+        <div><dt>Standards</dt><dd>NGSS MS-ESS1-2, MS-ESS1-3 · England KS2 Year 5 Earth and space</dd></div>
+      </dl>
+      <h4>Learning goals</h4>
+      <ul>
+        <li>Name the eight planets and put them in order from the Sun.</li>
+        <li>Compare rocky planets with giant planets using real data.</li>
+        <li>Explain why Pluto is now called a dwarf planet.</li>
+      </ul>
+      <h4>Try this in class</h4>
+      <ol>
+        <li>Before starting, ask students to list every planet they can remember, in order.</li>
+        <li>Run the <strong>Tour</strong> on the projector while students note one fact for each planet.</li>
+        <li>Planet trading cards: each group takes one planet, collects four facts from its panel, and presents them to the class.</li>
+        <li>Finish with the <strong>Quiz</strong> as a whole-class game.</li>
+        <li>Turn on <strong>Distance View</strong> and ask which gap between neighbouring planets is the biggest.</li>
+      </ol>
+      <h4>Discussion questions</h4>
+      <ul>
+        <li>Mercury is closest to the Sun. So why is Venus the hottest planet?</li>
+        <li>On which planet would you wait longest for your next birthday? Why?</li>
+        <li>Would you rather visit a rocky planet or a giant planet? What would you need to survive there?</li>
+        <li>Should Pluto be a planet? Use the three-part definition to argue your case.</li>
+      </ul>
+    </section>
+
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://science.nasa.gov/solar-system/">NASA Solar System</a>
+      <a href="https://science.nasa.gov/solar-system/solar-system-facts/">NASA Solar System facts</a>
+      <a href="https://ssd.jpl.nasa.gov/planets/phys_par.html">JPL Physical values</a>
+      <a href="https://science.nasa.gov/dwarf-planets/pluto/facts/">NASA Pluto</a>
+      <span>Reviewed Sep 27, 2026</span>
+    </p>
+  </article>
+</dialog>
+<script type="module" src="guide.js?v=20260927-1"></script>
 </body>
 </html>

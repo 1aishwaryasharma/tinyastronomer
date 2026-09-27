@@ -261,6 +261,19 @@ Suggested persistent label:
 
 Source disclosure: “[JPL planetary parameters](https://ssd.jpl.nasa.gov/planets/phys_par.html) · [JPL satellites](https://ssd.jpl.nasa.gov/sats/) · [NASA Solar System](https://science.nasa.gov/solar-system/solar-system-facts/) · body-specific NASA pages · reviewed 2026-08-16.”
 
+## Page guides (added 2026-09-27)
+
+Each page's `#guide` restates claims already audited above in longer,
+child-readable form, and adds only evergreen figures:
+
+- Seasons: Earth's perihelion in early January and a ~3% change in Sun distance (about 147–152 million km); solstice and equinox dates given as "about" with a note that they shift by year and time zone. [USNO](https://aa.usno.navy.mil/faq/seasons_orbit.html)
+- Light Study: 29.5-day phase cycle, ~5° lunar orbital tilt as the reason eclipses are not monthly, tides about every 24 h 50 min on many coasts, spring tides at new and full moon. [NASA Moon phases](https://science.nasa.gov/moon/moon-phases/), [NOAA Tides](https://oceanservice.noaa.gov/education/tutorial_tides/)
+- Scale Walk: the table is computed with the page's own constants (24 cm Sun, 1,392,000 km solar diameter, `data.js` radii and mean distances). Proxima Centauri at 4.25 light-years lands about 6,900 km away on that scale.
+- Grand Tour: Jupiter's volume is about 1,321 Earths, Neptune's period is about 165 years, Pluto's 2006 reclassification. No moon totals, so there is nothing volatile to date.
+- Missions: no live figures beyond the Voyager card's own "nearly a day" light time.
+
+Teacher boxes cite NGSS performance expectations (1-ESS1-1, 1-ESS1-2, 5-ESS1-1, 5-ESS1-2, MS-ESS1-1, MS-ESS1-2, MS-ESS1-3, 3-5-ETS1-1) and England's KS2 Year 5 Earth and space programme only where the activity addresses them directly.
+
 ## Source maintenance checklist
 
 - Review official moon totals monthly or remove exact totals from evergreen copy.

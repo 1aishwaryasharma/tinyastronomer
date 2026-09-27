@@ -24,7 +24,7 @@
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260909-2">
+<link rel="stylesheet" href="common.css?v=20260927-1">
 <style>
   #sky { position: fixed; inset: 0; z-index: 0; display: block; }
   .info-panel { top: 112px; width: 380px; max-height: calc(100dvh - 224px); overflow: auto; }
@@ -176,6 +176,7 @@
     <p class="science-sources"><a href="https://github.com/astronexus/HYG-Database">HYG · David Nash / Astronexus</a><a href="https://creativecommons.org/licenses/by-sa/4.0/">Star data: CC BY-SA 4.0 (filtered subset)</a></p>
     <p class="science-sources"><span>Sources</span><a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a><a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a><a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a><span>Reviewed Sep 27, 2026</span></p>
   </details>
+  <button type="button" class="guide-open" data-guide-open><span class="science-kind">Guide</span><span>For kids, parents &amp; teachers</span></button>
   <div class="fact-callout framed"><span class="fact-tag">✦ End of the journey</span>You've watched Earth spin, toured every planet, walked the distances, and met the robot explorers. This last stop is the real one: <strong>go outside tonight and look up</strong>. Everything you explored is really there.</div>
 </aside>
 </main>
@@ -737,5 +738,65 @@ canvas.addEventListener('click', (event) => {
 });
 SPACE.buildNav('sky');
 </script>
+<dialog class="page-guide" id="page-guide" aria-labelledby="guide-title" tabindex="-1">
+  <div class="guide-bar">
+    <span class="guide-kicker">Guide · kids, parents &amp; teachers</span>
+    <button type="button" data-guide-print>Print</button>
+    <button type="button" data-guide-close aria-label="Close the guide">✕</button>
+  </div>
+  <article class="guide">
+    <h2 id="guide-title">How to find planets, stars and the Moon in tonight’s sky</h2>
+    <p class="guide-lede">You don’t need a telescope. On a clear night you can spot planets, the Moon and dozens of bright stars with just your eyes. Sky Tonight works out what is above the horizon <strong>from where you are</strong>, and which way to look.</p>
+
+    <h3>How can I tell a planet from a star?</h3>
+    <p>Planets usually shine with a steadier light, while stars twinkle more. Planets also stay near the same path across the sky that the Sun and Moon follow. After the Moon, Venus and Jupiter are often the brightest things in the night sky.</p>
+
+    <h3>Which planets can I see without a telescope?</h3>
+    <p>Five: <strong>Mercury, Venus, Mars, Jupiter and Saturn</strong>. Mercury and Venus stay close to the Sun in our sky, so look for them low in the west after sunset or low in the east before sunrise. Mars, Jupiter and Saturn can be up for much of the night at some times of year. Uranus is only just visible from a very dark place, and Neptune needs a telescope.</p>
+
+    <h3>When is the best time to look?</h3>
+    <p>Wait until it is properly dark; the forecast shows a <strong>Dark from</strong> time. Give your eyes about 20 minutes to adjust, and use a red light rather than a bright phone screen. A bright Moon washes out faint stars, so the nights around new moon are best for stars. The Moon itself looks wonderful through binoculars around first quarter, when shadows show off its craters.</p>
+
+    <h3>How to use Sky Tonight</h3>
+    <p>Press <strong>Use my location</strong> (it stays on your device and is never sent anywhere) or type in a latitude and longitude. For each planet and the Moon, the list shows the compass direction to face, how high it is in degrees, the best time to look, and when it sets. Step the date and time forward to plan a night, or to see how the sky changes from week to week.</p>
+    <p>Clouds, trees, buildings and city lights all hide part of the sky, and the forecast assumes a clear, flat horizon.</p>
+
+    <section class="guide-teach" aria-labelledby="guide-teach-title">
+      <h3 id="guide-teach-title">For teachers</h3>
+      <dl class="guide-meta">
+        <div><dt>Ages</dt><dd>6–14 (grades 1–8)</dd></div>
+        <div><dt>Time</dt><dd>15 minutes in class, plus homework</dd></div>
+        <div><dt>Standards</dt><dd>NGSS 1-ESS1-1, 5-ESS1-2</dd></div>
+      </dl>
+      <h4>Learning goals</h4>
+      <ul>
+        <li>Observe that the Moon and planets change position from night to night.</li>
+        <li>Use compass directions and height above the horizon to find an object.</li>
+        <li>Connect the models in the other studies to the real sky.</li>
+      </ul>
+      <h4>Try this in class</h4>
+      <ol>
+        <li>Set your school’s location and tonight’s date. Note the Moon’s phase and one bright planet, and have students predict where to look.</li>
+        <li>For homework, students go outside with an adult and sketch the Moon and one bright planet, marking the horizon and the direction they faced.</li>
+        <li>Next day, compare sketches. Then step Sky Tonight forward a week to see how the Moon will move.</li>
+        <li>Keep a class Moon journal for a month.</li>
+      </ol>
+      <h4>Discussion questions</h4>
+      <ul>
+        <li>Why can we never see Venus in the middle of the night?</li>
+        <li>How did the Moon’s shape and position change over a week?</li>
+        <li>Why do some stars appear only at certain times of the year?</li>
+      </ul>
+      <p><strong>Safety:</strong> children should observe with an adult, and no one should ever look directly at the Sun.</p>
+    </section>
+
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a>
+      <a href="https://science.nasa.gov/moon/moon-phases/">NASA Moon phases</a>
+      <span>Reviewed Sep 27, 2026</span>
+    </p>
+  </article>
+</dialog>
+<script type="module" src="guide.js?v=20260927-1"></script>
 </body>
 </html>
