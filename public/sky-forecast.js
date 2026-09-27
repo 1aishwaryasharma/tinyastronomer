@@ -52,9 +52,19 @@ function sunAltitude(observer, date) {
   return horizontal('Sun', observer, date).altitude;
 }
 
-function localNoon(localDate) {
+// Anchor the night search at the observer's mean solar noon on the chosen
+// calendar date, so a manual location in another time zone gets the same
+// night as someone standing there, not the one nearest the device's noon.
+function localNoon(localDate, observer) {
   const date = asDate(localDate);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
+  const utcNoon = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+  return new Date(utcNoon - observer.longitude / 15 * 3600000);
+}
+
+// A twilight search can run past sunrise and find a later night's event on
+// nights that never get that dark; those events do not belong to tonight.
+function withinNight(date, start, end) {
+  return date && date >= start && date <= end ? date : null;
 }
 
 function searchAltitude(observer, direction, start, limitDays, altitude) {
@@ -81,7 +91,7 @@ export function brightnessDescription(magnitude) {
 }
 
 export function nightWindow(observer, localDate) {
-  const noon = localNoon(localDate);
+  const noon = localNoon(localDate, observer);
   const sunset = searchRiseSet('Sun', observer, -1, noon, 1.5);
 
   if (!sunset) {
@@ -120,11 +130,12 @@ export function nightWindow(observer, localDate) {
     };
   }
 
-  const civilDusk = searchAltitude(observer, -1, sunset, 1, -6);
-  const astroDusk = searchAltitude(observer, -1, sunset, 1, -18);
+  const inNight = (date) => withinNight(date, sunset, sunrise);
+  const civilDusk = inNight(searchAltitude(observer, -1, sunset, 1, -6));
+  const astroDusk = inNight(searchAltitude(observer, -1, sunset, 1, -18));
   const searchStart = new Date(sunset.getTime() + 1000);
-  const astroDawn = searchAltitude(observer, +1, searchStart, 1.5, -18);
-  const civilDawn = searchAltitude(observer, +1, searchStart, 1.5, -6);
+  const astroDawn = inNight(searchAltitude(observer, +1, searchStart, 1.5, -18));
+  const civilDawn = inNight(searchAltitude(observer, +1, searchStart, 1.5, -6));
 
   return {
     start: sunset,
@@ -181,9 +192,13 @@ function constellationAt(body, observer, date) {
   return A.Constellation(eqj.ra, eqj.dec).name;
 }
 
+// Venus is bright enough to find in early twilight, once the Sun is a few
+// degrees down. Everything else, Mercury included, needs civil twilight to end.
+const SUN_LIMIT = { Venus: -3 };
+
 function visibilitySamples(body, observer, window) {
-  const innerPlanet = body === 'Mercury' || body === 'Venus';
-  const bounds = innerPlanet
+  const sunLimit = SUN_LIMIT[body] ?? -6;
+  const bounds = sunLimit > -6
     ? { start: window.start, end: window.end }
     : darkBounds(window);
 
@@ -191,7 +206,7 @@ function visibilitySamples(body, observer, window) {
     time,
     position: horizontal(body, observer, time),
     sunAltitude: sunAltitude(observer, time),
-  })).filter((sample) => sample.sunAltitude <= (innerPlanet ? 0 : -6));
+  })).filter((sample) => sample.sunAltitude <= sunLimit);
 }
 
 function invisibleNote(samples) {
@@ -271,24 +286,36 @@ export function moonReport(observer, window, sampleTime) {
   };
 }
 
-function separation(bodyA, bodyB, observer, date) {
-  const a = A.Equator(bodyA, date, observer, false, true).vec;
-  const b = A.Equator(bodyB, date, observer, false, true).vec;
-  return A.AngleBetween(a, b);
-}
-
+// A pairing only counts when both objects are actually up in a dark enough sky.
 export function conjunctions(observer, window) {
-  const times = [window.astroDusk, window.astroDawn].filter(Boolean);
+  // Direction vectors keyed by sample time, only while the body is usefully up.
+  const vectors = new Map();
+  const upVectors = (body) => {
+    if (!vectors.has(body)) {
+      vectors.set(body, new Map(visibilitySamples(body, observer, window)
+        .filter((sample) => sample.position.altitude > 5)
+        .map(({ time }) => [time.getTime(), A.Equator(body, time, observer, false, true).vec])));
+    }
+    return vectors.get(body);
+  };
+  // No pair closes more than a few degrees in one night, so a single midnight
+  // check skips the far-apart pairs before sampling the whole night.
+  const middle = new Date((window.start.getTime() + window.end.getTime()) / 2);
+  const middleVectors = new Map(FORECAST_BODIES.map((body) => [body, A.Equator(body, middle, observer, false, true).vec]));
   const pairs = [];
 
   for (let i = 0; i < FORECAST_BODIES.length; i += 1) {
     for (let j = i + 1; j < FORECAST_BODIES.length; j += 1) {
       const bodyA = FORECAST_BODIES[i];
       const bodyB = FORECAST_BODIES[j];
+      if (A.AngleBetween(middleVectors.get(bodyA), middleVectors.get(bodyB)) > 15) continue;
+      const vectorsB = upVectors(bodyB);
       let closest = null;
-      for (const time of times) {
-        const degrees = separation(bodyA, bodyB, observer, time);
-        if (!closest || degrees < closest.degrees) closest = { time, degrees };
+      for (const [time, vectorA] of upVectors(bodyA)) {
+        const vectorB = vectorsB.get(time);
+        if (!vectorB) continue;
+        const degrees = A.AngleBetween(vectorA, vectorB);
+        if (!closest || degrees < closest.degrees) closest = { time: new Date(time), degrees };
       }
       if (closest && closest.degrees <= 5) {
         pairs.push({ bodies: [bodyA, bodyB], ...closest });

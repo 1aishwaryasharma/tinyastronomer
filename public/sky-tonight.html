@@ -174,7 +174,7 @@
     <p>Positions come from astronomy-engine's VSOP87-based model and are topocentric with standard atmospheric refraction. This guide assumes a flat horizon and clear sky. Location precision is about 10 km from the device, or about a city from the time zone.</p>
     <p>Stars use a local HYG catalog of 925 bright stars, with proper motion, precession, nutation and standard refraction. Magnitudes are catalog values. Fainter stars and small astrometric effects are omitted; twilight fading is illustrative. Orbit-view background stars are decorative.</p>
     <p class="science-sources"><a href="https://github.com/astronexus/HYG-Database">HYG · David Nash / Astronexus</a><a href="https://creativecommons.org/licenses/by-sa/4.0/">Star data: CC BY-SA 4.0 (filtered subset)</a></p>
-    <p class="science-sources"><span>Sources</span><a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a><a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a><a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a><span>Reviewed Sep 8, 2026</span></p>
+    <p class="science-sources"><span>Sources</span><a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a><a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a><a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a><span>Reviewed Sep 27, 2026</span></p>
   </details>
   <div class="fact-callout framed"><span class="fact-tag">✦ End of the journey</span>You've watched Earth spin, toured every planet, walked the distances, and met the robot explorers. This last stop is the real one: <strong>go outside tonight and look up</strong>. Everything you explored is really there.</div>
 </aside>
@@ -604,8 +604,7 @@ function updateTimeState() {
 function renderHighlights(observer, window) {
   const items = [];
   for (const pair of conjunctions(observer, window)) {
-    const moment = window.astroDusk && pair.time.getTime() === window.astroDusk.getTime() ? 'dusk' : 'dawn';
-    items.push(`${pair.bodies[0]} and ${pair.bodies[1]} are ${pair.degrees.toFixed(1)}° apart near ${moment}.`);
+    items.push(`${pair.bodies[0]} and ${pair.bodies[1]} are ${pair.degrees.toFixed(1)}° apart around ${formatTime(pair.time)}.`);
   }
   for (const shower of meteorShowers(dateAt(offset))) items.push(`${shower.name} meteor shower peaks within two nights. Look from a dark place after midnight.`);
   highlightsEl.hidden = items.length === 0;

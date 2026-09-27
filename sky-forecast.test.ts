@@ -4,6 +4,7 @@ import {
   bodyReport,
   brightnessDescription,
   compassDirection,
+  conjunctions,
   defaultNightMinutes,
   moonReport,
   nightSpanMinutes,
@@ -107,5 +108,46 @@ describe('Sky Tonight time-within-window', () => {
     expect(positionAt('Sun', observer, dusk).altitude).toBeLessThan(-6);
     expect(positionAt('Sun', observer, dawn).altitude).toBeGreaterThan(-6);
     expect(dusk.getTime() - nextNight.start.getTime()).toBe(duskMinutes * 60 * 1000);
+  });
+});
+
+describe('Sky Tonight accuracy regressions', () => {
+  test('a location in another time zone gets its own night for the chosen date', () => {
+    const tokyo = nightWindow(new Astronomy.Observer(35.7, 139.7, 0), new Date(2026, 8, 27, 12));
+    expectMinute(tokyo.sunset, '2026-09-27T08:31:00Z');
+    const honolulu = nightWindow(new Astronomy.Observer(21.3, -157.9, 0), new Date(2026, 8, 27, 12));
+    expectMinute(honolulu.sunset, '2026-09-28T04:23:00Z');
+  });
+
+  test('twilight events from a later night are not reported for tonight', () => {
+    const tromso = nightWindow(new Astronomy.Observer(69.6, 18.9, 0), new Date(2027, 7, 13, 12));
+    for (const key of ['civilDusk', 'astroDusk', 'astroDawn', 'civilDawn'] as const) {
+      const event = tromso[key];
+      if (event) {
+        expect(event.getTime()).toBeGreaterThanOrEqual(tromso.start.getTime());
+        expect(event.getTime()).toBeLessThanOrEqual(tromso.end.getTime());
+      }
+    }
+  });
+
+  test('Mercury is not called visible when it sets in bright twilight', () => {
+    const sf = new Astronomy.Observer(37.8, -122.4, 0);
+    const night = nightWindow(sf, new Date(2026, 8, 27, 12));
+    expect(bodyReport('Mercury', sf, night).visible).toBe(false);
+    const venus = bodyReport('Venus', sf, night);
+    expect(venus.visible).toBe(true);
+    expect(positionAt('Sun', sf, venus.bestTime!).altitude).toBeLessThanOrEqual(-3);
+  });
+
+  test('highlighted pairings only include objects that are up in a dark sky', () => {
+    const sf = new Astronomy.Observer(37.8, -122.4, 0);
+    // Oct 5, 2026: the Moon is 1.5° from Mars, but both are still below the horizon at dusk.
+    for (let day = 1; day <= 40; day += 1) {
+      const night = nightWindow(sf, new Date(2026, 9, day, 12));
+      for (const pair of conjunctions(sf, night)) {
+        expect(positionAt('Sun', sf, pair.time).altitude).toBeLessThanOrEqual(-3);
+        for (const body of pair.bodies) expect(positionAt(body, sf, pair.time).altitude).toBeGreaterThan(5);
+      }
+    }
   });
 });
