@@ -891,13 +891,16 @@ test('pages name tinyastronomer in the signals Google uses for brand search', ()
   for (const file of pages) {
     const html = readFileSync(file, 'utf8');
     expect(html, `${file}: title`).toMatch(/<title>[^<]*tinyastronomer[^<]*<\/title>/);
-    if (file === 'sky-tonight.html') {
-      expect(html).toContain('<meta name="description" content="See which stars, planets and the Moon are up tonight from your location, which direction to look, and when. Free, ad-free, works offline.">');
-    } else {
-      expect(html, `${file}: description`).toMatch(
-        /<meta\s+name=["']description["']\s+content=["']tinyastronomer /i
-      );
-    }
+    // The brand closes the title; the words people search for open it.
+    expect(html, `${file}: title leads with the topic`).toMatch(/<title>[^<]+ \| tinyastronomer<\/title>/);
+    // Snippets are cut near 160 characters, so the description leads with the
+    // answer rather than spending its opening words on the brand.
+    const description = html.match(/<meta name="description" content="([^"]+)">/)?.[1] ?? '';
+    expect(description, `${file}: description`).not.toMatch(/^tinyastronomer/i);
+    expect(description.length, `${file}: description length`).toBeGreaterThanOrEqual(110);
+    expect(description.length, `${file}: description length`).toBeLessThanOrEqual(160);
+    expect(html).toContain(`<meta property="og:description" content="${description}">`);
+    expect(html).toContain(`<meta name="twitter:description" content="${description}">`);
     expect(html, `${file}: og:site_name`).toMatch(
       /<meta\s+property=["']og:site_name["']\s+content=["']tinyastronomer["']/
     );
@@ -923,8 +926,46 @@ test('pages name tinyastronomer in the signals Google uses for brand search', ()
   expect(home).toContain('tinyastronomer is free, ad-free astronomy for curious kids.');
 
   const sitemap = readFileSync('sitemap.xml', 'utf8');
-  expect(sitemap).toContain('<lastmod>2026-08-17</lastmod>');
+  expect(sitemap).toContain('<lastmod>2026-09-27</lastmod>');
   expect(sitemap).not.toContain('2026-07-27');
+});
+
+test('every page ships a readable guide and teacher notes in its HTML', () => {
+  const words = (markup: string) =>
+    markup.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  for (const file of pages) {
+    const html = readFileSync(file, 'utf8');
+    // Search engines and screen readers get the guide from the markup, so it
+    // must be there before any script runs — not built on click.
+    const open = html.match(
+      /<(dialog|section) class="(?:page-guide|guide guide-inline)" id="(?:page-guide|guide)"/
+    );
+    expect(open, `${file}: guide`).not.toBeNull();
+    // The inline guide nests its teacher <section>, so find the matching close.
+    const tag = new RegExp(`<(/?)${open![1]}\\b`, 'g');
+    tag.lastIndex = open!.index!;
+    let depth = 0;
+    let end = -1;
+    for (let match; (match = tag.exec(html));) {
+      depth += match[1] ? -1 : 1;
+      if (depth === 0) { end = html.indexOf('>', match.index) + 1; break; }
+    }
+    const guide = html.slice(open!.index!, end);
+    expect(guide).toContain('<h2 id="guide-title">');
+    expect(guide).toContain('<h3 id="guide-teach-title">For teachers</h3>');
+    expect(guide).toContain('class="science-sources"');
+    expect(words(guide!), `${file}: guide length`).toBeGreaterThan(450);
+
+    if (guide!.startsWith('<dialog')) {
+      expect(html, `${file}: guide trigger`).toMatch(/\sdata-guide-open[\s>]/);
+      expect(html, `${file}: guide script`).toMatch(/<script type="module" src="guide\.js\?v=[^"]+"><\/script>/);
+    }
+  }
+
+  // The home deck loads no other script until a study opens, and it inerts
+  // every other body child while it is up.
+  expect(readFileSync('guide.js', 'utf8')).not.toMatch(/^\s*import\b/m);
+  expect(readFileSync('home-launch.js', 'utf8')).toContain("node.tagName !== 'DIALOG'");
 });
 
 test('indexing signals use directly served canonical URLs', () => {

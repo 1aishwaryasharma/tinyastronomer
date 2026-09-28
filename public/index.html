@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>tinyastronomer — Sol · Terra · Luna</title>
-<meta name="description" content="tinyastronomer is a free, ad-free 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, ocean tides, and eclipses unfold.">
+<title>Moon Phases, Eclipses &amp; Tides in 3D for Kids | tinyastronomer</title>
+<meta name="description" content="Watch day and night, Moon phases, ocean tides and solar and lunar eclipses happen in a 3D model of the Sun, Earth and Moon. Free for kids and classrooms.">
 <script type="importmap">
 {
   "imports": {
@@ -19,15 +19,15 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260816-20">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="tinyastronomer">
-<meta property="og:title" content="tinyastronomer — Sol · Terra · Luna">
-<meta property="og:description" content="tinyastronomer is a free, ad-free 3D model of the Sun, Earth, and Moon — watch day and night, the Moon's phases, ocean tides, and eclipses unfold.">
+<meta property="og:title" content="Moon Phases, Eclipses &amp; Tides in 3D for Kids | tinyastronomer">
+<meta property="og:description" content="Watch day and night, Moon phases, ocean tides and solar and lunar eclipses happen in a 3D model of the Sun, Earth and Moon. Free for kids and classrooms.">
 <meta property="og:url" content="https://tinyastronomer.com/">
 <meta property="og:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="tinyastronomer — Sol · Terra · Luna">
-<meta name="twitter:description" content="tinyastronomer is a free, ad-free 3D model of the Sun, Earth, and Moon — watch day and night, phases, tides, and eclipses.">
+<meta name="twitter:title" content="Moon Phases, Eclipses &amp; Tides in 3D for Kids | tinyastronomer">
+<meta name="twitter:description" content="Watch day and night, Moon phases, ocean tides and solar and lunar eclipses happen in a 3D model of the Sun, Earth and Moon. Free for kids and classrooms.">
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <script type="application/ld+json">
 {
@@ -42,8 +42,8 @@
 <link rel="stylesheet" href="tokens.css?v=20260904-1">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260909-2">
-<link rel="stylesheet" href="home.css?v=20260909-2">
+<link rel="stylesheet" href="common.css?v=20260927-1">
+<link rel="stylesheet" href="home.css?v=20260927-1">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -96,13 +96,14 @@
   <div class="observatory-map">
     <section class="observatory-intro" aria-labelledby="launch-title">
       <p class="observatory-kicker">Interactive solar system · six studies</p>
-      <h1 id="launch-title">A small observatory for our neighbourhood in space.</h1>
-      <p class="observatory-lede">Turn the model. Pause time. Watch day and night, phases, tides, eclipses, and more unfold.</p>
+      <h1 id="launch-title">A small observatory for kids exploring the solar system.</h1>
+      <p class="observatory-lede">Turn the model. Pause time. Watch day and night, Moon phases, tides, eclipses, and more unfold.</p>
       <p class="observatory-hint"><span aria-hidden="true">↔</span> Open a study to explore in 3D</p>
       <div class="observatory-actions">
         <a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>Start exploring <span aria-hidden="true">↗</span></a>
         <a class="observatory-hint observatory-scroll" href="#observations"><span aria-hidden="true">↓</span> All six studies</a>
       </div>
+      <a class="observatory-guide" href="#guide" data-guide-open>Guide for parents &amp; teachers <span aria-hidden="true">→</span></a>
     </section>
 
     <div class="observatory-viewport" id="home-earth-viewport">
@@ -206,7 +207,7 @@
 <header class="header" id="light-study-header" aria-label="Light Study controls">
   <div>
     <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
-    <h1 class="title">Sol · Terra · Luna</h1>
+    <h1 class="title">Sun, Earth &amp; Moon</h1>
   </div>
   <div class="header-meta">
     <div>Moon · <span id="meta-phase">New</span></div>
@@ -302,7 +303,7 @@
 <div class="label-3d moon" id="label-moon" aria-hidden="true">Moon</div>
 
 
-<script type="module" src="home-launch.js?v=20260904-1"></script>
+<script type="module" src="home-launch.js?v=20260927-1"></script>
 <script type="module">
 let sceneStarted = false;
 async function startLightStudy() {
@@ -1380,5 +1381,86 @@ renderer.domElement.focus({ preventScroll: true });
 window.addEventListener('light-study-open', startLightStudy, { once: true });
 if (document.body.classList.contains('is-study-open')) startLightStudy();
 </script>
+<dialog class="page-guide" id="page-guide" aria-labelledby="guide-title" tabindex="-1">
+  <div class="guide-bar">
+    <span class="guide-kicker">Guide · kids, parents &amp; teachers</span>
+    <button type="button" data-guide-print>Print</button>
+    <button type="button" data-guide-close aria-label="Close the guide">✕</button>
+  </div>
+  <article class="guide">
+    <h2 id="guide-title">Sun, Earth and Moon: day and night, Moon phases, tides and eclipses</h2>
+    <p class="guide-lede">Most of what we notice in the sky comes from three bodies moving together: <strong>Earth spinning</strong>, <strong>the Moon travelling around Earth</strong>, and <strong>the Sun lighting them both</strong>. The Light Study lets you watch each one happen in 3D.</p>
+
+    <h3>Why do we have day and night?</h3>
+    <p>The Sun always lights the half of Earth that faces it. Earth spins once about every 24 hours, carrying every place into sunlight (day) and then around to the dark side (night). The line between day and night is called the <strong>terminator</strong>. Try the <strong>Day &amp; Night</strong> preset and watch it sweep across the continents.</p>
+
+    <h3>Why does the Moon change shape?</h3>
+    <p>The Moon makes no light of its own; it shines by reflecting sunlight. Half of the Moon is always lit, but as it travels around Earth we see different amounts of that lit half. Going from one full moon to the next takes about 29.5 days. The phases, in order:</p>
+    <ol>
+      <li>New moon (the lit side faces away from us)</li>
+      <li>Waxing crescent</li>
+      <li>First quarter (half of the disc looks lit)</li>
+      <li>Waxing gibbous</li>
+      <li>Full moon</li>
+      <li>Waning gibbous</li>
+      <li>Last quarter</li>
+      <li>Waning crescent</li>
+    </ol>
+    <p>Phases are <strong>not</strong> caused by Earth’s shadow. That only happens during a lunar eclipse. Try the <strong>Lunar Phases</strong> preset.</p>
+
+    <h3>What causes ocean tides?</h3>
+    <p>The Moon’s gravity pulls a little harder on the side of Earth nearest to it and a little less on the far side. That difference stretches the oceans into two bulges, so many coasts get two high tides and two low tides about every 24 hours and 50 minutes. The Sun adds a smaller pull. When the Sun and Moon line up at new and full moon, tides are extra large; these are called <strong>spring tides</strong>. Try the <strong>Ocean Tides</strong> preset.</p>
+
+    <h3>What is the difference between a solar eclipse and a lunar eclipse?</h3>
+    <ul>
+      <li><strong>Solar eclipse:</strong> the Moon passes directly between the Sun and Earth, and its shadow falls on Earth. This can only happen at new moon.</li>
+      <li><strong>Lunar eclipse:</strong> Earth passes directly between the Sun and the Moon, and Earth’s shadow falls on the Moon. This can only happen at full moon. The Moon often turns red, because a little sunlight bends through Earth’s atmosphere and reaches it.</li>
+    </ul>
+    <p>Eclipses don’t happen every month because the Moon’s orbit is tilted about 5° compared with Earth’s, so the Moon usually passes just above or below the shadows. <strong>Never look straight at the Sun</strong>, even during a partial eclipse; use proper eclipse glasses. Try the <strong>Solar Eclipse</strong> and <strong>Lunar Eclipse</strong> presets.</p>
+
+    <h3>What are the northern and southern lights?</h3>
+    <p>The Sun sends out a stream of electrically charged particles. Earth’s magnetic field steers some of them toward the poles, where they crash into gases high in the atmosphere and make them glow green, red and purple. That glow is the <strong>aurora</strong>. Try the <strong>Polar Lights</strong> preset.</p>
+
+    <section class="guide-teach" aria-labelledby="guide-teach-title">
+      <h3 id="guide-teach-title">For teachers</h3>
+      <dl class="guide-meta">
+        <div><dt>Ages</dt><dd>7–14 (grades 2–8)</dd></div>
+        <div><dt>Time</dt><dd>20–40 minutes</dd></div>
+        <div><dt>Standards</dt><dd>NGSS MS-ESS1-1, 1-ESS1-1 · England KS2 Year 5 Earth and space</dd></div>
+      </dl>
+      <h4>Learning goals</h4>
+      <ul>
+        <li>Explain day and night using Earth’s rotation.</li>
+        <li>Explain Moon phases as changing views of the Moon’s sunlit half.</li>
+        <li>Explain why eclipses happen only at new or full moon, and not every month.</li>
+      </ul>
+      <h4>Try this in class</h4>
+      <ol>
+        <li>Open <strong>Day &amp; Night</strong> and pause. Ask students to point to a place having sunrise and a place having sunset.</li>
+        <li>Open <strong>Lunar Phases</strong>, speed up time, and have students name each phase as it appears and fill in a blank phase chart.</li>
+        <li>Act it out: darken the room and use a lamp as the Sun. Each student holds a ball (the Moon) at arm’s length and turns slowly on the spot (Earth), watching the lit part of the ball change.</li>
+        <li>Open <strong>Solar Eclipse</strong> and <strong>Lunar Eclipse</strong>. Ask which phase the Moon must be in for each.</li>
+        <li>Use <strong>Save view</strong> to capture images for a worksheet or slide.</li>
+      </ol>
+      <h4>Discussion questions</h4>
+      <ul>
+        <li>Half of the Moon is always lit. So why do we sometimes see none of it?</li>
+        <li>Why don’t we get a solar eclipse at every new moon?</li>
+        <li>Why do many beaches have two high tides a day, not one?</li>
+        <li>Where on Earth would you live to see the aurora most often?</li>
+      </ul>
+    </section>
+
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://science.nasa.gov/moon/moon-phases/">NASA Moon phases</a>
+      <a href="https://science.nasa.gov/moon/facts/">NASA Moon</a>
+      <a href="https://eclipse.gsfc.nasa.gov/SEhelp/moonorbit.html">NASA eclipse orbit data</a>
+      <a href="https://oceanservice.noaa.gov/education/tutorial_tides/">NOAA Tides</a>
+      <a href="https://science.nasa.gov/sun/auroras/">NASA Auroras</a>
+      <span>Reviewed Sep 27, 2026</span>
+    </p>
+  </article>
+</dialog>
+<script type="module" src="guide.js?v=20260927-1"></script>
 </body>
 </html>

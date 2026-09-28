@@ -7,6 +7,8 @@ const isSceneNode = (node) => (
   node.nodeType === Node.ELEMENT_NODE
   && node !== deck
   && node !== canvasContainer
+  // The guide opens from the deck, so it must stay usable while the deck is up.
+  && node.tagName !== 'DIALOG'
   && node.tagName !== 'SCRIPT'
   && node.tagName !== 'NOSCRIPT'
 );
