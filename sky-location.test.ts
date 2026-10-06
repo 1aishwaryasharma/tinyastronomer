@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { TZ_ALIASES, TZ_COORDS, TZ_SHARED_CLOCKS } from './public/tz-coords.js';
+import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './public/tz-coords.js';
 import {
   LOCATION_STORAGE_KEY,
   describeLocation,
@@ -42,21 +42,57 @@ test('the generator parses minute and second ISO 6709 coordinates', () => {
   expect(buildModule('US\t+4151-08739\tAmerica/Chicago\n')).toContain('"America/Chicago": [41.85, -87.65]');
 });
 
+test('names browsers report from CLDR resolve to the place they mean', () => {
+  // Chrome's ICU reports CLDR's canonical IDs, some of which tzdb retired or
+  // files elsewhere: Coral_Harbour is Atikokan, not Panama.
+  for (const [reported, zone] of [
+    ['America/Coral_Harbour', 'America/Atikokan'], ['Asia/Calcutta', 'Asia/Kolkata'],
+    ['Africa/Asmera', 'Africa/Asmara'], ['America/Godthab', 'America/Nuuk'], ['Pacific/Truk', 'Pacific/Chuuk'],
+  ]) expect(TZ_ALIASES[reported], reported).toBe(zone);
+  const module = buildModule(
+    'PA\t+0858-07932\tAmerica/Panama\n',
+    'CA\t+484531-0913718\tAmerica/Atikokan\n',
+    '# Non-zone.tab locations\n# Link\tTARGET\tLINK-NAME\nLink\tAmerica/Panama\tAmerica/Coral_Harbour\n',
+    '<type name="cayzs" alias="America/Coral_Harbour America/Atikokan" iana="America/Atikokan"/>',
+  );
+  expect(module.slice(module.indexOf('TZ_ALIASES'), module.indexOf('TZ_SHARED_CLOCKS'))).toContain('"America/Coral_Harbour": "America/Atikokan"');
+  expect(module.slice(module.indexOf('TZ_SHARED_CLOCKS'))).not.toContain('Coral_Harbour');
+});
+
+test('the generator refuses backward data it cannot classify', () => {
+  const zones = 'CI\t+0519-00402\tAfrica/Abidjan\n';
+  expect(() => buildModule(zones, '', '# A new reason\n# Link\tTARGET\tLINK-NAME\nLink\tAfrica/Abidjan\tX/Y\n'))
+    .toThrow('Unknown backward section');
+  expect(() => buildModule(zones, '', 'Zone\tABC1DEF\t-1:00\t-\tABC\n')).toThrow('Unknown Zone');
+  // A heading without its column header does not inherit the last section.
+  expect(() => buildModule(zones, '', '# Alternate names for the same location\n# Link\tTARGET\tLINK-NAME\n\n# Something new\nLink\tAfrica/Abidjan\tX/Y\n'))
+    .toThrow('Link before any section');
+  // POSIX clock zones and a "#=" successor that is not in the table are rough.
+  const module = buildModule(
+    zones + 'US\t+404251-0740023\tAmerica/New_York\n',
+    '',
+    '# Pre-1993 naming conventions\n# Link\tTARGET\tLINK-NAME\nLink\tAfrica/Abidjan\tIceland\t#= Atlantic/Reykjavik\n\nZone\tEST5EDT\t-5:00\tUSback\tE%sT\n',
+  );
+  const shared = module.slice(module.indexOf('TZ_SHARED_CLOCKS'));
+  expect(shared).toContain('"Iceland": "Africa/Abidjan"');
+  expect(shared).toContain('"EST5EDT": "America/New_York"');
+});
+
 test('legacy and per-country zone names resolve to real coordinates', () => {
   // Chrome reports Asia/Calcutta for all of India; zone1970.tab alone lacks it.
   expect(TZ_ALIASES['Asia/Calcutta']).toBe('Asia/Kolkata');
   for (const zone of ['Asia/Saigon', 'Asia/Katmandu', 'Europe/Kiev', 'America/Buenos_Aires']) {
-    expect(TZ_COORDS[TZ_ALIASES[zone]]).toBeDefined();
+    expect(TZ_COORDS[TZ_ALIASES[zone]] ?? TZ_CITY_COORDS[TZ_ALIASES[zone]]).toBeDefined();
   }
   for (const zone of ['Europe/Amsterdam', 'Europe/Stockholm', 'Asia/Kuala_Lumpur', 'Asia/Kuwait', 'Africa/Accra']) {
-    expect(TZ_COORDS[zone]).toBeDefined();
+    expect(TZ_CITY_COORDS[zone]).toBeDefined();
   }
   // backward links promise a shared clock, not a shared place. Renames (and
   // #= successors) are exact; merged places and clock names are rough.
   expect(TZ_ALIASES['Africa/Asmera']).toBe('Africa/Asmara');
   expect(TZ_ALIASES['Pacific/Truk']).toBe('Pacific/Chuuk');
   expect(TZ_ALIASES.Iceland).toBe('Atlantic/Reykjavik');
-  for (const zone of ['Africa/Timbuktu', 'Pacific/Yap', 'America/Coral_Harbour', 'Antarctica/South_Pole', 'Atlantic/Jan_Mayen', 'Asia/Harbin', 'Asia/Chungking', 'EST', 'CET']) {
+  for (const zone of ['Africa/Timbuktu', 'Pacific/Yap', 'Antarctica/South_Pole', 'Atlantic/Jan_Mayen', 'Asia/Harbin', 'Asia/Chungking', 'EST', 'CET']) {
     expect(TZ_ALIASES[zone], zone).toBeUndefined();
     expect(TZ_SHARED_CLOCKS[zone], zone).toBeDefined();
   }
@@ -68,10 +104,14 @@ test('legacy and per-country zone names resolve to real coordinates', () => {
       '# Link\tTARGET\tLINK-NAME\t#= TARGET1',
       'Link\tEurope/Brussels\tCET',
       'Link\tAfrica/Abidjan\tIceland\t#= Atlantic/Reykjavik',
+      '',
       '# Non-zone.tab locations with timestamps since 1970 that duplicate',
       '# those of an existing location',
+      '# Link\tTARGET\tLINK-NAME',
       'Link\tAfrica/Abidjan\tAfrica/Timbuktu',
+      '',
       '# Alternate names for the same location',
+      '# Link\tTARGET\tLINK-NAME',
       'Link\tEurope/Amsterdam\tEurope/Old_Name # comment',
     ].join('\n'),
   );
@@ -166,6 +206,9 @@ describe('location time zones', () => {
     expect(nearestTimeZone(35.7, 139.7)).toBe('Asia/Tokyo');
     expect(nearestTimeZone(-33.9, 151.2)).toBe('Australia/Sydney');
     expect(nearestTimeZone(21.3, -157.9)).toBe('Pacific/Honolulu');
+    // Towns on a fixed clock must not capture their daylight-saving neighbours.
+    expect(nearestTimeZone(49.5, -115.77)).toBe('America/Edmonton'); // Cranbrook, not Creston
+    expect(nearestTimeZone(48.6, -93.4)).toBe('America/Winnipeg'); // Fort Frances, not Atikokan
     const env = fakeEnvironment('Europe/London');
     expect(locationTimeZone({ lat: 35.7, lon: 139.7, source: 'manual' }, env)).toBe('Asia/Tokyo');
     expect(timeZoneLabel('Asia/Tokyo')).toBe('Tokyo time');

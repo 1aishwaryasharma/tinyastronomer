@@ -267,17 +267,17 @@ function invisibleNote(samples) {
   return 'Lost in twilight tonight.';
 }
 
-// Every setting inside the window: in a long polar night a body can set,
-// rise and set again before the window ends.
-function setsWithin(body, observer, window) {
-  const sets = [];
-  for (let from = window.start; sets.length < 4;) {
-    const set = searchRiseSet(body, observer, -1, from, 2);
-    if (!set || set > window.end) break;
-    sets.push(set);
-    from = new Date(set.getTime() + 60000);
+// The first setting after the window opens, which may be after it closes,
+// and every setting inside it: in a long polar night a body can set, rise
+// and set again before the window ends.
+function settings(body, observer, window) {
+  const first = searchRiseSet(body, observer, -1, window.start, 2);
+  const within = [];
+  for (let set = first; set && set <= window.end && within.length < 4;) {
+    within.push(set);
+    set = searchRiseSet(body, observer, -1, new Date(set.getTime() + 60000), 2);
   }
-  return sets;
+  return { first, within };
 }
 
 export function bodyReport(body, observer, window, sampleTime) {
@@ -292,24 +292,24 @@ export function bodyReport(body, observer, window, sampleTime) {
   const illumination = A.Illumination(body, best?.time ?? at);
   const key = body.toLowerCase();
   const telescopeNote = TELESCOPE_NOTES[key];
-  let note = best ? '' : invisibleNote(samples);
-  if (telescopeNote) note = note || `${telescopeNote.charAt(0).toUpperCase()}${telescopeNote.slice(1)}.`;
+  const sets = settings(body, observer, window);
 
   return {
     key,
     name: body,
     visible: Boolean(best),
     bestTime: best?.time ?? null,
+    bestPosition: best ? { ...best.position, compass: compassDirection(best.position.azimuth) } : null,
     altitude: position.altitude,
     azimuth: position.azimuth,
     compass: compassDirection(position.azimuth),
     mag: illumination.mag,
     brightness: telescopeNote ?? brightnessDescription(illumination.mag),
     rise: searchRiseSet(body, observer, +1, window.start, 2),
-    set: searchRiseSet(body, observer, -1, window.start, 2),
-    sets: setsWithin(body, observer, window),
+    set: sets.first,
+    sets: sets.within,
     constellation: constellationAt(body, observer, at),
-    note,
+    note: best ? '' : invisibleNote(samples),
   };
 }
 

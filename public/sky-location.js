@@ -1,4 +1,4 @@
-import { TZ_ALIASES, TZ_COORDS, TZ_SHARED_CLOCKS } from './tz-coords.js?v=20261006-2';
+import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './tz-coords.js?v=20261006-3';
 
 export const LOCATION_STORAGE_KEY = 'sky.location';
 
@@ -53,7 +53,8 @@ function coordinateLabel(latitude, longitude) {
 
 function timezoneGuess(env) {
   const timeZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone ?? '';
-  const known = TZ_COORDS[canonicalZone(timeZone)];
+  const zone = canonicalZone(timeZone);
+  const known = TZ_COORDS[zone] ?? TZ_CITY_COORDS[zone];
   if (known) {
     const location = {
       lat: known[0],
@@ -149,6 +150,9 @@ export function setManualLocation(latitude, longitude, env = globalThis) {
 
 // The IANA zone whose reference city is closest to the coordinates. Borders
 // do not follow distance exactly, so callers should say which zone they used.
+// Only one city per distinct clock is searched: a country's own reference
+// town on another zone's clock (Creston, Atikokan) would pull its neighbours
+// onto a clock without daylight saving.
 export function nearestTimeZone(latitude, longitude) {
   const toRadians = Math.PI / 180;
   let best = null, bestDistance = Infinity;

@@ -1250,9 +1250,11 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   expect(sky).not.toContain('End of the journey');
   expect(sky).toContain('Go out with a grown-up, and never look at the Sun.');
   expect(sky).toContain('id="print-sky"');
-  // An open guide prints itself even if the card's class was left behind.
-  expect(sky).toContain('body.printing-sky:not(:has(.page-guide[open])) > :not(.sky-print-card)');
-  expect(sky).toContain("addEventListener('beforeprint'");
+  // No timer decides whether the card prints: one request per print, dropped
+  // by the next interaction, so a stale card never replaces a later print.
+  expect(sky).toContain('body.printing-sky > :not(.sky-print-card)');
+  expect(sky).toContain("addEventListener('pointerdown', dropPrintCard, { once: true, capture: true })");
+  expect(sky).not.toContain('printCardRequestedAt');
   expect(readFileSync('index.html', 'utf8')).toContain('href="/sky-tonight" id="home-sky-tonight"');
 });
 
