@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { TZ_COORDS } from './public/tz-coords.js';
+import { TZ_ALIASES, TZ_COORDS } from './public/tz-coords.js';
 import {
   LOCATION_STORAGE_KEY,
   describeLocation,
@@ -42,6 +42,25 @@ test('the generator parses minute and second ISO 6709 coordinates', () => {
   expect(buildModule('US\t+4151-08739\tAmerica/Chicago\n')).toContain('"America/Chicago": [41.85, -87.65]');
 });
 
+test('legacy and per-country zone names resolve to real coordinates', () => {
+  // Chrome reports Asia/Calcutta for all of India; zone1970.tab alone lacks it.
+  expect(TZ_ALIASES['Asia/Calcutta']).toBe('Asia/Kolkata');
+  for (const zone of ['Asia/Saigon', 'Asia/Katmandu', 'Europe/Kiev', 'America/Buenos_Aires']) {
+    expect(TZ_COORDS[TZ_ALIASES[zone]]).toBeDefined();
+  }
+  for (const zone of ['Europe/Amsterdam', 'Europe/Stockholm', 'Asia/Kuala_Lumpur', 'Asia/Kuwait', 'Africa/Accra']) {
+    expect(TZ_COORDS[zone]).toBeDefined();
+  }
+  const module = buildModule(
+    'BE,LU,NL\t+5050+00420\tEurope/Brussels\n',
+    'NL\t+5222+00454\tEurope/Amsterdam\n',
+    'Link\tEurope/Brussels\t\tEurope/Luxembourg\nLink\tEurope/Amsterdam\tEurope/Old_Name # comment\n',
+  );
+  expect(module).toContain('"Europe/Amsterdam": [52.37, 4.9]');
+  expect(module).toContain('"Europe/Luxembourg": "Europe/Brussels"');
+  expect(module).toContain('"Europe/Old_Name": "Europe/Amsterdam"');
+});
+
 describe('location resolution', () => {
   test('uses and stores a silent time-zone guess without touching geolocation', () => {
     const env = fakeEnvironment();
@@ -57,6 +76,18 @@ describe('location resolution', () => {
     const env = fakeEnvironment();
     env.values.set(LOCATION_STORAGE_KEY, JSON.stringify({ lat: -33.9, lon: 151.2, source: 'manual' }));
     expect(resolveLocation(env)).toMatchObject({ lat: -33.9, lon: 151.2, source: 'manual' });
+  });
+
+  test('legacy browser zone names are located, not sent to the equator', () => {
+    const location = resolveLocation(fakeEnvironment('Asia/Calcutta'));
+    expect(location).toMatchObject({ lat: 22.53, lon: 88.37, source: 'tz', approximate: false, label: 'Kolkata area' });
+  });
+
+  test('a stored time-zone guess is redone, so old equator fallbacks heal', () => {
+    const env = fakeEnvironment('Asia/Calcutta');
+    env.values.set(LOCATION_STORAGE_KEY, JSON.stringify({ lat: 0, lon: 82.5, source: 'tz', timeZone: 'Asia/Calcutta', approximate: true }));
+    expect(resolveLocation(env)).toMatchObject({ lat: 22.53, approximate: false });
+    expect(JSON.parse(env.values.get(LOCATION_STORAGE_KEY)!)).toMatchObject({ lat: 22.53 });
   });
 
   test('falls back to the UTC offset when the zone is unknown', () => {

@@ -1,4 +1,4 @@
-import { TZ_COORDS } from './tz-coords.js';
+import { TZ_ALIASES, TZ_COORDS } from './tz-coords.js';
 
 export const LOCATION_STORAGE_KEY = 'sky.location';
 
@@ -35,8 +35,13 @@ function storeLocation(location, env) {
   return location;
 }
 
+function canonicalZone(timeZone) {
+  return TZ_ALIASES[timeZone] ?? timeZone;
+}
+
 function timezoneLabel(timeZone) {
-  const city = timeZone.includes('/') ? timeZone.split('/').at(-1) : timeZone;
+  const zone = canonicalZone(timeZone);
+  const city = zone.includes('/') ? zone.split('/').at(-1) : zone;
   return `${city.replaceAll('_', ' ')} area`;
 }
 
@@ -48,7 +53,7 @@ function coordinateLabel(latitude, longitude) {
 
 function timezoneGuess(env) {
   const timeZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone ?? '';
-  const known = TZ_COORDS[timeZone];
+  const known = TZ_COORDS[canonicalZone(timeZone)];
   if (known) {
     const location = {
       lat: known[0],
@@ -69,7 +74,7 @@ function timezoneGuess(env) {
     timeZone,
     approximate: true,
   };
-  location.label = 'Approximate time-zone location';
+  location.label = describeLocation(location);
   return location;
 }
 
@@ -78,14 +83,16 @@ export function describeLocation(location) {
     return timezoneLabel(location.timeZone);
   }
   if (location.source === 'tz' && location.approximate) {
-    return 'Approximate time-zone location';
+    return 'Rough guess from your time zone';
   }
   return coordinateLabel(location.lat, location.lon);
 }
 
 export function resolveLocation(env = globalThis) {
   const stored = readStoredLocation(env);
-  if (stored) return { ...stored, label: describeLocation(stored) };
+  // A time-zone guess is cheap to redo, and redoing it picks up travel and
+  // fixes guesses stored before a zone name was recognised.
+  if (stored && stored.source !== 'tz') return { ...stored, label: describeLocation(stored) };
   const location = timezoneGuess(env);
   return storeLocation(location, env);
 }
