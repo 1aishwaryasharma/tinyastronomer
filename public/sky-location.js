@@ -51,32 +51,31 @@ function coordinateLabel(latitude, longitude) {
   return `${lat} ${lon}`;
 }
 
+const TABLES = { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS };
+
+// Where a browser time zone puts the device. Exact for a zone or one of its
+// old names; approximate for a zone that only shares another place's clock
+// (Africa/Timbuktu runs on Abidjan time). Both tables are searched, as the
+// generator keeps targets from either. Null when the zone is unknown.
+export function locateZone(timeZone, tables = TABLES) {
+  const coordinates = (zone) => tables.TZ_COORDS[zone] ?? tables.TZ_CITY_COORDS[zone];
+  const exact = coordinates(tables.TZ_ALIASES[timeZone] ?? timeZone);
+  if (exact) return { lat: exact[0], lon: exact[1], approximate: false };
+  const shared = coordinates(tables.TZ_SHARED_CLOCKS[timeZone]);
+  return shared ? { lat: shared[0], lon: shared[1], approximate: true } : null;
+}
+
 function timezoneGuess(env) {
   const timeZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone ?? '';
-  const zone = canonicalZone(timeZone);
-  const known = TZ_COORDS[zone] ?? TZ_CITY_COORDS[zone];
-  if (known) {
-    const location = {
-      lat: known[0],
-      lon: known[1],
-      source: 'tz',
-      timeZone,
-      approximate: false,
-    };
-    location.label = describeLocation(location);
-    return location;
-  }
-
-  // A zone that only shares another place's clock (Africa/Timbuktu runs on
-  // Abidjan time) is near that place at best: use it, but call it rough.
-  const sharedClock = TZ_COORDS[TZ_SHARED_CLOCKS[timeZone]];
+  // Unknown zones fall back to the equator at the clock's longitude.
   const offsetMinutes = new env.Date().getTimezoneOffset();
   const location = {
-    lat: sharedClock ? sharedClock[0] : 0,
-    lon: sharedClock ? sharedClock[1] : Math.max(-180, Math.min(180, -offsetMinutes / 4)),
+    lat: 0,
+    lon: Math.max(-180, Math.min(180, -offsetMinutes / 4)),
+    approximate: true,
+    ...locateZone(timeZone),
     source: 'tz',
     timeZone,
-    approximate: true,
   };
   location.label = describeLocation(location);
   return location;

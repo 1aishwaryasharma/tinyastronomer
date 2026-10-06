@@ -235,9 +235,9 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, conjunctions, darkEnoughFor, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=20261006-3';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=20261006-4';
 import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=20261006-2';
-import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=20261006-3';
+import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=20261006-4';
 import { layoutSkyLabels } from './sky-labels.js';
 
 const clamp = SPACE.clamp;
@@ -628,11 +628,11 @@ function setsText(report) {
   const next = report.sets.find((time) => time > selectedTime);
   return next ? `sets ${formatTime(next)}` : activeWindow.sunrise ? 'up until sunrise' : 'up all night';
 }
-function makeUpNowItem(report, position) {
-  const { row, copy } = skyRow(report);
-  copy.append(` · ${whereToLook(position)}`);
-  rowLine(copy, 'detail', `${Math.round(position.altitude)}° up · ${report.brightness} · ${setsText(report)}`);
-  rowLine(copy, 'tag', `In ${report.constellation} · `).appendChild(exploreLink(report));
+function makeUpNowItem(item) {
+  const { row, copy } = skyRow(item);
+  copy.append(` · ${whereToLook(item.position)}`);
+  rowLine(copy, 'detail', `${Math.round(item.position.altitude)}° up · ${item.brightness} · ${setsText(item)}`);
+  rowLine(copy, 'tag', `In ${item.constellation} · `).appendChild(exploreLink(item));
   return row;
 }
 function makeLaterItem(report) {
@@ -648,39 +648,38 @@ function makeOtherItem(report, position, note = report.note) {
   rowLine(copy, 'tag', position.altitude > 0 ? `${position.compass}, ${Math.round(position.altitude)}° up at ${formatTime(selectedTime)}` : 'Below the horizon at the selected time');
   return row;
 }
-const listFormat = new Intl.ListFormat('en', { type: 'conjunction' });
+const orList = new Intl.ListFormat('en', { type: 'disjunction' });
 function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
 let listsSayNow = false;
 let bestTarget = '';
 function listAnnouncement() { return [headline.textContent, bestTarget].filter(Boolean).join('. ') + '.'; }
-// The page does not move the time on by itself, so once the moment shown is
-// more than a few minutes old, stop calling it "now".
-setInterval(() => { if (listsSayNow && !selectedIsNow()) updateTimeState(); }, 60000);
 function selectedIsNow() { return offset === 0 && Math.abs(selectedTime - new Date()) < 10 * 60000; }
+
+// The heading and headline are the only words that depend on the clock.
+function renderNowWording() {
+  const now = selectedIsNow();
+  listsSayNow = now;
+  upNowHeading.textContent = now ? 'Up now' : `Up at ${formatTime(selectedTime)}`;
+  headline.textContent = skyHeadline(currentLists, { when: now ? 'now' : `at ${formatTime(selectedTime)}`, time: formatTime, hasStars: featuredStars.length > 0 });
+}
+// The page does not move the time on by itself, so once the moment shown is
+// more than a few minutes old, stop calling it "now". Only the wording
+// changes: rebuilding the rows would drop the reader's focus.
+setInterval(() => { if (listsSayNow && !selectedIsNow()) renderNowWording(); }, 60000);
 
 // Lists follow the time slider: "up now" is about the selected moment, while
 // the heavier per-night reports are computed once per date and location.
 function renderLists(positions) {
-  const naked = currentReports.filter((report) => !TELESCOPE_BODIES.has(report.key));
-  // Below 5° the forecast already calls an object too low to see clearly, and
-  // in twilight a planet that is up may not be visible yet.
-  const sunAltitude = positions.sun.altitude;
-  const up = naked.filter((report) => report.visible && positions[report.key].altitude > 5 && darkEnoughFor(report.name, sunAltitude))
-    .sort((a, b) => positions[a.key].magnitude - positions[b.key].magnitude);
-  const later = naked.filter((report) => report.visible && !up.includes(report) && report.bestTime > selectedTime)
-    .sort((a, b) => a.bestTime - b.bestTime);
-  const earlier = naked.filter((report) => report.visible && !up.includes(report) && !later.includes(report));
-  const missing = naked.filter((report) => !report.visible);
+  const observer = new Astronomy.Observer(location.lat, location.lon, 0);
+  const { up, later, earlier, missing, telescope } = sortSkyLists(currentReports, positions, observer, selectedTime);
   currentLists = { up, later, positions };
-  const now = selectedIsNow(), when = now ? 'now' : `at ${formatTime(selectedTime)}`;
-  listsSayNow = now;
+  renderNowWording();
 
-  upNowHeading.textContent = now ? 'Up now' : `Up at ${formatTime(selectedTime)}`;
-  listEl.replaceChildren(...up.map((report) => makeUpNowItem(report, positions[report.key])));
+  listEl.replaceChildren(...up.map(makeUpNowItem));
   if (!up.length) {
     const empty = document.createElement('p'); empty.className = 'empty-list';
     const next = [later.length && 'see Later tonight', featuredStars.length && 'try the bright stars'].filter(Boolean);
-    empty.textContent = `No Moon or planet is up at this time.${next.length ? ` ${capitalize(new Intl.ListFormat('en', { type: 'disjunction' }).format(next))}.` : ''}`;
+    empty.textContent = `No Moon or planet is up at this time.${next.length ? ` ${capitalize(orList.format(next))}.` : ''}`;
     listEl.appendChild(empty);
   }
   laterSection.hidden = later.length === 0;
@@ -693,25 +692,15 @@ function renderLists(positions) {
     ? `Earlier tonight · ${earlier.length} · Not tonight · ${missing.length}`
     : earlier.length ? `Earlier tonight · ${earlier.length}` : `Not tonight · ${missing.length}`;
   hiddenDetails.hidden = earlier.length + missing.length === 0;
-  telescopeList.replaceChildren(...currentReports.filter((report) => TELESCOPE_BODIES.has(report.key))
-    .map((report) => makeOtherItem(report, positions[report.key], report.visible
-      ? `${capitalize(report.brightness)}. Best around ${formatTime(report.bestTime)}, ${whereToLook(report.bestPosition)}.`
-      : `${capitalize(report.brightness)}. ${report.note}`)));
-
-  const names = up.map((report) => report.key === 'moon' ? 'the Moon' : report.name);
-  headline.textContent = names.length > 3
-    ? `${capitalize(listFormat.format([...names.slice(0, 2), `${names.length - 2} more`]))} are up ${when}`
-    : names.length
-      ? `${capitalize(listFormat.format(names))} ${names.length === 1 ? 'is' : 'are'} up ${when}`
-      : later.length
-        ? `${capitalize(later[0].key === 'moon' ? 'the Moon' : later[0].name)} is best later, around ${formatTime(later[0].bestTime)}`
-        : featuredStars.length ? 'No planets up — look for bright stars' : 'No planets up at this time';
+  telescopeList.replaceChildren(...telescope.map((report) => makeOtherItem(report, positions[report.key], report.visible
+    ? `${capitalize(report.brightness)}. Best around ${formatTime(report.bestTime)}, ${whereToLook(report.bestPosition)}.`
+    : `${capitalize(report.brightness)}. ${report.note}`)));
 
   // The phone drawer shows one line before it is opened; make it the answer.
   // Up is brightest first, so its head is the easiest planet; failing that,
   // the brightest star. Announcements read it too, so a screen reader hears
   // where to look and not only what is up.
-  const best = up.length ? { ...positions[up[0].key], name: up[0].name } : featuredStars[0];
+  const best = up.length ? { ...up[0].position, name: up[0].name } : featuredStars[0];
   bestTarget = best ? `${best.name}: look ${whereToLook(best)}` : '';
   const peek = document.getElementById('sky-info-panel-peek');
   if (peek) {
@@ -836,7 +825,7 @@ function buildPrintCard() {
   const item = (name, text) => { const li = element('li'); li.append(element('strong', name), element('span', text), element('span', '☐ found it', 'check')); return li; };
   const { up, later, positions } = currentLists;
   const targets = element('ol');
-  for (const report of up) targets.appendChild(item(report.name, `${capitalize(whereToLook(positions[report.key]))}. ${capitalize(report.brightness)}.`));
+  for (const report of up) targets.appendChild(item(report.name, `${capitalize(whereToLook(report.position))}. ${capitalize(report.brightness)}.`));
   for (const report of later.slice(0, 3)) targets.appendChild(item(report.name, `Around ${formatTime(report.bestTime)}: ${whereToLook(report.bestPosition)}.`));
   for (const star of featuredStars.slice(0, 3)) targets.appendChild(item(star.name, `A bright star, ${whereToLook(star)}.`));
   if (!targets.children.length) targets.appendChild(element('li', 'Nothing bright is up at this time. Try a later time tonight.'));
@@ -864,16 +853,24 @@ function buildPrintCard() {
 // tap or key press on the page, which means the print sheet has gone. A later
 // print from the browser menu, or the guide's own Print, prints normally.
 let printCardRequested = false;
-function dropPrintCard() { printCardRequested = false; document.body.classList.remove('printing-sky'); }
+function dropPrintCard() {
+  printCardRequested = false;
+  document.body.classList.remove('printing-sky');
+  removeEventListener('pointerdown', dropPrintCard, true);
+  removeEventListener('keydown', dropPrintCard, true);
+}
 document.getElementById('print-sky').onclick = () => {
   buildPrintCard();
   document.body.classList.add('printing-sky');
   printCardRequested = true;
-  setTimeout(() => {
-    addEventListener('pointerdown', dropPrintCard, { once: true, capture: true });
-    addEventListener('keydown', dropPrintCard, { once: true, capture: true });
-  });
   print();
+  // Where print() blocks, afterprint has already tidied up. Where it returns
+  // at once (iOS), wait for the next interaction. The click that got here
+  // has already passed through pointerdown and keydown.
+  if (document.body.classList.contains('printing-sky')) {
+    addEventListener('pointerdown', dropPrintCard, true);
+    addEventListener('keydown', dropPrintCard, true);
+  }
 };
 addEventListener('beforeprint', () => {
   if (!printCardRequested) document.body.classList.remove('printing-sky');

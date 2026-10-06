@@ -176,3 +176,68 @@ test('heights read in fists and directions in words', async () => {
   expect(darkEnoughFor('Moon', -3)).toBe(true);
   expect(darkEnoughFor('Moon', 2)).toBe(false);
 });
+
+describe('Sky Tonight review regressions (written before their fixes)', () => {
+  const london = new Astronomy.Observer(51.5, -0.1, 0);
+  const night = (y: number, m: number, d: number) => nightWindow(london, new Date(y, m - 1, d, 12));
+  const pairs = (w: ReturnType<typeof nightWindow>) => conjunctions(london, w).map((pair) => pair.bodies.join('-'));
+
+  test('every body is sampled on one grid, so close pairings are found', () => {
+    // Bodies that clear twilight at different Sun altitudes used to start
+    // their 10-minute samples at different times, and pairs are matched by
+    // timestamp: the Moon (visible from sunset) and Venus (from -3°) never
+    // lined up with the planets (from -6°).
+    expect(pairs(night(2026, 10, 4))).toContain('Moon-Mars'); // 0.7° apart
+    expect(pairs(night(2026, 10, 5))).toContain('Moon-Jupiter'); // 2.2° apart
+    expect(pairs(night(2026, 3, 6))).toContain('Venus-Saturn'); // 2.2°, missed on main too
+  });
+
+  test('the "up now" rule and the nightly visibility search are one rule', async () => {
+    const { MIN_ALTITUDE, isVisibleAt } = await import('./public/sky-forecast.js');
+    expect(MIN_ALTITUDE).toBe(5);
+    expect(isVisibleAt('Jupiter', 20, -7)).toBe(true);
+    expect(isVisibleAt('Jupiter', 20, -2)).toBe(false); // twilight
+    expect(isVisibleAt('Jupiter', 4, -12)).toBe(false); // too low
+    expect(isVisibleAt('Moon', 20, -1)).toBe(true); // the Moon shows in twilight
+    // A body called visible tonight is visible by the same rule at its best time.
+    const w = night(2026, 10, 5);
+    for (const body of ['Moon', 'Mars', 'Jupiter', 'Saturn', 'Venus']) {
+      const report = bodyReport(body, london, w);
+      if (!report.visible) continue;
+      const sun = positionAt('Sun', london, report.bestTime!).altitude;
+      expect(isVisibleAt(body, report.bestPosition.altitude, sun), body).toBe(true);
+    }
+  });
+
+  test('lists sort by the selected moment, with its constellation', async () => {
+    const { sortSkyLists } = await import('./public/sky-forecast.js');
+    // Sep 23: the Moon is in Capricornus at dusk and Aquarius five hours later.
+    const w = night(2026, 9, 23);
+    const dusk = w.astroDusk!;
+    const later = new Date(dusk.getTime() + 5 * 3600e3);
+    const reports = ['Moon', 'Saturn', 'Neptune'].map((body) => bodyReport(body, london, w, dusk));
+    const positions = Object.fromEntries(['Sun', 'Moon', 'Saturn', 'Neptune']
+      .map((body) => [body.toLowerCase(), positionAt(body, london, later)]));
+    const lists = sortSkyLists(reports, positions, london, later);
+    const moon = lists.up.find((item: any) => item.key === 'moon');
+    expect(reports[0].constellation).toBe('Capricornus');
+    expect(moon.constellation).toBe('Aquarius');
+    // Telescope planets never join the naked-eye lists.
+    expect([...lists.up, ...lists.later, ...lists.earlier, ...lists.missing].map((item: any) => item.key)).not.toContain('neptune');
+    expect(lists.telescope.map((item: any) => item.key)).toEqual(['neptune']);
+  });
+
+  test('headlines name the Moon once, the same way everywhere', async () => {
+    const { displayName, skyHeadline } = await import('./public/sky-forecast.js');
+    expect(displayName('Moon')).toBe('the Moon');
+    expect(displayName('Saturn')).toBe('Saturn');
+    const time = (date: Date) => `${date.getUTCHours()}:00`;
+    const item = (name: string, bestTime?: Date) => ({ name, bestTime });
+    expect(skyHeadline({ up: [item('Moon')], later: [] }, { when: 'now', time })).toBe('The Moon is up now');
+    expect(skyHeadline({ up: ['Moon', 'Venus', 'Mars', 'Saturn'].map((n) => item(n)), later: [] }, { when: 'now', time }))
+      .toBe('The Moon, Venus, and 2 more are up now');
+    expect(skyHeadline({ up: [], later: [item('Moon', new Date('2026-10-06T03:00:00Z'))] }, { when: 'now', time }))
+      .toBe('The Moon is best later, around 3:00');
+    expect(skyHeadline({ up: [], later: [] }, { when: 'now', time, hasStars: true })).toBe('No planets up — look for bright stars');
+  });
+});

@@ -220,3 +220,18 @@ describe('location time zones', () => {
     expect(locationTimeZone({ lat: 51.5, lon: -0.1, source: 'tz' }, env)).toBe('Europe/London');
   });
 });
+
+test('a shared-clock zone finds its target wherever the generator put it', async () => {
+  const { locateZone } = await import('./public/sky-location.js');
+  // The generator keeps a shared target from zone1970 or zone.tab, so the
+  // browser must look in both tables, not fall back to the equator.
+  const tables = {
+    TZ_COORDS: {},
+    TZ_CITY_COORDS: { 'Europe/Amsterdam': [52.37, 4.9] },
+    TZ_ALIASES: {},
+    TZ_SHARED_CLOCKS: { 'Europe/Somewhere': 'Europe/Amsterdam' },
+  };
+  expect(locateZone('Europe/Somewhere', tables)).toEqual({ lat: 52.37, lon: 4.9, approximate: true });
+  expect(locateZone('Europe/Amsterdam', tables)).toEqual({ lat: 52.37, lon: 4.9, approximate: false });
+  expect(locateZone('Etc/Unknown', tables)).toBeNull();
+});

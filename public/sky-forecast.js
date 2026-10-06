@@ -229,10 +229,6 @@ function darkBounds(window) {
   };
 }
 
-function constellationAt(body, observer, date) {
-  const eqj = A.Equator(body, date, observer, false, true);
-  return A.Constellation(eqj.ra, eqj.dec).name;
-}
 
 // The Moon is plain to see in twilight, and even by day, so it is up for the
 // whole night window. Venus is bright enough to find in early twilight, once
@@ -240,30 +236,37 @@ function constellationAt(body, observer, date) {
 // civil twilight to end.
 const SUN_LIMIT = { Moon: 0, Venus: -3 };
 
-// Whether the sky is dark enough at this Sun altitude to see the body, by the
-// same rule the nightly visibility search uses.
+// Below this altitude an object is too low to see clearly.
+export const MIN_ALTITUDE = 5;
+
+// Whether the sky is dark enough at this Sun altitude to see the body.
 export function darkEnoughFor(body, sunAltitudeDegrees) {
   return sunAltitudeDegrees <= (SUN_LIMIT[body] ?? -6);
 }
 
-function visibilitySamples(body, observer, window) {
-  const sunLimit = SUN_LIMIT[body] ?? -6;
-  const bounds = sunLimit > -6
-    ? { start: window.start, end: window.end }
-    : darkBounds(window);
+// The one visibility rule: the nightly search, the pairings and the page's
+// "Up now" list all use it.
+export function isVisibleAt(body, altitude, sunAltitudeDegrees) {
+  return altitude > MIN_ALTITUDE && darkEnoughFor(body, sunAltitudeDegrees);
+}
 
-  return samplesBetween(bounds.start, bounds.end).map((time) => ({
+// Every body is sampled on the same grid from sunset, then filtered by its
+// own darkness rule. Pairings match samples by timestamp, so a grid that
+// started at each body's own twilight limit never lined the Moon or Venus up
+// with the other planets.
+function visibilitySamples(body, observer, window) {
+  return samplesBetween(window.start, window.end).map((time) => ({
     time,
     position: horizontal(body, observer, time),
     sunAltitude: sunAltitude(observer, time),
-  })).filter((sample) => sample.sunAltitude <= sunLimit);
+  })).filter((sample) => darkEnoughFor(body, sample.sunAltitude));
 }
 
 function invisibleNote(samples) {
   if (samples.length === 0) return 'No dark observing window tonight.';
   const maxAltitude = Math.max(...samples.map((sample) => sample.position.altitude));
   if (maxAltitude <= 0) return 'Below the horizon all night.';
-  if (maxAltitude <= 5) return 'Too low on the horizon to see clearly.';
+  if (maxAltitude <= MIN_ALTITUDE) return 'Too low on the horizon to see clearly.';
   return 'Lost in twilight tonight.';
 }
 
@@ -275,7 +278,10 @@ function settings(body, observer, window) {
   const within = [];
   for (let set = first; set && set <= window.end && within.length < 4;) {
     within.push(set);
-    set = searchRiseSet(body, observer, -1, new Date(set.getTime() + 60000), 2);
+    // Only the rest of this window matters, so stop the search at its end.
+    const from = new Date(set.getTime() + 60000);
+    const remainingDays = (window.end - from) / DAY_MS;
+    set = remainingDays > 0 ? searchRiseSet(body, observer, -1, from, remainingDays) : null;
   }
   return { first, within };
 }
@@ -283,7 +289,7 @@ function settings(body, observer, window) {
 export function bodyReport(body, observer, window, sampleTime) {
   const at = asDate(sampleTime ?? window.astroDusk ?? window.civilDusk ?? window.start);
   const samples = visibilitySamples(body, observer, window);
-  const candidates = samples.filter((sample) => sample.position.altitude > 5);
+  const candidates = samples.filter((sample) => isVisibleAt(body, sample.position.altitude, sample.sunAltitude));
   const best = candidates.reduce(
     (winner, sample) => !winner || sample.position.altitude > winner.position.altitude ? sample : winner,
     null,
@@ -354,7 +360,7 @@ export function conjunctions(observer, window) {
   const upVectors = (body) => {
     if (!vectors.has(body)) {
       vectors.set(body, new Map(visibilitySamples(body, observer, window)
-        .filter((sample) => sample.position.altitude > 5)
+        .filter((sample) => isVisibleAt(body, sample.position.altitude, sample.sunAltitude))
         .map(({ time }) => [time.getTime(), A.Equator(body, time, observer, false, true).vec])));
     }
     return vectors.get(body);
@@ -430,6 +436,44 @@ export function positionAt(body, observer, date) {
     magnitude,
     compass: compassDirection(position.azimuth),
   };
+}
+
+export function constellationAt(body, observer, date) {
+  const eqj = A.Equator(body, date, observer, false, true);
+  return A.Constellation(eqj.ra, eqj.dec).name;
+}
+
+export function displayName(name) {
+  return name === 'Moon' ? 'the Moon' : name;
+}
+
+// Sorts tonight's reports for the selected moment. Reports are computed once
+// per night; positions are at `time`, and "up" rows carry the constellation
+// at `time` too, since the Moon can cross into another during the night.
+export function sortSkyLists(reports, positions, observer, time) {
+  const naked = reports.filter((report) => !TELESCOPE_BODIES.has(report.key));
+  const isUp = (report) => report.visible && isVisibleAt(report.name, positions[report.key].altitude, positions.sun.altitude);
+  const up = naked.filter(isUp)
+    .sort((a, b) => positions[a.key].magnitude - positions[b.key].magnitude)
+    .map((report) => ({ ...report, position: positions[report.key], constellation: constellationAt(report.name, observer, time) }));
+  const later = naked.filter((report) => report.visible && !isUp(report) && report.bestTime > time)
+    .sort((a, b) => a.bestTime - b.bestTime);
+  const earlier = naked.filter((report) => report.visible && !isUp(report) && report.bestTime <= time);
+  const missing = naked.filter((report) => !report.visible);
+  const telescope = reports.filter((report) => TELESCOPE_BODIES.has(report.key));
+  return { up, later, earlier, missing, telescope };
+}
+
+const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+const andList = new Intl.ListFormat('en', { type: 'conjunction' });
+
+// `when` is "now" or "at 9:30 pm"; `time` formats a Date for the reader.
+export function skyHeadline({ up, later }, { when, time, hasStars = false }) {
+  const names = up.map((item) => displayName(item.name));
+  if (names.length > 3) return `${capitalize(andList.format([...names.slice(0, 2), `${names.length - 2} more`]))} are up ${when}`;
+  if (names.length) return `${capitalize(andList.format(names))} ${names.length === 1 ? 'is' : 'are'} up ${when}`;
+  if (later.length) return `${capitalize(displayName(later[0].name))} is best later, around ${time(later[0].bestTime)}`;
+  return hasStars ? 'No planets up — look for bright stars' : 'No planets up at this time';
 }
 
 export { A as Astronomy };

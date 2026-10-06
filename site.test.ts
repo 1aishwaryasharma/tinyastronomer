@@ -1233,14 +1233,17 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   const sky = readFileSync('sky-tonight.html', 'utf8');
   expect(sky).toContain('id="sky-headline"');
   expect(sky).toContain('id="up-now-heading"');
-  expect(sky).toContain('whereToLook(position)');
+  expect(sky).toContain('whereToLook(item.position)');
   // Uranus and Neptune leave the chart and the lists unless the reader asks.
   expect(sky).toContain('id="telescope-planets"');
   expect(sky).toContain("telescopeDetails.open || !TELESCOPE_BODIES.has(body.key)");
   // The drawer's one visible line names the easiest target, planets first.
   expect(sky).toContain('whereToLookShort(best)');
-  // A planet that is up is not "up now" until the sky is dark enough for it.
-  expect(sky).toContain('darkEnoughFor(report.name, sunAltitude)');
+  // Which body is "up now" is decided by sortSkyLists (tested with real
+  // astronomy in sky-forecast.test.ts), not by a rule copied into the page.
+  expect(sky).toContain('sortSkyLists(currentReports, positions, observer, selectedTime)');
+  // Going stale relabels "now" without rebuilding rows under the reader.
+  expect(sky).toContain('if (listsSayNow && !selectedIsNow()) renderNowWording()');
   // Crawlers and failed script loads see the searched question, not a placeholder.
   expect(sky).toContain('<h2 class="info-title" id="sky-headline">What\'s in the sky tonight?</h2>');
   // New exports must not meet a cached module without them.
@@ -1253,7 +1256,8 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   // No timer decides whether the card prints: one request per print, dropped
   // by the next interaction, so a stale card never replaces a later print.
   expect(sky).toContain('body.printing-sky > :not(.sky-print-card)');
-  expect(sky).toContain("addEventListener('pointerdown', dropPrintCard, { once: true, capture: true })");
+  expect(sky).toContain("addEventListener('pointerdown', dropPrintCard, true)");
+  expect(sky).toContain("removeEventListener('pointerdown', dropPrintCard, true)");
   expect(sky).not.toContain('printCardRequestedAt');
   expect(readFileSync('index.html', 'utf8')).toContain('href="/sky-tonight" id="home-sky-tonight"');
 });
