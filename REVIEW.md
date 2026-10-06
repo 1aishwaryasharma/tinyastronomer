@@ -23,7 +23,6 @@ unless the code they rely on changes or new evidence contradicts them.
 - **No `aria-live` on the lists.** They rebuild on every slider step. The
   slider's `change`, date and location changes announce the headline and where
   to look instead.
-
 - **`isVisibleAt` after `visibilitySamples` repeats the darkness check.**
   Deliberate: `isVisibleAt` is the single visibility rule used by the nightly
   search, pairings and "Up now". Splitting it to skip one comparison per sample
