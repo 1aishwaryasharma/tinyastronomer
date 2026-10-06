@@ -93,11 +93,14 @@ export function compassWords(compass) {
 
 // A fist held at arm's length covers about 10° of sky, for adults and children
 // alike (smaller hands, shorter arms). Degrees mean little to a seven-year-old.
+// Above this, direction stops being useful: look straight up.
+const OVERHEAD = 75;
+
 export function fistHeight(altitude) {
   if (altitude < 3) return 'right on the horizon';
   // Below 7.5° the nearest half fist rounds to ½, which reads as "0½ fists".
   if (altitude < 7.5) return 'half a fist up';
-  if (altitude >= 75) return 'almost straight overhead';
+  if (altitude >= OVERHEAD) return 'almost straight overhead';
   const halves = Math.round(altitude / 5) / 2;
   const whole = Math.floor(halves);
   return `${whole}${halves % 1 ? '½' : ''} fist${halves === 1 ? '' : 's'} up`;
@@ -105,12 +108,12 @@ export function fistHeight(altitude) {
 
 export function whereToLook(position) {
   const height = fistHeight(position.altitude);
-  return position.altitude >= 75 ? height : `${height} in the ${compassWords(position.compass)}`;
+  return position.altitude >= OVERHEAD ? height : `${height} in the ${compassWords(position.compass)}`;
 }
 
 // The same rule in a phone-width line: "E, 2 fists up" or "straight up".
 export function whereToLookShort(position) {
-  return position.altitude >= 75 ? 'straight up' : `${position.compass}, ${fistHeight(position.altitude)}`;
+  return position.altitude >= OVERHEAD ? 'straight up' : `${position.compass}, ${fistHeight(position.altitude)}`;
 }
 
 // Uranus and Neptune are in the forecast, but a child looking for them by eye
@@ -460,11 +463,13 @@ export function sortSkyLists(reports, positions, observer, time) {
   const naked = reports.filter((report) => !TELESCOPE_BODIES.has(report.key));
   const up = [], later = [], earlier = [], missing = [];
   for (const report of naked) {
-    if (!report.visible) { missing.push(report); continue; }
+    // The chosen moment is checked exactly, so a body visible now is up even
+    // when no 10-minute sample of the night caught it.
     if (isVisibleAt(report.name, positions[report.key].altitude, positions.sun.altitude)) {
       up.push({ ...report, position: positions[report.key], constellation: constellationAt(report.name, observer, time) });
       continue;
     }
+    if (!report.visible) { missing.push(report); continue; }
     // "Later" if it is visible again before the window ends; its best time
     // is the best still to come.
     const ahead = report.visibleSamples.filter((sample) => sample.time > time);

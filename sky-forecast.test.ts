@@ -269,3 +269,20 @@ describe('Sky Tonight round-four regressions (written before their fixes)', () =
     expect(found.filter((pair) => /Uranus|Neptune/.test(pair))).toEqual([]);
   });
 });
+
+describe('Sky Tonight round-five regressions (written before their fixes)', () => {
+  test('a body visible at the chosen moment is "up", even between nightly samples', async () => {
+    const { sortSkyLists, FORECAST_BODIES } = await import('./public/sky-forecast.js');
+    // London, night of 21 May 2026: at 03:09 UTC Saturn is 5.55° up with the
+    // Sun at -6.18°, visible by the shared rule, but no 10-minute sample
+    // catches it, so the nightly report calls it not visible.
+    const london = new Astronomy.Observer(51.5, -0.1, 0);
+    const w = nightWindow(london, new Date(2026, 4, 21, 12));
+    const time = new Date('2026-05-22T03:09:00Z');
+    const reports = FORECAST_BODIES.map((body: string) => bodyReport(body, london, w));
+    const positions = Object.fromEntries(['Sun', ...FORECAST_BODIES].map((body: string) => [body.toLowerCase(), positionAt(body, london, time)]));
+    const lists = sortSkyLists(reports, positions, london, time);
+    expect(lists.up.map((item: any) => item.key)).toContain('saturn');
+    expect(lists.missing.map((item: any) => item.key)).not.toContain('saturn');
+  });
+});

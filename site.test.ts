@@ -1245,6 +1245,31 @@ test('Sky Tonight module versions are content hashes', () => {
   }
 });
 
+test('module hashes ignore CRLF line endings', () => {
+  // A Windows checkout with autocrlf stamps CRLF bytes; git, CI and the
+  // deploy see LF. The same text must hash the same either way.
+  expect(moduleHash('a\r\nb\r\n')).toBe(moduleHash('a\nb\n'));
+});
+
+test('stamping module versions also refreshes the inline-script CSP hashes', async () => {
+  // Stamping rewrites ?v= inside sky-tonight.html's inline module, which
+  // changes that script's hash in public/_headers.
+  const { mkdtempSync, cpSync, writeFileSync: write } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { stampVersions } = await import('./tools/stamp-module-versions.ts');
+  const dir = mkdtempSync(join(tmpdir(), 'stamp-'));
+  cpSync('.', dir, { recursive: true, filter: (src) => !src.includes('/assets/') && !src.includes('/vendor/') });
+  write(join(dir, 'sky-forecast.js'), readFileSync('sky-forecast.js', 'utf8') + '\n// edited\n');
+  stampVersions(dir);
+  const policy = readFileSync(join(dir, '_headers'), 'utf8');
+  const html = readFileSync(join(dir, 'sky-tonight.html'), 'utf8');
+  for (const match of html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)) {
+    if (/\bsrc=/.test(match[1] || '')) continue;
+    expect(policy).toContain(`'sha256-${createHash('sha256').update(match[2]).digest('base64')}'`);
+  }
+});
+
 test('sky tonight speaks to children: fists, words, and no telescope-only planets up front', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   expect(sky).toContain('id="sky-headline"');

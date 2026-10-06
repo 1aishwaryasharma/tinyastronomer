@@ -235,9 +235,9 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=05a2487265';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=02c3c70d2e';
-import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=4f86c4e739';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=18e046c94b';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=af6548def7';
+import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=d0fb9efa11';
 import { layoutSkyLabels } from './sky-labels.js';
 
 const clamp = SPACE.clamp;
@@ -558,7 +558,7 @@ function locationMeta() {
 function updateLocationCopy() {
   location.label = describeLocation(location);
   displayTimeZone = locationTimeZone(location);
-  locationLabel.textContent = location.label; locationSource.textContent = sourceDescription(); metaLocation.textContent = locationMeta();
+  locationLabel.textContent = capitalize(location.label); locationSource.textContent = sourceDescription(); metaLocation.textContent = locationMeta();
   latitudeInput.value = location.lat.toFixed(1); longitudeInput.value = location.lon.toFixed(1);
 }
 
@@ -613,9 +613,13 @@ function skyRow(report) {
   row.addEventListener('pointerleave', () => { if (highlightedBody === report.key) highlightedBody = null; drawing.invalidate(); });
   row.append(dot, copy); return { row, copy };
 }
-function rowLine(copy, className, text) {
-  const line = document.createElement('span'); line.className = className; line.textContent = text; copy.appendChild(line); return line;
+function element(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text) node.textContent = text;
+  if (className) node.className = className;
+  return node;
 }
+function rowLine(copy, className, text) { return copy.appendChild(element('span', text, className)); }
 // Each object links to the study that explains it, so a search visitor who
 // came for tonight's sky can go and meet what they just saw.
 function exploreLink(report) {
@@ -735,14 +739,14 @@ function updateTimeState() {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'sky-item star-item'; button.dataset.body = star.key;
     button.id = `sky-body-${star.key}`;
-    button.setAttribute('aria-label', `Show ${star.name} on the horizon chart, ${star.compass}, ${Math.round(star.altitude)} degrees up`);
+    button.setAttribute('aria-label', `Show ${star.name} on the horizon chart: ${whereToLook(star)}`);
     const name = document.createElement('strong'); name.textContent = star.name;
-    button.append(name, ` · ${star.compass}, ${Math.round(star.altitude)}° up`);
+    button.append(name, ` · ${whereToLookShort(star)}`);
     button.onclick = () => { if (viewMode !== 'horizon') setView('horizon', false); highlightBody(star.key);
       const panel = document.getElementById('sky-info-panel');
       const toggle = width <= 820 ? panel.querySelector('.mobile-info-toggle') : document.querySelector('.desktop-info-toggle');
       if (toggle?.getAttribute('aria-expanded') === 'true') { toggle.click(); toggle.focus(); }
-      accessibility.announce(`${star.name}, ${star.compass}, ${Math.round(star.altitude)} degrees up.`); };
+      accessibility.announce(`${star.name}: look ${whereToLook(star)}.`); };
     return button;
   }));
   if (!featuredStars.length && sunAltitude < -6) document.getElementById('stars-status').textContent = 'No named bright stars are high enough in this guide at the selected time. Try later tonight.';
@@ -820,7 +824,6 @@ nowButton.onclick = () => {
 // A one-page card for the trip outside: no phone glare, and a box to sketch in.
 function buildPrintCard() {
   const card = document.getElementById('sky-print-card');
-  const element = (tag, text, className) => { const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node; };
   const item = (name, text) => { const li = element('li'); li.append(element('strong', name), element('span', text), element('span', '☐ found it', 'check')); return li; };
   const { up, later } = currentLists;
   const targets = element('ol');
@@ -876,7 +879,7 @@ addEventListener('beforeprint', () => {
   printCardRequested = false;
 });
 addEventListener('afterprint', dropPrintCard);
-telescopeDetails.addEventListener('toggle', () => { if (!allPositions.length) return; highlightedBody = null; updateChartBodies(); drawing.invalidate(); });
+telescopeDetails.addEventListener('toggle', () => { if (!allPositions.length) return; updateChartBodies(); highlightBody(null); });
 horizonButton.onclick = () => setView('horizon');
 orbitButton.onclick = () => setView('orbit');
 latitudeInput.onfocus = () => latitudeInput.select();

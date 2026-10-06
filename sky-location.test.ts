@@ -148,7 +148,7 @@ describe('location resolution', () => {
   test('a zone that only shares another country\'s clock is a labelled rough guess', () => {
     // Africa/Timbuktu (Mali) runs on Abidjan (Ivory Coast) time.
     expect(resolveLocation(fakeEnvironment('Africa/Timbuktu'))).toMatchObject({
-      lat: 5.32, lon: -4.03, approximate: true, label: 'Rough guess from your time zone',
+      lat: 5.32, lon: -4.03, approximate: true, label: 'your area (rough guess)',
     });
   });
 
@@ -234,4 +234,10 @@ test('a shared-clock zone finds its target wherever the generator put it', async
   expect(locateZone('Europe/Somewhere', tables)).toEqual({ lat: 52.37, lon: 4.9, approximate: true });
   expect(locateZone('Europe/Amsterdam', tables)).toEqual({ lat: 52.37, lon: 4.9, approximate: false });
   expect(locateZone('Etc/Unknown', tables)).toBeNull();
+});
+
+test('a rough location reads as a place inside sentences', () => {
+  // The label is dropped into "Sky forecast updated for …" and "At 9:30 pm from …".
+  const location = resolveLocation(fakeEnvironment('Etc/Unknown'));
+  expect(`Sky forecast updated for ${location.label}.`).toBe('Sky forecast updated for your area (rough guess).');
 });

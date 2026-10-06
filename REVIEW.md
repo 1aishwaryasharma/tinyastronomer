@@ -24,10 +24,19 @@ unless the code they rely on changes or new evidence contradicts them.
   slider's `change`, date and location changes announce the headline and where
   to look instead.
 
+- **`isVisibleAt` after `visibilitySamples` repeats the darkness check.**
+  Deliberate: `isVisibleAt` is the single visibility rule used by the nightly
+  search, pairings and "Up now". Splitting it to skip one comparison per sample
+  would put the rule back in several places.
+- **`bodyReport` keeps `set` beside `sets`.** `set` (first setting after the
+  window opens) predates this work on `main` and is covered by the San
+  Francisco fixture; the page reads `sets`.
+
 ## Conventions
 
 - Sky Tonight module imports carry a content hash (`?v=`). After editing
   `sky-forecast.js`, `sky-stars.js`, `sky-location.js` or `tz-coords.js`, run
   `bun tools/stamp-module-versions.ts`; `site.test.ts` fails until you do.
-- Inline-script CSP hashes in `public/_headers` must match the page scripts.
+  The tool also refreshes the inline-script CSP hashes in `public/_headers`,
+  so run it after editing any inline script too.
 - A finding about behaviour should come with a failing test or a reproduction.

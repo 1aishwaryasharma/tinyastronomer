@@ -86,7 +86,8 @@ export function describeLocation(location) {
     return timezoneLabel(location.timeZone);
   }
   if (location.source === 'tz' && location.approximate) {
-    return 'Rough guess from your time zone';
+    // Read inside sentences ("updated for …", "At 9:30 pm from …").
+    return 'your area (rough guess)';
   }
   return coordinateLabel(location.lat, location.lon);
 }
