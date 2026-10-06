@@ -1209,7 +1209,7 @@ test('sky tonight builds a private local forecast before requesting precise loca
   expect(sky.indexOf('requestDeviceLocation()')).toBeGreaterThan(sky.indexOf('useLocationButton.onclick'));
   // Lead with the answer: what is up comes before the observing-window detail.
   // Argent Chromium omits off-viewport ids, so the location card, sky-list and
-  // night-window (a visual baseline) must all stay inside the 1280×800 panel.
+  // night-window (whose times a flow asserts) must stay inside the 1280×800 panel.
   expect(sky.indexOf('id="use-location"')).toBeLessThan(sky.indexOf('id="sky-list"'));
   expect(sky.indexOf('id="sky-list"')).toBeLessThan(sky.indexOf('id="night-window"'));
   expect(sky.indexOf('id="night-window"')).toBeLessThan(sky.indexOf('id="later-list"'));

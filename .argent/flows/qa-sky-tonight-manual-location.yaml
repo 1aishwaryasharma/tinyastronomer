@@ -76,9 +76,18 @@ steps:
         in:
           id: sunset-time
         equals: 7:28 pm
-  - await:
-      idle: true
-  - snapshot:
-      name: london-night-window
-      cropOn:
-        id: night-window
+  - assert:
+      text:
+        in:
+          id: dark-time
+        equals: 9:27 pm
+  - assert:
+      text:
+        in:
+          id: sunrise-time
+        equals: 6:27 am
+  - assert:
+      text:
+        in:
+          id: moon-summary
+        contains: New Moon · 2% lit
