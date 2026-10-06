@@ -153,9 +153,12 @@ describe('Sky Tonight accuracy regressions', () => {
 });
 
 test('heights read in fists and directions in words', async () => {
-  const { compassWords, easiestToSpot, fistHeight, whereToLook } = await import('./public/sky-forecast.js');
+  const { compassWords, darkEnoughFor, fistHeight, whereToLook, whereToLookShort } = await import('./public/sky-forecast.js');
   expect(fistHeight(1)).toBe('right on the horizon');
   expect(fistHeight(5)).toBe('half a fist up');
+  // 7–7.5° once rounded to "0½ fists up".
+  for (const altitude of [7, 7.2, 7.49]) expect(fistHeight(altitude)).toBe('half a fist up');
+  expect(fistHeight(7.5)).toBe('1 fist up');
   expect(fistHeight(10)).toBe('1 fist up');
   expect(fistHeight(14)).toBe('1½ fists up');
   expect(fistHeight(19)).toBe('2 fists up');
@@ -163,12 +166,10 @@ test('heights read in fists and directions in words', async () => {
   expect(compassWords('ESE')).toBe('east-southeast');
   expect(whereToLook({ altitude: 19, compass: 'ESE' })).toBe('2 fists up in the east-southeast');
   expect(whereToLook({ altitude: 81, compass: 'NNW' })).toBe('almost straight overhead');
-  // A planet beats a slightly brighter star; Neptune and set bodies never lead.
-  const order = easiestToSpot([
-    { key: 'neptune', altitude: 40, magnitude: 7.8 },
-    { key: 'saturn', altitude: 19, magnitude: 0.6 },
-    { key: 'jupiter', altitude: -10, magnitude: -2.4 },
-    { key: 'moon', altitude: 30, magnitude: -11 },
-  ], [{ key: 'vega', altitude: 71, magnitude: 0.03 }]).map((body) => body.key);
-  expect(order).toEqual(['moon', 'saturn', 'vega']);
+  expect(whereToLookShort({ altitude: 19, compass: 'ESE' })).toBe('ESE, 2 fists up');
+  expect(whereToLookShort({ altitude: 81, compass: 'NNW' })).toBe('straight up');
+  // Venus shows in brighter twilight than everything else.
+  expect(darkEnoughFor('Jupiter', -1)).toBe(false);
+  expect(darkEnoughFor('Jupiter', -6)).toBe(true);
+  expect(darkEnoughFor('Venus', -4)).toBe(true);
 });

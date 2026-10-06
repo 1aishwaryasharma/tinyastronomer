@@ -1,4 +1,4 @@
-import { TZ_ALIASES, TZ_COORDS } from './tz-coords.js';
+import { TZ_ALIASES, TZ_COORDS } from './tz-coords.js?v=20261006-1';
 
 export const LOCATION_STORAGE_KEY = 'sky.location';
 
@@ -90,11 +90,11 @@ export function describeLocation(location) {
 
 export function resolveLocation(env = globalThis) {
   const stored = readStoredLocation(env);
-  // A time-zone guess is cheap to redo, and redoing it picks up travel and
-  // fixes guesses stored before a zone name was recognised.
+  // A time-zone guess is cheap to redo, so only device and manual locations
+  // are kept. Redoing it picks up travel and heals guesses stored before a
+  // zone name was recognised, such as the old equator fallback for India.
   if (stored && stored.source !== 'tz') return { ...stored, label: describeLocation(stored) };
-  const location = timezoneGuess(env);
-  return storeLocation(location, env);
+  return timezoneGuess(env);
 }
 
 const GEOLOCATION_ERRORS = {

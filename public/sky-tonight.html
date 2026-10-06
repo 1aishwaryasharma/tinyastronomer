@@ -147,7 +147,7 @@
 <main>
 <aside class="info-panel" id="sky-info-panel">
   <div class="info-label">— Tonight from your location —</div>
-  <h2 class="info-title" id="sky-headline">Finding what's up…</h2>
+  <h2 class="info-title" id="sky-headline">What's in the sky tonight?</h2>
   <section class="location-card" aria-labelledby="location-heading">
     <h3 class="sr-only" id="location-heading">Observer location</h3>
     <div class="location-row">
@@ -235,9 +235,9 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, conjunctions, defaultNightMinutes, easiestToSpot, fistHeight, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, timeInNight, whereToLook } from './sky-forecast.js';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, conjunctions, darkEnoughFor, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=20261006-1';
 import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js';
-import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js';
+import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=20261006-1';
 import { layoutSkyLabels } from './sky-labels.js';
 
 const clamp = SPACE.clamp;
@@ -507,6 +507,11 @@ function offsetFromIso(value) {
 }
 // Times are read at the observing site: a manual location abroad uses its own clock.
 let displayTimeZone;
+function formatDate(date) {
+  const options = { year: 'numeric', month: 'short', day: 'numeric' };
+  try { return date.toLocaleDateString(undefined, { ...options, timeZone: displayTimeZone }); }
+  catch { return date.toLocaleDateString(undefined, options); }
+}
 function formatTime(date) {
   if (!date) return '—';
   try { return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone }).toLowerCase(); }
@@ -621,12 +626,11 @@ function makeUpNowItem(report, position) {
   rowLine(copy, 'tag', `In ${report.constellation} · `).appendChild(exploreLink(report));
   return row;
 }
-function makeLaterItem(report, observer) {
+function makeLaterItem(report) {
   const { row, copy } = skyRow(report);
-  const best = positionAt(report.name, observer, report.bestTime);
   const rises = report.rise && report.rise > selectedTime && report.rise <= activeWindow.end ? `rises ${formatTime(report.rise)} · ` : '';
   copy.append(` · ${rises}best around ${formatTime(report.bestTime)}`);
-  rowLine(copy, 'detail', `then ${whereToLook(best)} · ${report.brightness}`);
+  rowLine(copy, 'detail', `then ${whereToLook(report.bestPosition)} · ${report.brightness}`);
   return row;
 }
 function makeOtherItem(report, position, note = report.note) {
@@ -643,10 +647,12 @@ function selectedIsNow() { return offset === 0 && Math.abs(selectedTime - new Da
 
 // Lists follow the time slider: "up now" is about the selected moment, while
 // the heavier per-night reports are computed once per date and location.
-function renderLists(observer, positions) {
+function renderLists(positions) {
   const naked = currentReports.filter((report) => !TELESCOPE_BODIES.has(report.key));
-  // Below 5° the forecast already calls an object too low to see clearly.
-  const up = naked.filter((report) => report.visible && positions[report.key].altitude > 5)
+  // Below 5° the forecast already calls an object too low to see clearly, and
+  // in twilight a planet that is up may not be visible yet.
+  const sunAltitude = positions.sun.altitude;
+  const up = naked.filter((report) => report.visible && positions[report.key].altitude > 5 && darkEnoughFor(report.name, sunAltitude))
     .sort((a, b) => positions[a.key].magnitude - positions[b.key].magnitude);
   const later = naked.filter((report) => report.visible && !up.includes(report) && report.bestTime > selectedTime)
     .sort((a, b) => a.bestTime - b.bestTime);
@@ -663,13 +669,15 @@ function renderLists(observer, positions) {
     listEl.appendChild(empty);
   }
   laterSection.hidden = later.length === 0;
-  laterList.replaceChildren(...later.map((report) => makeLaterItem(report, observer)));
+  laterList.replaceChildren(...later.map(makeLaterItem));
   hiddenListEl.replaceChildren(
     ...earlier.map((report) => makeOtherItem(report, positions[report.key], `best earlier tonight, around ${formatTime(report.bestTime)}`)),
     ...missing.map((report) => makeOtherItem(report, positions[report.key])),
   );
-  const hiddenCount = earlier.length + missing.length;
-  hiddenSummary.textContent = `${earlier.length ? 'Not now' : 'Not tonight'} · ${hiddenCount}`; hiddenDetails.hidden = hiddenCount === 0;
+  hiddenSummary.textContent = earlier.length && missing.length
+    ? `Earlier tonight · ${earlier.length} · Not tonight · ${missing.length}`
+    : earlier.length ? `Earlier tonight · ${earlier.length}` : `Not tonight · ${missing.length}`;
+  hiddenDetails.hidden = earlier.length + missing.length === 0;
   telescopeList.replaceChildren(...currentReports.filter((report) => TELESCOPE_BODIES.has(report.key))
     .map((report) => makeOtherItem(report, positions[report.key], report.brightness)));
 
@@ -685,10 +693,10 @@ function renderLists(observer, positions) {
   // The phone drawer shows one line before it is opened; make it the answer.
   const peek = document.getElementById('sky-info-panel-peek');
   if (peek) {
-    // One target with its height fits a 360px phone; the headline lists the rest.
-    const [best] = easiestToSpot(up.map((report) => ({ ...positions[report.key], key: report.key, name: report.name })), featuredStars);
-    const height = best && (best.altitude >= 75 ? 'straight up' : `${best.compass}, ${fistHeight(best.altitude)}`);
-    peek.textContent = best ? `${best.name}: look ${height}` : 'Try a darker time to find stars and planets';
+    // Up is brightest first, so its head is the easiest planet; failing that,
+    // the brightest star. One target with its height fits a 360px phone.
+    const best = up.length ? { ...positions[up[0].key], name: up[0].name } : featuredStars[0];
+    peek.textContent = best ? `${best.name}: look ${whereToLookShort(best)}` : 'Try a darker time to find stars and planets';
   }
 }
 
@@ -725,7 +733,7 @@ function updateTimeState() {
     ? visibleNow.map((body) => `${body.name} ${body.compass}, ${Math.round(body.altitude)} degrees up`).join('; ')
     : 'the Moon and planets are below the horizon';
   skySummary.textContent = `At ${formatTime(selectedTime)} from ${location.label}: ${summary}. Stars: ${featuredStars.map(star => `${star.name} ${star.compass}, ${Math.round(star.altitude)} degrees up`).join('; ') || 'none in the bright-star guide'}.`;
-  renderLists(observer, Object.fromEntries(allPositions.map((body) => [body.key, body])));
+  renderLists(Object.fromEntries(allPositions.map((body) => [body.key, body])));
   timeValue.textContent = formatTime(selectedTime);
   timeSlider.setAttribute('aria-valuetext', formatTime(selectedTime));
   metaTime.textContent = formatTime(selectedTime);
@@ -748,7 +756,10 @@ function renderForecast() {
   if (selectedTime) applyNightMinutes(activeWindow, timeSlider.value);
   else setDefaultTime(activeWindow);
   const sampleTime = selectedTime;
-  currentReports = FORECAST_BODIES.map((body) => bodyReport(body, observer, activeWindow, sampleTime));
+  currentReports = FORECAST_BODIES.map((body) => {
+    const report = bodyReport(body, observer, activeWindow, sampleTime);
+    return report.bestTime ? { ...report, bestPosition: positionAt(body, observer, report.bestTime) } : report;
+  });
   sunsetTime.textContent = formatTime(activeWindow.sunset); darkTime.textContent = formatTime(activeWindow.astroDusk); sunriseTime.textContent = formatTime(activeWindow.sunrise);
   if (activeWindow.polar === 'day') { polarNote.textContent = 'The Sun does not set at this location tonight.'; windowTimes.hidden = true; }
   else if (activeWindow.polar === 'night') { polarNote.textContent = 'The Sun stays below the horizon at this location.'; windowTimes.hidden = true; }
@@ -761,7 +772,8 @@ function update() {
   slider.setAttribute('aria-valuetext', fmtDate(offset)); dateInput.value = isoLocal(dateAt(offset));
   prevBtn.disabled = offset <= 0; nextBtn.disabled = offset >= MAX_OFFSET; updateLocationCopy(); renderForecast();
 }
-function commitDate() { update(); accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}.`); }
+function announceForecast() { accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}. ${headline.textContent}.`); }
+function commitDate() { update(); announceForecast(); }
 function setOffset(next) { offset = clamp(Math.round(next), 0, MAX_OFFSET); slider.value = offset; commitDate(); }
 function applyDateInput(announce) {
   const next = offsetFromIso(dateInput.value);
@@ -785,14 +797,14 @@ timeSlider.oninput = () => {
   selectedTime = new Date(activeWindow.start.getTime() + Number(timeSlider.value) * 60000);
   updateTimeState();
 };
-timeSlider.onchange = () => accessibility.announce(`Sky positions at ${formatTime(selectedTime)}.`);
+timeSlider.onchange = () => accessibility.announce(`Sky positions at ${formatTime(selectedTime)}. ${headline.textContent}.`);
 nowButton.onclick = () => {
   const now = new Date();
   if (!insideWindow(now, activeWindow)) return;
   timeSlider.value = String(Math.round((now - activeWindow.start) / 300000) * 5);
   selectedTime = new Date(activeWindow.start.getTime() + Number(timeSlider.value) * 60000);
   updateTimeState(); drawing.invalidate();
-  accessibility.announce(`Sky positions now, ${formatTime(selectedTime)}.`);
+  accessibility.announce(`Sky positions now, ${formatTime(selectedTime)}. ${headline.textContent}.`);
 };
 // A one-page card for the trip outside: no phone glare, and a box to sketch in.
 function buildPrintCard() {
@@ -802,8 +814,7 @@ function buildPrintCard() {
   const { up, later, positions } = currentLists;
   const targets = element('ol');
   for (const report of up) targets.appendChild(item(report.name, `${capitalize(whereToLook(positions[report.key]))}. ${capitalize(report.brightness)}.`));
-  const observer = new Astronomy.Observer(location.lat, location.lon, 0);
-  for (const report of later.slice(0, 3)) targets.appendChild(item(report.name, `Around ${formatTime(report.bestTime)}: ${whereToLook(positionAt(report.name, observer, report.bestTime))}.`));
+  for (const report of later.slice(0, 3)) targets.appendChild(item(report.name, `Around ${formatTime(report.bestTime)}: ${whereToLook(report.bestPosition)}.`));
   for (const star of featuredStars.slice(0, 3)) targets.appendChild(item(star.name, `A bright star, ${whereToLook(star)}.`));
   if (!targets.children.length) targets.appendChild(element('li', 'Nothing bright is up at this time. Try a later time tonight.'));
   const tips = element('ul', '', 'tips');
@@ -816,7 +827,7 @@ function buildPrintCard() {
   ]) tips.appendChild(element('li', tip));
   card.replaceChildren(
     element('h2', 'My sky tonight'),
-    element('p', `${fmtDate(offset)} · ${formatTime(selectedTime)} · ${location.label}`, 'print-meta'),
+    element('p', `${formatDate(selectedTime)} · ${formatTime(selectedTime)} · ${location.label}`, 'print-meta'),
     element('h3', 'Find these'), targets,
     element('h3', 'The Moon'), element('p', moonSummary.textContent.replace(/(lit)(rises|already)/, '$1 · $2')),
     element('h3', 'Draw what you see'), element('div', '', 'sketch'),
@@ -838,13 +849,13 @@ longitudeInput.onfocus = () => longitudeInput.select();
 
 useLocationButton.onclick = async () => {
   useLocationButton.disabled = true; locationStatus.textContent = 'Asking your browser for your location…';
-  try { location = await requestDeviceLocation(); locationStatus.textContent = 'Using your rounded device location.'; update(); accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}.`); }
+  try { location = await requestDeviceLocation(); locationStatus.textContent = 'Using your rounded device location.'; update(); announceForecast(); }
   catch (error) { locationStatus.textContent = error.message; }
   finally { useLocationButton.disabled = false; }
 };
 locationForm.onsubmit = (event) => {
   event.preventDefault();
-  try { location = setManualLocation(latitudeInput.value, longitudeInput.value); locationStatus.textContent = 'Using your manual location.'; update(); document.getElementById('location-change').open = false; accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}.`); }
+  try { location = setManualLocation(latitudeInput.value, longitudeInput.value); locationStatus.textContent = 'Using your manual location.'; update(); document.getElementById('location-change').open = false; announceForecast(); }
   catch (error) { locationStatus.textContent = error.message; }
 };
 

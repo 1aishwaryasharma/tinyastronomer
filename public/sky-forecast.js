@@ -95,7 +95,8 @@ export function compassWords(compass) {
 // alike (smaller hands, shorter arms). Degrees mean little to a seven-year-old.
 export function fistHeight(altitude) {
   if (altitude < 3) return 'right on the horizon';
-  if (altitude < 7) return 'half a fist up';
+  // Below 7.5° the nearest half fist rounds to ½, which reads as "0½ fists".
+  if (altitude < 7.5) return 'half a fist up';
   if (altitude >= 75) return 'almost straight overhead';
   const halves = Math.round(altitude / 5) / 2;
   const whole = Math.floor(halves);
@@ -107,21 +108,19 @@ export function whereToLook(position) {
   return position.altitude >= 75 ? height : `${height} in the ${compassWords(position.compass)}`;
 }
 
+// The same rule in a phone-width line: "E, 2 fists up" or "straight up".
+export function whereToLookShort(position) {
+  return position.altitude >= 75 ? 'straight up' : `${position.compass}, ${fistHeight(position.altitude)}`;
+}
+
 // Uranus and Neptune are in the forecast, but a child looking for them by eye
 // will not find them, so they stay out of the headline lists and the chart
-// unless asked for.
-export const TELESCOPE_BODIES = new Set(['uranus', 'neptune']);
-
-// What to point a child at first: the Moon and naked-eye planets, brightest
-// first, then the brightest stars. Planets beat stars of similar brightness
-// because they are what people come looking for.
-export function easiestToSpot(bodies, stars = []) {
-  const byBrightness = (a, b) => (a.magnitude ?? 99) - (b.magnitude ?? 99);
-  return [
-    ...bodies.filter((body) => !TELESCOPE_BODIES.has(body.key) && body.key !== 'sun' && body.altitude > 5).sort(byBrightness),
-    ...[...stars].sort(byBrightness),
-  ];
-}
+// unless asked for. The value is what to say instead of a brightness.
+const TELESCOPE_NOTES = {
+  uranus: 'optical aid recommended',
+  neptune: 'telescope required',
+};
+export const TELESCOPE_BODIES = new Set(Object.keys(TELESCOPE_NOTES));
 
 export function brightnessDescription(magnitude) {
   if (!Number.isFinite(magnitude)) return 'brightness unavailable';
@@ -239,6 +238,12 @@ function constellationAt(body, observer, date) {
 // degrees down. Everything else, Mercury included, needs civil twilight to end.
 const SUN_LIMIT = { Venus: -3 };
 
+// Whether the sky is dark enough at this Sun altitude to see the body, by the
+// same rule the nightly visibility search uses.
+export function darkEnoughFor(body, sunAltitudeDegrees) {
+  return sunAltitudeDegrees <= (SUN_LIMIT[body] ?? -6);
+}
+
 function visibilitySamples(body, observer, window) {
   const sunLimit = SUN_LIMIT[body] ?? -6;
   const bounds = sunLimit > -6
@@ -270,12 +275,13 @@ export function bodyReport(body, observer, window, sampleTime) {
   );
   const position = horizontal(body, observer, at);
   const illumination = A.Illumination(body, best?.time ?? at);
+  const key = body.toLowerCase();
+  const telescopeNote = TELESCOPE_NOTES[key];
   let note = best ? '' : invisibleNote(samples);
-  if (body === 'Uranus') note = note || 'Optical aid recommended.';
-  if (body === 'Neptune') note = note || 'Telescope required.';
+  if (telescopeNote) note = note || `${telescopeNote.charAt(0).toUpperCase()}${telescopeNote.slice(1)}.`;
 
   return {
-    key: body.toLowerCase(),
+    key,
     name: body,
     visible: Boolean(best),
     bestTime: best?.time ?? null,
@@ -283,11 +289,7 @@ export function bodyReport(body, observer, window, sampleTime) {
     azimuth: position.azimuth,
     compass: compassDirection(position.azimuth),
     mag: illumination.mag,
-    brightness: body === 'Uranus'
-      ? 'optical aid recommended'
-      : body === 'Neptune'
-        ? 'telescope required'
-        : brightnessDescription(illumination.mag),
+    brightness: telescopeNote ?? brightnessDescription(illumination.mag),
     rise: searchRiseSet(body, observer, +1, window.start, 2),
     set: searchRiseSet(body, observer, -1, window.start, 2),
     constellation: constellationAt(body, observer, at),

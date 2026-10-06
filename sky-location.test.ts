@@ -62,14 +62,14 @@ test('legacy and per-country zone names resolve to real coordinates', () => {
 });
 
 describe('location resolution', () => {
-  test('uses and stores a silent time-zone guess without touching geolocation', () => {
+  test('uses a silent time-zone guess without touching geolocation or storage', () => {
     const env = fakeEnvironment();
     Object.defineProperty(env.navigator, 'geolocation', {
       get() { throw new Error('geolocation must not be read'); },
     });
     const location = resolveLocation(env);
     expect(location).toMatchObject({ lat: 41.85, lon: -87.65, source: 'tz', label: 'Chicago area' });
-    expect(JSON.parse(env.values.get(LOCATION_STORAGE_KEY)!)).toMatchObject({ source: 'tz' });
+    expect(env.values.has(LOCATION_STORAGE_KEY)).toBe(false);
   });
 
   test('prefers a valid stored location', () => {
@@ -87,7 +87,6 @@ describe('location resolution', () => {
     const env = fakeEnvironment('Asia/Calcutta');
     env.values.set(LOCATION_STORAGE_KEY, JSON.stringify({ lat: 0, lon: 82.5, source: 'tz', timeZone: 'Asia/Calcutta', approximate: true }));
     expect(resolveLocation(env)).toMatchObject({ lat: 22.53, approximate: false });
-    expect(JSON.parse(env.values.get(LOCATION_STORAGE_KEY)!)).toMatchObject({ lat: 22.53 });
   });
 
   test('falls back to the UTC offset when the zone is unknown', () => {

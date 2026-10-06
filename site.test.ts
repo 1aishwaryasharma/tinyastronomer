@@ -1224,8 +1224,16 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   // Uranus and Neptune leave the chart and the lists unless the reader asks.
   expect(sky).toContain('id="telescope-planets"');
   expect(sky).toContain("telescopeDetails.open || !TELESCOPE_BODIES.has(body.key)");
-  // The drawer's one visible line names the easiest targets, planets first.
-  expect(sky).toContain('easiestToSpot(');
+  // The drawer's one visible line names the easiest target, planets first.
+  expect(sky).toContain('whereToLookShort(best)');
+  // A planet that is up is not "up now" until the sky is dark enough for it.
+  expect(sky).toContain('darkEnoughFor(report.name, sunAltitude)');
+  // Crawlers and failed script loads see the searched question, not a placeholder.
+  expect(sky).toContain('<h2 class="info-title" id="sky-headline">What\'s in the sky tonight?</h2>');
+  // New exports must not meet a cached module without them.
+  expect(sky).toContain("from './sky-forecast.js?v=");
+  expect(sky).toContain("from './sky-location.js?v=");
+  expect(readFileSync('sky-location.js', 'utf8')).toContain("from './tz-coords.js?v=");
   expect(sky).not.toContain('End of the journey');
   expect(sky).toContain('Go out with a grown-up, and never look at the Sun.');
   expect(sky).toContain('id="print-sky"');
