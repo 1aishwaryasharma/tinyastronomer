@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { TZ_ALIASES, TZ_COORDS } from './public/tz-coords.js';
+import { TZ_ALIASES, TZ_COORDS, TZ_SHARED_CLOCKS } from './public/tz-coords.js';
 import {
   LOCATION_STORAGE_KEY,
   describeLocation,
@@ -51,14 +51,36 @@ test('legacy and per-country zone names resolve to real coordinates', () => {
   for (const zone of ['Europe/Amsterdam', 'Europe/Stockholm', 'Asia/Kuala_Lumpur', 'Asia/Kuwait', 'Africa/Accra']) {
     expect(TZ_COORDS[zone]).toBeDefined();
   }
+  // backward links promise a shared clock, not a shared place. Renames (and
+  // #= successors) are exact; merged places and clock names are rough.
+  expect(TZ_ALIASES['Africa/Asmera']).toBe('Africa/Asmara');
+  expect(TZ_ALIASES['Pacific/Truk']).toBe('Pacific/Chuuk');
+  expect(TZ_ALIASES.Iceland).toBe('Atlantic/Reykjavik');
+  for (const zone of ['Africa/Timbuktu', 'Pacific/Yap', 'America/Coral_Harbour', 'Antarctica/South_Pole', 'Atlantic/Jan_Mayen', 'Asia/Harbin', 'Asia/Chungking', 'EST', 'CET']) {
+    expect(TZ_ALIASES[zone], zone).toBeUndefined();
+    expect(TZ_SHARED_CLOCKS[zone], zone).toBeDefined();
+  }
   const module = buildModule(
-    'BE,LU,NL\t+5050+00420\tEurope/Brussels\n',
+    'BE,LU,NL\t+5050+00420\tEurope/Brussels\nCI,ML\t+0519-00402\tAfrica/Abidjan\nIS\t+6409-02151\tAtlantic/Reykjavik\n',
     'NL\t+5222+00454\tEurope/Amsterdam\n',
-    'Link\tEurope/Brussels\t\tEurope/Luxembourg\nLink\tEurope/Amsterdam\tEurope/Old_Name # comment\n',
+    [
+      '# Pre-1993 naming conventions',
+      '# Link\tTARGET\tLINK-NAME\t#= TARGET1',
+      'Link\tEurope/Brussels\tCET',
+      'Link\tAfrica/Abidjan\tIceland\t#= Atlantic/Reykjavik',
+      '# Non-zone.tab locations with timestamps since 1970 that duplicate',
+      '# those of an existing location',
+      'Link\tAfrica/Abidjan\tAfrica/Timbuktu',
+      '# Alternate names for the same location',
+      'Link\tEurope/Amsterdam\tEurope/Old_Name # comment',
+    ].join('\n'),
   );
   expect(module).toContain('"Europe/Amsterdam": [52.37, 4.9]');
-  expect(module).toContain('"Europe/Luxembourg": "Europe/Brussels"');
+  expect(module).toContain('"Iceland": "Atlantic/Reykjavik"');
   expect(module).toContain('"Europe/Old_Name": "Europe/Amsterdam"');
+  const shared = module.slice(module.indexOf('TZ_SHARED_CLOCKS'));
+  expect(shared).toContain('"Africa/Timbuktu": "Africa/Abidjan"');
+  expect(shared).toContain('"CET": "Europe/Brussels"');
 });
 
 describe('location resolution', () => {
@@ -81,6 +103,13 @@ describe('location resolution', () => {
   test('legacy browser zone names are located, not sent to the equator', () => {
     const location = resolveLocation(fakeEnvironment('Asia/Calcutta'));
     expect(location).toMatchObject({ lat: 22.53, lon: 88.37, source: 'tz', approximate: false, label: 'Kolkata area' });
+  });
+
+  test('a zone that only shares another country\'s clock is a labelled rough guess', () => {
+    // Africa/Timbuktu (Mali) runs on Abidjan (Ivory Coast) time.
+    expect(resolveLocation(fakeEnvironment('Africa/Timbuktu'))).toMatchObject({
+      lat: 5.32, lon: -4.03, approximate: true, label: 'Rough guess from your time zone',
+    });
   });
 
   test('a stored time-zone guess is redone, so old equator fallbacks heal', () => {

@@ -34,15 +34,43 @@ function parseTab(tab: string): Map<string, [number, number]> {
   return zones;
 }
 
-// Browsers still report legacy names: Chrome says Asia/Calcutta for all of
-// India. `backward` maps each one to the zone that replaced it.
-function parseLinks(backward: string): Map<string, string> {
-  const links = new Map<string, string>();
+// Clock names from Unix System V and POSIX, not places.
+const CLOCK_NAMES = new Set(['CET', 'EET', 'EST', 'HST', 'MET', 'MST', 'WET']);
+
+// `backward` maps old names to current zones, but a link only promises the
+// same clock, not the same place. Its sections say which is which:
+// "Alternate names for the same location" (and the older renames) are the
+// same city, so Asia/Calcutta is Kolkata; "Non-zone.tab locations ... that
+// duplicate those of an existing location" are other places that merely
+// share a clock, so Africa/Timbuktu links to Abidjan, in another country.
+// Those, and clock names like EST, only get a rough position.
+function parseLinks(backward: string, coords: Map<string, unknown>) {
+  const exact = new Map<string, string>();
+  const shared = new Map<string, string>();
+  const links: { target: string; name: string; successor?: string; merged: boolean }[] = [];
+  let merged = false;
   for (const line of backward.split(/\r?\n/)) {
-    const [kind, target, name] = line.replace(/#.*/, '').trim().split(/\s+/);
-    if (kind === 'Link' && target && name) links.set(name, target);
+    if (line.startsWith('# ')) {
+      if (/^# (Pre-1993|Two-part|Pre-2013|Alternate names)/.test(line)) merged = false;
+      else if (/^# Non-zone\.tab locations/.test(line)) merged = true;
+      continue;
+    }
+    // "#= TARGET1" names the link's real successor where tzdb could not
+    // link to a link, e.g. Iceland #= Atlantic/Reykjavik.
+    const match = line.match(/^Link\s+(\S+)\s+(\S+)(?:\s+#=\s*(\S+))?/);
+    if (match) links.push({ target: match[1], name: match[2], successor: match[3], merged });
   }
-  return links;
+  for (const link of links.filter((link) => link.merged || CLOCK_NAMES.has(link.name))) shared.set(link.name, link.target);
+  for (const { target, name, successor } of links) {
+    if (coords.has(name) || shared.has(name)) continue;
+    if (successor && coords.has(successor)) exact.set(name, successor);
+    else if (successor && shared.has(successor)) shared.set(name, shared.get(successor)!);
+    else exact.set(name, target);
+  }
+  const located = (map: Map<string, string>) => [...map]
+    .filter(([name, target]) => !coords.has(name) && coords.has(target))
+    .sort(([a], [b]) => a.localeCompare(b));
+  return { exact: located(exact), shared: located(shared) };
 }
 
 // zone1970.tab merges countries that have shared clocks since 1970, so
@@ -50,12 +78,11 @@ function parseLinks(backward: string): Map<string, string> {
 // reference city, which is the better guess for someone standing there.
 export function buildModule(zone1970Tab: string, zoneTab = '', backward = ''): string {
   const coords = new Map([...parseTab(zone1970Tab), ...parseTab(zoneTab)]);
-  const aliases = [...parseLinks(backward)]
-    .filter(([name, target]) => !coords.has(name) && coords.has(target))
-    .sort(([a], [b]) => a.localeCompare(b));
+  const { exact, shared } = parseLinks(backward, coords);
   const rows = [...coords]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([zone, [lat, lon]]) => `  ${JSON.stringify(zone)}: [${lat}, ${lon}],`);
+  const mapRows = (entries: [string, string][]) => entries.map(([name, target]) => `  ${JSON.stringify(name)}: ${JSON.stringify(target)},`);
   return [
     '// Generated from the IANA Time Zone Database zone.tab, zone1970.tab and',
     '// backward (public domain).',
@@ -65,9 +92,15 @@ export function buildModule(zone1970Tab: string, zoneTab = '', backward = ''): s
     ...rows,
     '};',
     '',
-    '// Legacy and merged zone names, mapped to the zone whose coordinates they use.',
+    '// Old names for the same place, mapped to the zone that replaced them.',
     'export const TZ_ALIASES = {',
-    ...aliases.map(([name, target]) => `  ${JSON.stringify(name)}: ${JSON.stringify(target)},`),
+    ...mapRows(exact),
+    '};',
+    '',
+    '// Other places, or bare clock names, that only share a zone\'s clock.',
+    '// Their coordinates are a rough guess, not a location.',
+    'export const TZ_SHARED_CLOCKS = {',
+    ...mapRows(shared),
     '};',
     '',
   ].join('\n');

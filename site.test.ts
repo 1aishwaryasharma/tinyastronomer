@@ -1216,6 +1216,19 @@ test('sky tonight builds a private local forecast before requesting precise loca
   expect(sky.indexOf('id="sky-list"')).toBeLessThan(sky.indexOf('id="star-list"'));
 });
 
+test('each local module is imported under one URL', () => {
+  // Two spellings (with and without ?v=) are two module instances: the file is
+  // fetched and run twice, and the unversioned copy escapes cache-busting.
+  const specifiers = new Map<string, Set<string>>();
+  for (const file of readdirSync('.').filter((name) => /\.(?:html|js)$/.test(name) && name !== 'common.bundle.js')) {
+    for (const match of readFileSync(file, 'utf8').matchAll(/\bfrom\s+['"](\.\/[^'"?]+)(\?[^'"]*)?['"]/g)) {
+      if (!specifiers.has(match[1])) specifiers.set(match[1], new Set());
+      specifiers.get(match[1])!.add(match[0].replace(/^from\s+/, ''));
+    }
+  }
+  for (const [module, urls] of specifiers) expect([...urls], module).toHaveLength(1);
+});
+
 test('sky tonight speaks to children: fists, words, and no telescope-only planets up front', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   expect(sky).toContain('id="sky-headline"');
@@ -1237,6 +1250,9 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   expect(sky).not.toContain('End of the journey');
   expect(sky).toContain('Go out with a grown-up, and never look at the Sun.');
   expect(sky).toContain('id="print-sky"');
+  // An open guide prints itself even if the card's class was left behind.
+  expect(sky).toContain('body.printing-sky:not(:has(.page-guide[open])) > :not(.sky-print-card)');
+  expect(sky).toContain("addEventListener('beforeprint'");
   expect(readFileSync('index.html', 'utf8')).toContain('href="/sky-tonight" id="home-sky-tonight"');
 });
 

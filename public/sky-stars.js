@@ -1,6 +1,6 @@
 import * as A from './vendor/astronomy-engine/astronomy.min.js';
 import { STAR_CATALOG } from './assets/stars/catalog.js';
-import { compassDirection } from './sky-forecast.js';
+import { compassDirection } from './sky-forecast.js?v=20261006-2';
 
 const MAS_TO_RAD = Math.PI / (180 * 3600000);
 const J2000 = Date.parse('2000-01-01T12:00:00Z');

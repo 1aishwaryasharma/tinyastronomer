@@ -1,4 +1,4 @@
-import { TZ_ALIASES, TZ_COORDS } from './tz-coords.js?v=20261006-1';
+import { TZ_ALIASES, TZ_COORDS, TZ_SHARED_CLOCKS } from './tz-coords.js?v=20261006-2';
 
 export const LOCATION_STORAGE_KEY = 'sky.location';
 
@@ -66,10 +66,13 @@ function timezoneGuess(env) {
     return location;
   }
 
+  // A zone that only shares another place's clock (Africa/Timbuktu runs on
+  // Abidjan time) is near that place at best: use it, but call it rough.
+  const sharedClock = TZ_COORDS[TZ_SHARED_CLOCKS[timeZone]];
   const offsetMinutes = new env.Date().getTimezoneOffset();
   const location = {
-    lat: 0,
-    lon: Math.max(-180, Math.min(180, -offsetMinutes / 4)),
+    lat: sharedClock ? sharedClock[0] : 0,
+    lon: sharedClock ? sharedClock[1] : Math.max(-180, Math.min(180, -offsetMinutes / 4)),
     source: 'tz',
     timeZone,
     approximate: true,

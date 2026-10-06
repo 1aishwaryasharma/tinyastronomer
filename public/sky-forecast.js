@@ -234,9 +234,11 @@ function constellationAt(body, observer, date) {
   return A.Constellation(eqj.ra, eqj.dec).name;
 }
 
-// Venus is bright enough to find in early twilight, once the Sun is a few
-// degrees down. Everything else, Mercury included, needs civil twilight to end.
-const SUN_LIMIT = { Venus: -3 };
+// The Moon is plain to see in twilight, and even by day, so it is up for the
+// whole night window. Venus is bright enough to find in early twilight, once
+// the Sun is a few degrees down. Everything else, Mercury included, needs
+// civil twilight to end.
+const SUN_LIMIT = { Moon: 0, Venus: -3 };
 
 // Whether the sky is dark enough at this Sun altitude to see the body, by the
 // same rule the nightly visibility search uses.
@@ -263,6 +265,19 @@ function invisibleNote(samples) {
   if (maxAltitude <= 0) return 'Below the horizon all night.';
   if (maxAltitude <= 5) return 'Too low on the horizon to see clearly.';
   return 'Lost in twilight tonight.';
+}
+
+// Every setting inside the window: in a long polar night a body can set,
+// rise and set again before the window ends.
+function setsWithin(body, observer, window) {
+  const sets = [];
+  for (let from = window.start; sets.length < 4;) {
+    const set = searchRiseSet(body, observer, -1, from, 2);
+    if (!set || set > window.end) break;
+    sets.push(set);
+    from = new Date(set.getTime() + 60000);
+  }
+  return sets;
 }
 
 export function bodyReport(body, observer, window, sampleTime) {
@@ -292,6 +307,7 @@ export function bodyReport(body, observer, window, sampleTime) {
     brightness: telescopeNote ?? brightnessDescription(illumination.mag),
     rise: searchRiseSet(body, observer, +1, window.start, 2),
     set: searchRiseSet(body, observer, -1, window.start, 2),
+    sets: setsWithin(body, observer, window),
     constellation: constellationAt(body, observer, at),
     note,
   };

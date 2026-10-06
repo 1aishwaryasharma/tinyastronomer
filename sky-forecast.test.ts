@@ -172,4 +172,7 @@ test('heights read in fists and directions in words', async () => {
   expect(darkEnoughFor('Jupiter', -1)).toBe(false);
   expect(darkEnoughFor('Jupiter', -6)).toBe(true);
   expect(darkEnoughFor('Venus', -4)).toBe(true);
+  // The Moon is plain to see in twilight.
+  expect(darkEnoughFor('Moon', -3)).toBe(true);
+  expect(darkEnoughFor('Moon', 2)).toBe(false);
 });
