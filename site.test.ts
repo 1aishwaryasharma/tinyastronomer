@@ -1207,10 +1207,29 @@ test('sky tonight builds a private local forecast before requesting precise loca
   }
   expect(sky).toContain('Used only on this device. Nothing is sent anywhere.');
   expect(sky.indexOf('requestDeviceLocation()')).toBeGreaterThan(sky.indexOf('useLocationButton.onclick'));
-  // sky-list must stay above the bright-star block. Argent Chromium omits
-  // off-viewport ids, and the 1280×800 QA window cannot show both at once.
-  expect(sky.indexOf('id="night-window"')).toBeLessThan(sky.indexOf('id="sky-list"'));
+  // Lead with the answer: what is up comes before the observing-window detail.
+  // Argent Chromium omits off-viewport ids, so the location card, sky-list and
+  // night-window (a visual baseline) must all stay inside the 1280×800 panel.
+  expect(sky.indexOf('id="use-location"')).toBeLessThan(sky.indexOf('id="sky-list"'));
+  expect(sky.indexOf('id="sky-list"')).toBeLessThan(sky.indexOf('id="night-window"'));
+  expect(sky.indexOf('id="night-window"')).toBeLessThan(sky.indexOf('id="later-list"'));
   expect(sky.indexOf('id="sky-list"')).toBeLessThan(sky.indexOf('id="star-list"'));
+});
+
+test('sky tonight speaks to children: fists, words, and no telescope-only planets up front', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  expect(sky).toContain('id="sky-headline"');
+  expect(sky).toContain('id="up-now-heading"');
+  expect(sky).toContain('whereToLook(position)');
+  // Uranus and Neptune leave the chart and the lists unless the reader asks.
+  expect(sky).toContain('id="telescope-planets"');
+  expect(sky).toContain("telescopeDetails.open || !TELESCOPE_BODIES.has(body.key)");
+  // The drawer's one visible line names the easiest targets, planets first.
+  expect(sky).toContain('easiestToSpot(');
+  expect(sky).not.toContain('End of the journey');
+  expect(sky).toContain('Go out with a grown-up, and never look at the Sun.');
+  expect(sky).toContain('id="print-sky"');
+  expect(readFileSync('index.html', 'utf8')).toContain('href="/sky-tonight" id="home-sky-tonight"');
 });
 
 test('sky tonight offers one horizon canvas with time and orbit controls', () => {

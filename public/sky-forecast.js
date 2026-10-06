@@ -80,6 +80,49 @@ export function compassDirection(azimuth) {
   return COMPASS_POINTS[Math.round(normalized / 22.5) % 16];
 }
 
+const COMPASS_WORDS = {
+  N: 'north', NNE: 'north-northeast', NE: 'northeast', ENE: 'east-northeast',
+  E: 'east', ESE: 'east-southeast', SE: 'southeast', SSE: 'south-southeast',
+  S: 'south', SSW: 'south-southwest', SW: 'southwest', WSW: 'west-southwest',
+  W: 'west', WNW: 'west-northwest', NW: 'northwest', NNW: 'north-northwest',
+};
+
+export function compassWords(compass) {
+  return COMPASS_WORDS[compass] ?? compass;
+}
+
+// A fist held at arm's length covers about 10° of sky, for adults and children
+// alike (smaller hands, shorter arms). Degrees mean little to a seven-year-old.
+export function fistHeight(altitude) {
+  if (altitude < 3) return 'right on the horizon';
+  if (altitude < 7) return 'half a fist up';
+  if (altitude >= 75) return 'almost straight overhead';
+  const halves = Math.round(altitude / 5) / 2;
+  const whole = Math.floor(halves);
+  return `${whole}${halves % 1 ? '½' : ''} fist${halves === 1 ? '' : 's'} up`;
+}
+
+export function whereToLook(position) {
+  const height = fistHeight(position.altitude);
+  return position.altitude >= 75 ? height : `${height} in the ${compassWords(position.compass)}`;
+}
+
+// Uranus and Neptune are in the forecast, but a child looking for them by eye
+// will not find them, so they stay out of the headline lists and the chart
+// unless asked for.
+export const TELESCOPE_BODIES = new Set(['uranus', 'neptune']);
+
+// What to point a child at first: the Moon and naked-eye planets, brightest
+// first, then the brightest stars. Planets beat stars of similar brightness
+// because they are what people come looking for.
+export function easiestToSpot(bodies, stars = []) {
+  const byBrightness = (a, b) => (a.magnitude ?? 99) - (b.magnitude ?? 99);
+  return [
+    ...bodies.filter((body) => !TELESCOPE_BODIES.has(body.key) && body.key !== 'sun' && body.altitude > 5).sort(byBrightness),
+    ...[...stars].sort(byBrightness),
+  ];
+}
+
 export function brightnessDescription(magnitude) {
   if (!Number.isFinite(magnitude)) return 'brightness unavailable';
   if (magnitude < -3) return 'brighter than any star';

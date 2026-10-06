@@ -151,3 +151,24 @@ describe('Sky Tonight accuracy regressions', () => {
     }
   });
 });
+
+test('heights read in fists and directions in words', async () => {
+  const { compassWords, easiestToSpot, fistHeight, whereToLook } = await import('./public/sky-forecast.js');
+  expect(fistHeight(1)).toBe('right on the horizon');
+  expect(fistHeight(5)).toBe('half a fist up');
+  expect(fistHeight(10)).toBe('1 fist up');
+  expect(fistHeight(14)).toBe('1½ fists up');
+  expect(fistHeight(19)).toBe('2 fists up');
+  expect(fistHeight(80)).toBe('almost straight overhead');
+  expect(compassWords('ESE')).toBe('east-southeast');
+  expect(whereToLook({ altitude: 19, compass: 'ESE' })).toBe('2 fists up in the east-southeast');
+  expect(whereToLook({ altitude: 81, compass: 'NNW' })).toBe('almost straight overhead');
+  // A planet beats a slightly brighter star; Neptune and set bodies never lead.
+  const order = easiestToSpot([
+    { key: 'neptune', altitude: 40, magnitude: 7.8 },
+    { key: 'saturn', altitude: 19, magnitude: 0.6 },
+    { key: 'jupiter', altitude: -10, magnitude: -2.4 },
+    { key: 'moon', altitude: 30, magnitude: -11 },
+  ], [{ key: 'vega', altitude: 71, magnitude: 0.03 }]).map((body) => body.key);
+  expect(order).toEqual(['moon', 'saturn', 'vega']);
+});
