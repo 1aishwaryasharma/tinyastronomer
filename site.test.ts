@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { moduleHash, VERSIONED_MODULES } from "./tools/stamp-module-versions.ts";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { handleRequest } from "./dev-server.ts";
@@ -1227,6 +1228,21 @@ test('each local module is imported under one URL', () => {
     }
   }
   for (const [module, urls] of specifiers) expect([...urls], module).toHaveLength(1);
+});
+
+test('Sky Tonight module versions are content hashes', () => {
+  // Hand-bumped dates were missed twice: sky-stars.js changed without a new
+  // ?v=, so a cached copy imported an older sky-forecast.js and the page ran
+  // two instances. A version that is the file's hash cannot be forgotten, and
+  // because each importer contains its imports' hashes, a change ripples up.
+  const modules = VERSIONED_MODULES;
+  const hash = (file: string) => moduleHash(readFileSync(file));
+  for (const file of readdirSync('.').filter((name) => /\.(?:html|js)$/.test(name))) {
+    for (const match of readFileSync(file, 'utf8').matchAll(/from\s+['"]\.\/([\w-]+\.js)(?:\?v=([^'"]*))?['"]/g)) {
+      if (!modules.includes(match[1])) continue;
+      expect(match[2], `${file} imports ${match[1]}: run bun tools/stamp-module-versions.ts`).toBe(hash(match[1]));
+    }
+  }
 });
 
 test('sky tonight speaks to children: fists, words, and no telescope-only planets up front', () => {

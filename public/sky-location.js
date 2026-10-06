@@ -1,4 +1,4 @@
-import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './tz-coords.js?v=20261006-3';
+import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './tz-coords.js?v=a9c8921321';
 
 export const LOCATION_STORAGE_KEY = 'sky.location';
 

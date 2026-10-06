@@ -39,6 +39,11 @@ its post-processing helpers. After editing those sources, rebuild with
 `bun run build.ts`. Three.js and the early-loading chrome module remain shared
 external dependencies.
 
+Sky Tonight's module imports carry content-hash versions. After editing
+`sky-forecast.js`, `sky-stars.js`, `sky-location.js` or `tz-coords.js`, run
+`bun tools/stamp-module-versions.ts`. Settled review decisions are in
+[REVIEW.md](REVIEW.md).
+
 Run the repository checks with Bun:
 
 ```sh

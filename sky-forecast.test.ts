@@ -241,3 +241,31 @@ describe('Sky Tonight review regressions (written before their fixes)', () => {
     expect(skyHeadline({ up: [], later: [] }, { when: 'now', time, hasStars: true })).toBe('No planets up — look for bright stars');
   });
 });
+
+describe('Sky Tonight round-four regressions (written before their fixes)', () => {
+  test('in a polar night, a body that sets and rises again is "later", not "earlier"', async () => {
+    const { sortSkyLists, FORECAST_BODIES } = await import('./public/sky-forecast.js');
+    // Tromsø's 24-hour window from 19 Dec 2026: the Moon is best at 18:44,
+    // sets, and is visible again from about 10:34 the next morning.
+    const tromso = new Astronomy.Observer(69.65, 18.96, 0);
+    const w = nightWindow(tromso, new Date(2026, 11, 19, 12));
+    expect(w.polar).toBe('night');
+    const time = new Date('2026-12-20T03:44:00Z');
+    const reports = FORECAST_BODIES.map((body: string) => bodyReport(body, tromso, w));
+    const positions = Object.fromEntries(['Sun', ...FORECAST_BODIES].map((body: string) => [body.toLowerCase(), positionAt(body, tromso, time)]));
+    const lists = sortSkyLists(reports, positions, tromso, time);
+    const moon = lists.later.find((item: any) => item.key === 'moon');
+    expect(lists.earlier.map((item: any) => item.key)).not.toContain('moon');
+    expect(moon).toBeDefined();
+    // "Best around" means the best still to come, not the one already past.
+    expect(moon.bestTime.getTime()).toBeGreaterThan(time.getTime());
+  });
+
+  test('highlights only pair objects a child can find by eye', () => {
+    // 6 Mar 2026, London: Venus passes 2.2° from Saturn and 0.9° from Neptune.
+    const london = new Astronomy.Observer(51.5, -0.1, 0);
+    const found = conjunctions(london, nightWindow(london, new Date(2026, 2, 6, 12))).map((pair) => pair.bodies.join('-'));
+    expect(found).toContain('Venus-Saturn');
+    expect(found.filter((pair) => /Uranus|Neptune/.test(pair))).toEqual([]);
+  });
+});

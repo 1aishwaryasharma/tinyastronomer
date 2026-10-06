@@ -290,6 +290,7 @@ export function bodyReport(body, observer, window, sampleTime) {
   const at = asDate(sampleTime ?? window.astroDusk ?? window.civilDusk ?? window.start);
   const samples = visibilitySamples(body, observer, window);
   const candidates = samples.filter((sample) => isVisibleAt(body, sample.position.altitude, sample.sunAltitude));
+  const withCompass = (sample) => sample && { time: sample.time, position: { ...sample.position, compass: compassDirection(sample.position.azimuth) } };
   const best = candidates.reduce(
     (winner, sample) => !winner || sample.position.altitude > winner.position.altitude ? sample : winner,
     null,
@@ -305,7 +306,10 @@ export function bodyReport(body, observer, window, sampleTime) {
     name: body,
     visible: Boolean(best),
     bestTime: best?.time ?? null,
-    bestPosition: best ? { ...best.position, compass: compassDirection(best.position.azimuth) } : null,
+    bestPosition: withCompass(best)?.position ?? null,
+    // Every visible sample, so the page can tell "later" from "earlier" in
+    // a long polar night, where a body can set and rise again.
+    visibleSamples: candidates.map(withCompass),
     altitude: position.altitude,
     azimuth: position.azimuth,
     compass: compassDirection(position.azimuth),
@@ -368,13 +372,15 @@ export function conjunctions(observer, window) {
   // No pair closes more than a few degrees in one night, so a single midnight
   // check skips the far-apart pairs before sampling the whole night.
   const middle = new Date((window.start.getTime() + window.end.getTime()) / 2);
-  const middleVectors = new Map(FORECAST_BODIES.map((body) => [body, A.Equator(body, middle, observer, false, true).vec]));
+  // Only pairs a child can find by eye: Uranus and Neptune are not shown.
+  const bodies = FORECAST_BODIES.filter((body) => !TELESCOPE_BODIES.has(body.toLowerCase()));
+  const middleVectors = new Map(bodies.map((body) => [body, A.Equator(body, middle, observer, false, true).vec]));
   const pairs = [];
 
-  for (let i = 0; i < FORECAST_BODIES.length; i += 1) {
-    for (let j = i + 1; j < FORECAST_BODIES.length; j += 1) {
-      const bodyA = FORECAST_BODIES[i];
-      const bodyB = FORECAST_BODIES[j];
+  for (let i = 0; i < bodies.length; i += 1) {
+    for (let j = i + 1; j < bodies.length; j += 1) {
+      const bodyA = bodies[i];
+      const bodyB = bodies[j];
       if (A.AngleBetween(middleVectors.get(bodyA), middleVectors.get(bodyB)) > 15) continue;
       const vectorsB = upVectors(bodyB);
       let closest = null;
@@ -452,19 +458,27 @@ export function displayName(name) {
 // at `time` too, since the Moon can cross into another during the night.
 export function sortSkyLists(reports, positions, observer, time) {
   const naked = reports.filter((report) => !TELESCOPE_BODIES.has(report.key));
-  const isUp = (report) => report.visible && isVisibleAt(report.name, positions[report.key].altitude, positions.sun.altitude);
-  const up = naked.filter(isUp)
-    .sort((a, b) => positions[a.key].magnitude - positions[b.key].magnitude)
-    .map((report) => ({ ...report, position: positions[report.key], constellation: constellationAt(report.name, observer, time) }));
-  const later = naked.filter((report) => report.visible && !isUp(report) && report.bestTime > time)
-    .sort((a, b) => a.bestTime - b.bestTime);
-  const earlier = naked.filter((report) => report.visible && !isUp(report) && report.bestTime <= time);
-  const missing = naked.filter((report) => !report.visible);
+  const up = [], later = [], earlier = [], missing = [];
+  for (const report of naked) {
+    if (!report.visible) { missing.push(report); continue; }
+    if (isVisibleAt(report.name, positions[report.key].altitude, positions.sun.altitude)) {
+      up.push({ ...report, position: positions[report.key], constellation: constellationAt(report.name, observer, time) });
+      continue;
+    }
+    // "Later" if it is visible again before the window ends; its best time
+    // is the best still to come.
+    const ahead = report.visibleSamples.filter((sample) => sample.time > time);
+    if (!ahead.length) { earlier.push(report); continue; }
+    const next = ahead.reduce((best, sample) => sample.position.altitude > best.position.altitude ? sample : best);
+    later.push({ ...report, bestTime: next.time, bestPosition: next.position });
+  }
+  up.sort((a, b) => a.position.magnitude - b.position.magnitude);
+  later.sort((a, b) => a.bestTime - b.bestTime);
   const telescope = reports.filter((report) => TELESCOPE_BODIES.has(report.key));
   return { up, later, earlier, missing, telescope };
 }
 
-const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 const andList = new Intl.ListFormat('en', { type: 'conjunction' });
 
 // `when` is "now" or "at 9:30 pm"; `time` formats a Date for the reader.

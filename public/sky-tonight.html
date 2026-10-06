@@ -235,9 +235,9 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=20261006-4';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=20261006-2';
-import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=20261006-4';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=05a2487265';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=02c3c70d2e';
+import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=4f86c4e739';
 import { layoutSkyLabels } from './sky-labels.js';
 
 const clamp = SPACE.clamp;
@@ -494,7 +494,7 @@ let activeWindow = null;
 let currentReports = [];
 let allPositions = [];
 let moonText = '';
-let currentLists = { up: [], later: [], positions: {} };
+let currentLists = { up: [], later: [] };
 let selectedTime = null;
 let viewMode = 'horizon';
 try { viewMode = localStorage.getItem('sky.view') === 'orbit' ? 'orbit' : 'horizon'; } catch {}
@@ -649,7 +649,6 @@ function makeOtherItem(report, position, note = report.note) {
   return row;
 }
 const orList = new Intl.ListFormat('en', { type: 'disjunction' });
-function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
 let listsSayNow = false;
 let bestTarget = '';
 function listAnnouncement() { return [headline.textContent, bestTarget].filter(Boolean).join('. ') + '.'; }
@@ -672,7 +671,7 @@ setInterval(() => { if (listsSayNow && !selectedIsNow()) renderNowWording(); }, 
 function renderLists(positions) {
   const observer = new Astronomy.Observer(location.lat, location.lon, 0);
   const { up, later, earlier, missing, telescope } = sortSkyLists(currentReports, positions, observer, selectedTime);
-  currentLists = { up, later, positions };
+  currentLists = { up, later };
   renderNowWording();
 
   listEl.replaceChildren(...up.map(makeUpNowItem));
@@ -823,7 +822,7 @@ function buildPrintCard() {
   const card = document.getElementById('sky-print-card');
   const element = (tag, text, className) => { const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node; };
   const item = (name, text) => { const li = element('li'); li.append(element('strong', name), element('span', text), element('span', '☐ found it', 'check')); return li; };
-  const { up, later, positions } = currentLists;
+  const { up, later } = currentLists;
   const targets = element('ol');
   for (const report of up) targets.appendChild(item(report.name, `${capitalize(whereToLook(report.position))}. ${capitalize(report.brightness)}.`));
   for (const report of later.slice(0, 3)) targets.appendChild(item(report.name, `Around ${formatTime(report.bestTime)}: ${whereToLook(report.bestPosition)}.`));
