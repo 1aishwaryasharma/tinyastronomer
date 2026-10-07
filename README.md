@@ -39,6 +39,11 @@ its post-processing helpers. After editing those sources, rebuild with
 `bun run build.ts`. Three.js and the early-loading chrome module remain shared
 external dependencies.
 
+Sky Tonight's module imports carry content-hash versions. After editing one
+of them (listed in `tools/stamp-module-versions.ts`) or any inline script, run
+`bun tools/stamp-module-versions.ts`; it also refreshes the CSP hashes. Settled review decisions are in
+[REVIEW.md](REVIEW.md).
+
 Run the repository checks with Bun:
 
 ```sh

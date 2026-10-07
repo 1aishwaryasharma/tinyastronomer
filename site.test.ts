@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { moduleHash, VERSIONED_MODULES } from "./tools/stamp-module-versions.ts";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { handleRequest } from "./dev-server.ts";
@@ -1207,10 +1208,125 @@ test('sky tonight builds a private local forecast before requesting precise loca
   }
   expect(sky).toContain('Used only on this device. Nothing is sent anywhere.');
   expect(sky.indexOf('requestDeviceLocation()')).toBeGreaterThan(sky.indexOf('useLocationButton.onclick'));
-  // sky-list must stay above the bright-star block. Argent Chromium omits
-  // off-viewport ids, and the 1280×800 QA window cannot show both at once.
-  expect(sky.indexOf('id="night-window"')).toBeLessThan(sky.indexOf('id="sky-list"'));
+  // Lead with the answer: what is up comes before the observing-window detail.
+  // Argent Chromium omits off-viewport ids, so the location card, sky-list and
+  // night-window (whose times a flow asserts) must stay inside the 1280×800 panel.
+  expect(sky.indexOf('id="use-location"')).toBeLessThan(sky.indexOf('id="sky-list"'));
+  expect(sky.indexOf('id="sky-list"')).toBeLessThan(sky.indexOf('id="night-window"'));
+  expect(sky.indexOf('id="night-window"')).toBeLessThan(sky.indexOf('id="later-list"'));
   expect(sky.indexOf('id="sky-list"')).toBeLessThan(sky.indexOf('id="star-list"'));
+});
+
+test('each local module is imported under one URL', () => {
+  // Two spellings (with and without ?v=) are two module instances: the file is
+  // fetched and run twice, and the unversioned copy escapes cache-busting.
+  const specifiers = new Map<string, Set<string>>();
+  for (const file of readdirSync('.').filter((name) => /\.(?:html|js)$/.test(name) && name !== 'common.bundle.js')) {
+    for (const match of readFileSync(file, 'utf8').matchAll(/\bfrom\s+['"](\.\/[^'"?]+)(\?[^'"]*)?['"]/g)) {
+      if (!specifiers.has(match[1])) specifiers.set(match[1], new Set());
+      specifiers.get(match[1])!.add(match[0].replace(/^from\s+/, ''));
+    }
+  }
+  for (const [module, urls] of specifiers) expect([...urls], module).toHaveLength(1);
+});
+
+test('Sky Tonight module versions are content hashes', () => {
+  // Hand-bumped dates were missed twice: sky-stars.js changed without a new
+  // ?v=, so a cached copy imported an older sky-forecast.js and the page ran
+  // two instances. A version that is the file's hash cannot be forgotten, and
+  // because each importer contains its imports' hashes, a change ripples up.
+  const modules = VERSIONED_MODULES;
+  // Modules only Sky Tonight imports are versioned too.
+  expect(modules).toContain('sky-labels.js');
+  const hash = (file: string) => moduleHash(readFileSync(file));
+  for (const file of readdirSync('.').filter((name) => /\.(?:html|js)$/.test(name))) {
+    for (const match of readFileSync(file, 'utf8').matchAll(/from\s+['"]\.\/([\w-]+\.js)(?:\?v=([^'"]*))?['"]/g)) {
+      if (!modules.includes(match[1])) continue;
+      expect(match[2], `${file} imports ${match[1]}: run bun tools/stamp-module-versions.ts`).toBe(hash(match[1]));
+    }
+  }
+});
+
+test('inline-script CSP hashes ignore CRLF line endings', async () => {
+  // The browser hashes the LF bytes git serves, not a Windows checkout's CRLF.
+  const { inlineScriptHash } = await import('./tools/stamp-module-versions.ts');
+  expect(inlineScriptHash('a\r\nb\r\n')).toBe(inlineScriptHash('a\nb\n'));
+  expect(inlineScriptHash('a\nb\n')).toBe(`'sha256-${createHash('sha256').update('a\nb\n').digest('base64')}'`);
+});
+
+test('the CSP refresh adds hashes to an empty list and keeps pages in folders', async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync: write } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { stampVersions, inlineScriptHash } = await import('./tools/stamp-module-versions.ts');
+  const dir = mkdtempSync(join(tmpdir(), 'csp-'));
+  mkdirSync(join(dir, 'guides'));
+  write(join(dir, '_headers'), "/*\n  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'\n");
+  write(join(dir, 'a.html'), '<script>one()</script>');
+  write(join(dir, 'guides', 'b.html'), '<script>two()</script>');
+  stampVersions(dir);
+  const policy = readFileSync(join(dir, '_headers'), 'utf8');
+  expect(policy).toContain(inlineScriptHash('one()'));
+  expect(policy).toContain(inlineScriptHash('two()'));
+  expect(policy).toContain("; style-src 'self'");
+});
+
+test('module hashes ignore CRLF line endings', () => {
+  // A Windows checkout with autocrlf stamps CRLF bytes; git, CI and the
+  // deploy see LF. The same text must hash the same either way.
+  expect(moduleHash('a\r\nb\r\n')).toBe(moduleHash('a\nb\n'));
+});
+
+test('stamping module versions also refreshes the inline-script CSP hashes', async () => {
+  // Stamping rewrites ?v= inside sky-tonight.html's inline module, which
+  // changes that script's hash in public/_headers.
+  const { mkdtempSync, cpSync, writeFileSync: write } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { stampVersions } = await import('./tools/stamp-module-versions.ts');
+  const dir = mkdtempSync(join(tmpdir(), 'stamp-'));
+  cpSync('.', dir, { recursive: true, filter: (src) => !src.includes('/assets/') && !src.includes('/vendor/') });
+  write(join(dir, 'sky-forecast.js'), readFileSync('sky-forecast.js', 'utf8') + '\n// edited\n');
+  stampVersions(dir);
+  const policy = readFileSync(join(dir, '_headers'), 'utf8');
+  const html = readFileSync(join(dir, 'sky-tonight.html'), 'utf8');
+  for (const match of html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)) {
+    if (/\bsrc=/.test(match[1] || '')) continue;
+    expect(policy).toContain(`'sha256-${createHash('sha256').update(match[2]).digest('base64')}'`);
+  }
+});
+
+test('sky tonight speaks to children: fists, words, and no telescope-only planets up front', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  expect(sky).toContain('id="sky-headline"');
+  expect(sky).toContain('id="up-now-heading"');
+  expect(sky).toContain('whereToLook(item.position)');
+  // Uranus and Neptune leave the chart and the lists unless the reader asks.
+  expect(sky).toContain('id="telescope-planets"');
+  expect(sky).toContain("telescopeDetails.open || !TELESCOPE_BODIES.has(body.key)");
+  // The drawer's one visible line names the easiest target, planets first.
+  expect(sky).toContain('whereToLookShort(best)');
+  // Which body is "up now" is decided by sortSkyLists (tested with real
+  // astronomy in sky-forecast.test.ts), not by a rule copied into the page.
+  expect(sky).toContain('sortSkyLists(currentReports, positions, observer, selectedTime)');
+  // Going stale relabels "now" without rebuilding rows under the reader.
+  expect(sky).toContain('if (listsSayNow && !selectedIsNow()) renderNowWording()');
+  // Crawlers and failed script loads see the searched question, not a placeholder.
+  expect(sky).toContain('<h2 class="info-title" id="sky-headline">What\'s in the sky tonight?</h2>');
+  // New exports must not meet a cached module without them.
+  expect(sky).toContain("from './sky-forecast.js?v=");
+  expect(sky).toContain("from './sky-location.js?v=");
+  expect(readFileSync('sky-location.js', 'utf8')).toContain("from './tz-coords.js?v=");
+  expect(sky).not.toContain('End of the journey');
+  expect(sky).toContain('Go out with a grown-up, and never look at the Sun.');
+  expect(sky).toContain('id="print-sky"');
+  // No timer decides whether the card prints: one request per print, dropped
+  // by the next interaction, so a stale card never replaces a later print.
+  expect(sky).toContain('body.printing-sky > :not(.sky-print-card)');
+  expect(sky).toContain("addEventListener('pointerdown', dropPrintCard, true)");
+  expect(sky).toContain("removeEventListener('pointerdown', dropPrintCard, true)");
+  expect(sky).not.toContain('printCardRequestedAt');
+  expect(readFileSync('index.html', 'utf8')).toContain('href="/sky-tonight" id="home-sky-tonight"');
 });
 
 test('sky tonight offers one horizon canvas with time and orbit controls', () => {

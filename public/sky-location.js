@@ -1,4 +1,4 @@
-import { TZ_COORDS } from './tz-coords.js';
+import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './tz-coords.js?v=a9c8921321';
 
 export const LOCATION_STORAGE_KEY = 'sky.location';
 
@@ -35,8 +35,9 @@ function storeLocation(location, env) {
   return location;
 }
 
-function timezoneLabel(timeZone) {
-  const city = timeZone.includes('/') ? timeZone.split('/').at(-1) : timeZone;
+
+function timezoneLabel(zone) {
+  const city = zone.includes('/') ? zone.split('/').at(-1) : zone;
   return `${city.replaceAll('_', ' ')} area`;
 }
 
@@ -46,48 +47,54 @@ function coordinateLabel(latitude, longitude) {
   return `${lat} ${lon}`;
 }
 
+const TABLES = { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS };
+
+// Where a browser time zone puts the device. Exact for a zone or one of its
+// old names; approximate for a zone that only shares another place's clock
+// (Africa/Timbuktu runs on Abidjan time). Both tables are searched, as the
+// generator keeps targets from either. Null when the zone is unknown.
+export function locateZone(timeZone, tables = TABLES) {
+  const coordinates = (zone) => tables.TZ_COORDS[zone] ?? tables.TZ_CITY_COORDS[zone];
+  const exact = coordinates(tables.TZ_ALIASES[timeZone] ?? timeZone);
+  if (exact) return { lat: exact[0], lon: exact[1], approximate: false, zone: tables.TZ_ALIASES[timeZone] ?? timeZone };
+  const shared = coordinates(tables.TZ_SHARED_CLOCKS[timeZone]);
+  return shared ? { lat: shared[0], lon: shared[1], approximate: true } : null;
+}
+
 function timezoneGuess(env) {
   const timeZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone ?? '';
-  const known = TZ_COORDS[timeZone];
-  if (known) {
-    const location = {
-      lat: known[0],
-      lon: known[1],
-      source: 'tz',
-      timeZone,
-      approximate: false,
-    };
-    location.label = describeLocation(location);
-    return location;
-  }
-
+  // Unknown zones fall back to the equator at the clock's longitude.
   const offsetMinutes = new env.Date().getTimezoneOffset();
   const location = {
     lat: 0,
     lon: Math.max(-180, Math.min(180, -offsetMinutes / 4)),
+    approximate: true,
+    ...locateZone(timeZone),
     source: 'tz',
     timeZone,
-    approximate: true,
   };
-  location.label = 'Approximate time-zone location';
+  location.label = describeLocation(location);
   return location;
 }
 
 export function describeLocation(location) {
   if (location.source === 'tz' && location.timeZone && !location.approximate) {
-    return timezoneLabel(location.timeZone);
+    return timezoneLabel(location.zone ?? location.timeZone);
   }
   if (location.source === 'tz' && location.approximate) {
-    return 'Approximate time-zone location';
+    // Read inside sentences ("updated for …", "At 9:30 pm from …").
+    return 'your area (rough guess)';
   }
   return coordinateLabel(location.lat, location.lon);
 }
 
 export function resolveLocation(env = globalThis) {
   const stored = readStoredLocation(env);
-  if (stored) return { ...stored, label: describeLocation(stored) };
-  const location = timezoneGuess(env);
-  return storeLocation(location, env);
+  // A time-zone guess is cheap to redo, so only device and manual locations
+  // are kept. Redoing it picks up travel and heals guesses stored before a
+  // zone name was recognised, such as the old equator fallback for India.
+  if (stored && stored.source !== 'tz') return { ...stored, label: describeLocation(stored) };
+  return timezoneGuess(env);
 }
 
 const GEOLOCATION_ERRORS = {
@@ -139,6 +146,9 @@ export function setManualLocation(latitude, longitude, env = globalThis) {
 
 // The IANA zone whose reference city is closest to the coordinates. Borders
 // do not follow distance exactly, so callers should say which zone they used.
+// Only one city per distinct clock is searched: a country's own reference
+// town on another zone's clock (Creston, Atikokan) would pull its neighbours
+// onto a clock without daylight saving.
 export function nearestTimeZone(latitude, longitude) {
   const toRadians = Math.PI / 180;
   let best = null, bestDistance = Infinity;

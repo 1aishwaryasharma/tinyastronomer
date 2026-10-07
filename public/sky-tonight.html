@@ -104,6 +104,27 @@
   @media (pointer: coarse) { .small-btn, .location-change summary, .manual-field input, .step-btn, .date-input { min-height: 44px; } .step-btn { min-width: 44px; } }
   .star-item { width: 100%; min-height: 44px; border: 0; border-bottom: 1px solid var(--line); color: var(--ink-dim); background: transparent; text-align: left; font: inherit; cursor: pointer; flex-wrap: wrap; gap: 4px; }
   .star-item:focus-visible { outline: 2px solid #f4c560; outline-offset: 2px; }
+  .sky-item-copy .detail { display: block; margin-top: 1px; }
+  .sky-item-copy .tag a, .sky-explore a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  #later-section[hidden] { display: none; }
+  #print-sky { margin-top: 14px; }
+  #print-sky + .guide-open { margin-top: 8px; }
+  .sky-print-card { display: none; }
+  @media print {
+    body.printing-sky > :not(.sky-print-card) { display: none !important; }
+    body.printing-sky .sky-print-card { display: block; padding: 8px 4px; color: #000; background: #fff; font-family: 'Newsreader', serif; }
+    .sky-print-card h2 { font-size: 30px; font-weight: 400; }
+    .sky-print-card .print-meta { margin-top: 4px; color: #444; font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.06em; }
+    .sky-print-card h3 { margin-top: 18px; font-family: 'Fragment Mono', monospace; font-size: 11px; font-weight: 400; letter-spacing: 0.14em; text-transform: uppercase; }
+    .sky-print-card ol, .sky-print-card ul { margin: 8px 0 0; padding: 0; list-style: none; }
+    .sky-print-card li { display: flex; gap: 12px; align-items: baseline; padding: 9px 0; border-bottom: 1px solid #bbb; font-size: 15px; line-height: 1.4; break-inside: avoid; }
+    .sky-print-card li strong { min-width: 84px; font-size: 19px; font-weight: 500; }
+    .sky-print-card .check { margin-left: auto; white-space: nowrap; font-family: 'Fragment Mono', monospace; font-size: 11px; }
+    .sky-print-card .sketch { height: 210px; margin-top: 8px; border: 1px solid #888; position: relative; break-inside: avoid; }
+    .sky-print-card .sketch::after { content: 'horizon'; position: absolute; left: 0; right: 0; bottom: 34px; border-top: 1px dashed #888; padding: 2px 6px; color: #666; font-family: 'Fragment Mono', monospace; font-size: 9px; }
+    .sky-print-card .tips li { display: list-item; margin-left: 18px; list-style: disc; border: 0; padding: 3px 0; font-size: 13px; }
+    .sky-print-card .print-foot { margin-top: 14px; color: #555; font-family: 'Fragment Mono', monospace; font-size: 10px; }
+  }
 </style>
 </head>
 <body>
@@ -126,7 +147,7 @@
 <main>
 <aside class="info-panel" id="sky-info-panel">
   <div class="info-label">— Tonight from your location —</div>
-  <h2 class="info-title">What's in the sky tonight?</h2>
+  <h2 class="info-title" id="sky-headline">What's in the sky tonight?</h2>
   <section class="location-card" aria-labelledby="location-heading">
     <h3 class="sr-only" id="location-heading">Observer location</h3>
     <div class="location-row">
@@ -144,6 +165,8 @@
       </form>
     </details>
   </section>
+  <h3 class="section-title" id="up-now-heading">Up now</h3>
+  <div class="sky-list" id="sky-list"></div>
   <h3 class="section-title">Tonight's window</h3>
   <section class="night-card" id="night-window" aria-label="Tonight's observing window">
     <p class="polar-note" id="polar-note"></p>
@@ -157,8 +180,11 @@
       <p class="moon-copy" id="moon-summary">Calculating the Moon…</p>
     </div>
   </section>
-  <h3 class="section-title">Moon &amp; planets tonight</h3>
-  <div class="sky-list" id="sky-list" aria-live="polite"></div>
+  <section id="later-section" aria-labelledby="later-heading">
+    <h3 class="section-title" id="later-heading">Later tonight</h3>
+    <div class="sky-list" id="later-list"></div>
+  </section>
+  <section class="highlights" id="sky-highlights" hidden><h3 class="section-title">Tonight's highlights</h3><div id="highlight-list"></div></section>
   <section aria-labelledby="stars-heading">
     <h3 class="section-title" id="stars-heading">Bright stars now</h3>
     <p class="privacy-note" id="stars-status"></p>
@@ -166,9 +192,12 @@
     <p class="privacy-note">A 360° horizon chart: north appears at both edges. Star positions are real; dot sizes are enlarged. Clouds, moonlight and city lights affect what you can see.</p>
   </section>
   <details class="not-tonight" id="not-tonight"><summary id="not-tonight-summary">Not tonight</summary><div id="sky-hidden-list"></div></details>
-  <section class="highlights" id="sky-highlights" hidden><h3 class="section-title">Tonight's highlights</h3><div id="highlight-list"></div></section>
+  <details class="not-tonight" id="telescope-planets"><summary>Telescope planets · Uranus &amp; Neptune</summary><p class="privacy-note">Too faint to find by eye. Open this to show them on the chart too.</p><div id="telescope-list"></div></details>
   <p class="sr-only" id="sky-summary"></p>
-  <div class="fact-callout"><span class="fact-tag">✦ Try it</span>On a clear night, planets usually glow more steadily than stars, though they can twinkle when low in turbulent air. Slide the date forward to see the sky change.</div>
+  <div class="fact-callout"><span class="fact-tag">✦ Measure with your fist</span>Stretch your arm out and make a fist: it covers about 10° of sky. “2 fists up” means two fists stacked above the horizon. Planets usually shine steadily while stars twinkle. Go out with a grown-up, and never look at the Sun.</div>
+  <button type="button" class="guide-open" id="print-sky"><span class="science-kind">Print</span><span>My sky tonight · a card to take outside</span></button>
+  <button type="button" class="guide-open" data-guide-open><span class="science-kind">Guide</span><span>For kids, parents &amp; teachers</span></button>
+  <nav class="fact-callout framed sky-explore" aria-label="Explore what you saw"><span class="fact-tag">✦ Saw something?</span>Fly to any planet in the <a href="/solar-system">Grand Tour</a>, see why the Moon changes shape in the <a href="/#light-study">Light Study</a>, or find out why the stars change with the <a href="/seasons">Seasons</a>.</nav>
   <details class="science-note">
     <summary><span class="science-kind">Local forecast</span><span>Accuracy &amp; sources</span></summary>
     <p>Positions come from astronomy-engine's VSOP87-based model and are topocentric with standard atmospheric refraction. This guide assumes a flat horizon and clear sky. Location precision is about 10 km from the device, or about a city from the time zone.</p>
@@ -176,10 +205,10 @@
     <p class="science-sources"><a href="https://github.com/astronexus/HYG-Database">HYG · David Nash / Astronexus</a><a href="https://creativecommons.org/licenses/by-sa/4.0/">Star data: CC BY-SA 4.0 (filtered subset)</a></p>
     <p class="science-sources"><span>Sources</span><a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a><a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a><a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a><span>Reviewed Sep 27, 2026</span></p>
   </details>
-  <button type="button" class="guide-open" data-guide-open><span class="science-kind">Guide</span><span>For kids, parents &amp; teachers</span></button>
-  <div class="fact-callout framed"><span class="fact-tag">✦ End of the journey</span>You've watched Earth spin, toured every planet, walked the distances, and met the robot explorers. This last stop is the real one: <strong>go outside tonight and look up</strong>. Everything you explored is really there.</div>
 </aside>
 </main>
+
+<section class="sky-print-card" id="sky-print-card" aria-hidden="true"></section>
 
 <div class="date-controls">
   <div class="control-row">
@@ -206,10 +235,10 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, bodyReport, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, timeInNight } from './sky-forecast.js';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js';
-import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js';
-import { layoutSkyLabels } from './sky-labels.js';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=9c0db87c52';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=338a649d11';
+import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=e7717d6463';
+import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
 const clamp = SPACE.clamp;
 const BODIES = SPACE_DATA.planets();
@@ -417,6 +446,12 @@ function drawHorizon(time) {
 }
 
 const listEl = document.getElementById('sky-list');
+const laterSection = document.getElementById('later-section');
+const laterList = document.getElementById('later-list');
+const upNowHeading = document.getElementById('up-now-heading');
+const headline = document.getElementById('sky-headline');
+const telescopeDetails = document.getElementById('telescope-planets');
+const telescopeList = document.getElementById('telescope-list');
 const hiddenListEl = document.getElementById('sky-hidden-list');
 const hiddenDetails = document.getElementById('not-tonight');
 const hiddenSummary = document.getElementById('not-tonight-summary');
@@ -456,6 +491,10 @@ const baseDate = new Date(); baseDate.setHours(12, 0, 0, 0);
 let offset = 0;
 let location = resolveLocation();
 let activeWindow = null;
+let currentReports = [];
+let allPositions = [];
+let moonText = '';
+let currentLists = { up: [], later: [] };
 let selectedTime = null;
 let viewMode = 'horizon';
 try { viewMode = localStorage.getItem('sky.view') === 'orbit' ? 'orbit' : 'horizon'; } catch {}
@@ -470,10 +509,19 @@ function offsetFromIso(value) {
 }
 // Times are read at the observing site: a manual location abroad uses its own clock.
 let displayTimeZone;
+// One formatter per zone: toLocaleTimeString builds a new one per call, and
+// the lists format dozens of times on every time-slider step.
+const timeFormats = new Map();
 function formatTime(date) {
   if (!date) return '—';
-  try { return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone }).toLowerCase(); }
-  catch { return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).toLowerCase(); }
+  let format = timeFormats.get(displayTimeZone);
+  if (!format) {
+    const options = { hour: 'numeric', minute: '2-digit' };
+    try { format = new Intl.DateTimeFormat(undefined, { ...options, timeZone: displayTimeZone }); }
+    catch { format = new Intl.DateTimeFormat(undefined, options); }
+    timeFormats.set(displayTimeZone, format);
+  }
+  return format.format(date).toLowerCase();
 }
 function zoneOffset(timeZone, date) {
   try { return new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' }).formatToParts(date).find(part => part.type === 'timeZoneName')?.value; }
@@ -500,17 +548,17 @@ function sourceDescription() {
     return zoneOffset(displayTimeZone, now) === zoneOffset(deviceZone, now)
       ? 'Manual coordinates' : `Manual coordinates · times in ${timeZoneLabel(displayTimeZone)}`;
   }
-  return location.approximate ? 'Approximate from UTC offset' : 'From your time zone';
+  return location.approximate ? 'Use my location to be accurate' : 'From your time zone';
 }
 function locationMeta() {
   if (location.source === 'geo') return `${describeLocation(location)} (device)`;
   if (location.source === 'manual') return `${describeLocation(location)} (manual)`;
-  return `${describeLocation(location)} (from time zone)`;
+  return location.approximate ? capitalize(describeLocation(location)) : `${describeLocation(location)} (from time zone)`;
 }
 function updateLocationCopy() {
   location.label = describeLocation(location);
   displayTimeZone = locationTimeZone(location);
-  locationLabel.textContent = location.label; locationSource.textContent = sourceDescription(); metaLocation.textContent = locationMeta();
+  locationLabel.textContent = capitalize(location.label); locationSource.textContent = sourceDescription(); metaLocation.textContent = locationMeta();
   latitudeInput.value = location.lat.toFixed(1); longitudeInput.value = location.lon.toFixed(1);
 }
 
@@ -550,69 +598,156 @@ function updateMoon(window, sampleTime) {
   moonLit.setAttribute('d', moonPath(moon.phaseAngle, location.lat < 0)); moonGlyphTitle.textContent = `${moon.phase}, ${moon.illuminationPercent}% illuminated`;
   const rise = moon.rise && moon.rise <= window.end ? `rises ${formatTime(moon.rise)}` : 'already up or rises later';
   const set = moon.set && moon.set <= window.end ? `sets ${formatTime(moon.set)}` : 'up past sunrise';
-  moonSummary.innerHTML = `<strong>${moon.phase} · ${moon.illuminationPercent}% lit</strong><br>${rise} · ${set}${moon.washesOutSky ? ' · bright enough to wash out faint objects' : ''}`;
+  const timing = `${rise} · ${set}${moon.washesOutSky ? ' · bright enough to wash out faint objects' : ''}`;
+  moonSummary.innerHTML = `<strong>${moon.phase} · ${moon.illuminationPercent}% lit</strong><br>${timing}`;
+  moonText = `${moon.phase} · ${moon.illuminationPercent}% lit · ${timing}`;
 }
 
-function makeSkyItem(report, sampleTime, visible, observer) {
-  const row = document.createElement('div'); row.className = 'sky-item'; row.id = `sky-body-${report.key}`; row.dataset.body = report.key;
-  const data = BODY_DATA[report.key], dot = document.createElement('span');
-  dot.className = 'sky-dot'; dot.style.background = data.dot; dot.style.color = data.dot; dot.setAttribute('aria-hidden', 'true');
-  const copy = document.createElement('span'); copy.className = 'sky-item-copy';
-  const name = document.createElement('strong'); name.textContent = report.name; copy.appendChild(name);
-  if (visible && report.bestTime) {
-    const best = positionAt(report.name, observer, report.bestTime);
-    const timing = report.set && report.set <= activeWindow.end ? `sets ${formatTime(report.set)}` : 'up past sunrise';
-    copy.append(` · ${best.compass} (${Math.max(0, Math.round(best.altitude))}° up) at ${formatTime(report.bestTime)} · ${report.brightness} · ${timing}`);
-    const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = `In ${report.constellation}`; copy.appendChild(tag);
-  } else {
-    copy.append(` · ${report.note}`);
-    const at = positionAt(report.name, observer, sampleTime), tag = document.createElement('span'); tag.className = 'tag';
-    tag.textContent = at.altitude > 0 ? `${at.compass}, ${Math.round(at.altitude)}° up at ${formatTime(sampleTime)}` : 'Below the horizon at the selected time'; copy.appendChild(tag);
-  }
+function skyRow(report) {
+  const row = element('div', '', 'sky-item'); row.id = `sky-body-${report.key}`; row.dataset.body = report.key;
+  const data = BODY_DATA[report.key], dot = element('span', '', 'sky-dot');
+  dot.style.background = data.dot; dot.style.color = data.dot; dot.setAttribute('aria-hidden', 'true');
+  const copy = element('span', '', 'sky-item-copy');
+  copy.appendChild(element('strong', report.name));
   row.addEventListener('pointerenter', () => { highlightedBody = report.key; drawing.invalidate(); });
   row.addEventListener('pointerleave', () => { if (highlightedBody === report.key) highlightedBody = null; drawing.invalidate(); });
-  row.append(dot, copy); return row;
+  row.append(dot, copy); return { row, copy };
+}
+function element(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+function rowLine(copy, className, text) { return copy.appendChild(element('span', text, className)); }
+// Each object links to the study that explains it, so a search visitor who
+// came for tonight's sky can go and meet what they just saw.
+function exploreLink(report) {
+  const link = element('a', report.key === 'moon' ? 'Why the Moon changes shape →' : `Fly to ${report.name} in 3D →`);
+  link.href = report.key === 'moon' ? '/#light-study' : `/solar-system#${report.key}`;
+  return link;
+}
+function setsText(report) {
+  const next = report.sets.find((time) => time > selectedTime);
+  return next ? `sets ${formatTime(next)}` : activeWindow.sunrise ? 'up until sunrise' : 'up all night';
+}
+function makeUpNowItem(item) {
+  const { row, copy } = skyRow(item);
+  copy.append(` · ${whereToLook(item.position)}`);
+  rowLine(copy, 'detail', `${Math.round(item.position.altitude)}° up · ${item.brightness} · ${setsText(item)}`);
+  rowLine(copy, 'tag', `In ${item.constellation} · `).appendChild(exploreLink(item));
+  return row;
+}
+function makeLaterItem(report) {
+  const { row, copy } = skyRow(report);
+  const rises = report.rise && report.rise > selectedTime && report.rise <= activeWindow.end ? `rises ${formatTime(report.rise)} · ` : '';
+  copy.append(` · ${rises}best around ${formatTime(report.bestTime)}`);
+  rowLine(copy, 'detail', `then ${whereToLook(report.bestPosition)} · ${report.brightness}`);
+  return row;
+}
+function makeOtherItem(report, position, note = report.note) {
+  const { row, copy } = skyRow(report);
+  copy.append(` · ${note}`);
+  rowLine(copy, 'tag', position.altitude > 0 ? `${whereToLookShort(position)} at ${formatTime(selectedTime)}` : 'Below the horizon at the selected time');
+  return row;
+}
+const orList = new Intl.ListFormat('en', { type: 'disjunction' });
+let listsSayNow = false;
+let bestTarget = '';
+function listAnnouncement() { return [headline.textContent, bestTarget].filter(Boolean).join('. ') + '.'; }
+function selectedIsNow() { return offset === 0 && Math.abs(selectedTime - new Date()) < 10 * 60000; }
+
+// The heading and headline are the only words that depend on the clock.
+function renderNowWording() {
+  const now = selectedIsNow();
+  listsSayNow = now;
+  upNowHeading.textContent = now ? 'Up now' : `Up at ${formatTime(selectedTime)}`;
+  headline.textContent = skyHeadline(currentLists, { when: now ? 'now' : `at ${formatTime(selectedTime)}`, time: formatTime, hasStars: featuredStars.length > 0 });
+}
+// The page does not move the time on by itself, so once the moment shown is
+// more than a few minutes old, stop calling it "now". Only the wording
+// changes: rebuilding the rows would drop the reader's focus.
+setInterval(() => { if (listsSayNow && !selectedIsNow()) renderNowWording(); }, 60000);
+
+// Lists follow the time slider: "up now" is about the selected moment, while
+// the heavier per-night reports are computed once per date and location.
+function renderLists(positions) {
+  const observer = new Astronomy.Observer(location.lat, location.lon, 0);
+  const { up, later, earlier, missing, telescope } = sortSkyLists(currentReports, positions, observer, selectedTime);
+  currentLists = { up, later };
+  renderNowWording();
+
+  listEl.replaceChildren(...up.map(makeUpNowItem));
+  if (!up.length) {
+    const next = [later.length && 'see Later tonight', featuredStars.length && 'try the bright stars'].filter(Boolean);
+    listEl.appendChild(element('p', `No Moon or planet is up at this time.${next.length ? ` ${capitalize(orList.format(next))}.` : ''}`, 'empty-list'));
+  }
+  laterSection.hidden = later.length === 0;
+  laterList.replaceChildren(...later.map(makeLaterItem));
+  hiddenListEl.replaceChildren(
+    ...earlier.map((report) => makeOtherItem(report, positions[report.key], `best earlier tonight, around ${formatTime(report.bestTime)}`)),
+    ...missing.map((report) => makeOtherItem(report, positions[report.key])),
+  );
+  hiddenSummary.textContent = earlier.length && missing.length
+    ? `Earlier tonight · ${earlier.length} · Not tonight · ${missing.length}`
+    : earlier.length ? `Earlier tonight · ${earlier.length}` : `Not tonight · ${missing.length}`;
+  hiddenDetails.hidden = earlier.length + missing.length === 0;
+  telescopeList.replaceChildren(...telescope.map((report) => makeOtherItem(report, positions[report.key], report.visible
+    ? `${capitalize(report.brightness)}. Best around ${formatTime(report.bestTime)}, ${whereToLook(report.bestPosition)}.`
+    : `${capitalize(report.brightness)}. ${report.note}`)));
+
+  // The phone drawer shows one line before it is opened; make it the answer.
+  // Up is brightest first, so its head is the easiest planet; failing that,
+  // the brightest star. Announcements read it too, so a screen reader hears
+  // where to look and not only what is up.
+  const best = up.length ? { ...up[0].position, name: up[0].name } : featuredStars[0];
+  bestTarget = best ? `${best.name}: look ${whereToLook(best)}` : '';
+  const peek = document.getElementById('sky-info-panel-peek');
+  if (peek) {
+    // One target with its height fits a 360px phone.
+    peek.textContent = best ? `${best.name}: look ${whereToLookShort(best)}` : 'Try a darker time to find stars and planets';
+  }
+}
+
+// Uranus and Neptune join the chart only while their list is open. Toggling
+// it re-filters cached positions; nothing else depends on it.
+function updateChartBodies() {
+  currentHorizonPositions = allPositions.filter((body) => telescopeDetails.open || !TELESCOPE_BODIES.has(body.key));
+  const visibleNow = currentHorizonPositions.filter((body) => body.key !== 'sun' && body.altitude > 0);
+  const summary = visibleNow.length
+    ? visibleNow.map((body) => `${body.name}: ${whereToLook(body)}`).join('; ')
+    : 'the Moon and planets are below the horizon';
+  skySummary.textContent = `At ${formatTime(selectedTime)} from ${location.label}: ${summary}. Stars: ${featuredStars.map((star) => `${star.name}: ${whereToLook(star)}`).join('; ') || 'none in the bright-star guide'}.`;
 }
 
 function updateTimeState() {
   if (!activeWindow || !selectedTime) return;
   const observer = new Astronomy.Observer(location.lat, location.lon, 0);
   const bodies = [{ key: 'sun', name: 'Sun', dot: '#f4c560' }, ...FORECAST_BODIES.map((name) => BODY_DATA[name.toLowerCase()])];
-  currentHorizonPositions = bodies.map((body) => ({ ...body, ...positionAt(body.name, observer, selectedTime) }));
+  allPositions = bodies.map((body) => ({ ...body, ...positionAt(body.name, observer, selectedTime) }));
   highlightedBody = null;
   currentStars = starPositions(observer, selectedTime);
-  const sunAltitude = currentHorizonPositions.find(body => body.key === 'sun').altitude;
+  const sunAltitude = allPositions.find(body => body.key === 'sun').altitude;
   featuredStars = brightStarsNow(currentStars, sunAltitude);
   document.getElementById('stars-status').textContent = sunAltitude >= -6
     ? 'The sky is too bright for this star guide. Move the time into the night.'
     : `At ${formatTime(selectedTime)} · tap a star below to find it on the horizon chart.`;
   document.getElementById('star-list').replaceChildren(...featuredStars.map(star => {
-    const button = document.createElement('button');
-    button.type = 'button'; button.className = 'sky-item star-item'; button.dataset.body = star.key;
+    const button = element('button', '', 'sky-item star-item');
+    button.type = 'button'; button.dataset.body = star.key;
     button.id = `sky-body-${star.key}`;
-    button.setAttribute('aria-label', `Show ${star.name} on the horizon chart, ${star.compass}, ${Math.round(star.altitude)} degrees up`);
-    const name = document.createElement('strong'); name.textContent = star.name;
-    button.append(name, ` · ${star.compass}, ${Math.round(star.altitude)}° up`);
+    button.setAttribute('aria-label', `Show ${star.name} on the horizon chart: ${whereToLook(star)}`);
+    button.append(element('strong', star.name), ` · ${whereToLookShort(star)}`);
     button.onclick = () => { if (viewMode !== 'horizon') setView('horizon', false); highlightBody(star.key);
       const panel = document.getElementById('sky-info-panel');
       const toggle = width <= 820 ? panel.querySelector('.mobile-info-toggle') : document.querySelector('.desktop-info-toggle');
       if (toggle?.getAttribute('aria-expanded') === 'true') { toggle.click(); toggle.focus(); }
-      accessibility.announce(`${star.name}, ${star.compass}, ${Math.round(star.altitude)} degrees up.`); };
+      accessibility.announce(`${star.name}: look ${whereToLook(star)}.`); };
     return button;
   }));
   if (!featuredStars.length && sunAltitude < -6) document.getElementById('stars-status').textContent = 'No named bright stars are high enough in this guide at the selected time. Try later tonight.';
-  const visibleNow = currentHorizonPositions.filter((body) => body.key !== 'sun' && body.altitude > 0);
-  const summary = visibleNow.length
-    ? visibleNow.map((body) => `${body.name} ${body.compass}, ${Math.round(body.altitude)} degrees up`).join('; ')
-    : 'the Moon and planets are below the horizon';
-  skySummary.textContent = `At ${formatTime(selectedTime)} from ${location.label}: ${summary}. Stars: ${featuredStars.map(star => `${star.name} ${star.compass}, ${Math.round(star.altitude)} degrees up`).join('; ') || 'none in the bright-star guide'}.`;
-  const peek = document.getElementById('sky-info-panel-peek');
-  if (peek) {
-    const best = [...visibleNow.filter(body => !['uranus', 'neptune'].includes(body.key)), ...featuredStars].sort((a, b) => b.altitude - a.altitude).slice(0, 2);
-    peek.textContent = best.length
-      ? best.map((body) => `${body.name} ${body.compass} ${Math.round(body.altitude)}°`).join('  ·  ')
-      : 'Try a darker time to find stars and planets';
-  }
+  updateChartBodies();
+  renderLists(Object.fromEntries(allPositions.map((body) => [body.key, body])));
   timeValue.textContent = formatTime(selectedTime);
   timeSlider.setAttribute('aria-valuetext', formatTime(selectedTime));
   metaTime.textContent = formatTime(selectedTime);
@@ -626,7 +761,7 @@ function renderHighlights(observer, window) {
   }
   for (const shower of meteorShowers(dateAt(offset))) items.push(`${shower.name} meteor shower peaks within two nights. Look from a dark place after midnight.`);
   highlightsEl.hidden = items.length === 0;
-  highlightList.replaceChildren(...items.map((text) => { const paragraph = document.createElement('p'); paragraph.textContent = text; return paragraph; }));
+  highlightList.replaceChildren(...items.map((text) => element('p', text)));
 }
 
 function renderForecast() {
@@ -635,13 +770,7 @@ function renderForecast() {
   if (selectedTime) applyNightMinutes(activeWindow, timeSlider.value);
   else setDefaultTime(activeWindow);
   const sampleTime = selectedTime;
-  const reports = FORECAST_BODIES.map((body) => bodyReport(body, observer, activeWindow, sampleTime));
-  const visible = reports.filter((report) => report.visible).sort((a, b) => a.bestTime - b.bestTime);
-  const hidden = reports.filter((report) => !report.visible);
-  listEl.replaceChildren(...visible.map((report) => makeSkyItem(report, sampleTime, true, observer)));
-  if (visible.length === 0) { const empty = document.createElement('p'); empty.className = 'empty-list'; empty.textContent = 'No Moon or planet climbs high enough during darkness tonight.'; listEl.appendChild(empty); }
-  hiddenListEl.replaceChildren(...hidden.map((report) => makeSkyItem(report, sampleTime, false, observer)));
-  hiddenSummary.textContent = `Not tonight · ${hidden.length}`; hiddenDetails.hidden = hidden.length === 0;
+  currentReports = FORECAST_BODIES.map((body) => bodyReport(body, observer, activeWindow, sampleTime));
   sunsetTime.textContent = formatTime(activeWindow.sunset); darkTime.textContent = formatTime(activeWindow.astroDusk); sunriseTime.textContent = formatTime(activeWindow.sunrise);
   if (activeWindow.polar === 'day') { polarNote.textContent = 'The Sun does not set at this location tonight.'; windowTimes.hidden = true; }
   else if (activeWindow.polar === 'night') { polarNote.textContent = 'The Sun stays below the horizon at this location.'; windowTimes.hidden = true; }
@@ -654,7 +783,8 @@ function update() {
   slider.setAttribute('aria-valuetext', fmtDate(offset)); dateInput.value = isoLocal(dateAt(offset));
   prevBtn.disabled = offset <= 0; nextBtn.disabled = offset >= MAX_OFFSET; updateLocationCopy(); renderForecast();
 }
-function commitDate() { update(); accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}.`); }
+function announceForecast() { accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}. ${listAnnouncement()}`); }
+function commitDate() { update(); announceForecast(); }
 function setOffset(next) { offset = clamp(Math.round(next), 0, MAX_OFFSET); slider.value = offset; commitDate(); }
 function applyDateInput(announce) {
   const next = offsetFromIso(dateInput.value);
@@ -678,15 +808,74 @@ timeSlider.oninput = () => {
   selectedTime = new Date(activeWindow.start.getTime() + Number(timeSlider.value) * 60000);
   updateTimeState();
 };
-timeSlider.onchange = () => accessibility.announce(`Sky positions at ${formatTime(selectedTime)}.`);
+timeSlider.onchange = () => accessibility.announce(`Sky positions at ${formatTime(selectedTime)}. ${listAnnouncement()}`);
 nowButton.onclick = () => {
   const now = new Date();
   if (!insideWindow(now, activeWindow)) return;
   timeSlider.value = String(Math.round((now - activeWindow.start) / 300000) * 5);
   selectedTime = new Date(activeWindow.start.getTime() + Number(timeSlider.value) * 60000);
   updateTimeState(); drawing.invalidate();
-  accessibility.announce(`Sky positions now, ${formatTime(selectedTime)}.`);
+  accessibility.announce(`Sky positions now, ${formatTime(selectedTime)}. ${listAnnouncement()}`);
 };
+// A one-page card for the trip outside: no phone glare, and a box to sketch in.
+function buildPrintCard() {
+  const card = document.getElementById('sky-print-card');
+  const item = (name, text) => { const li = element('li'); li.append(element('strong', name), element('span', text), element('span', '☐ found it', 'check')); return li; };
+  const { up, later } = currentLists;
+  const targets = element('ol');
+  for (const report of up) targets.appendChild(item(report.name, `${capitalize(whereToLook(report.position))}. ${capitalize(report.brightness)}.`));
+  for (const report of later.slice(0, 3)) targets.appendChild(item(report.name, `Around ${formatTime(report.bestTime)}: ${whereToLook(report.bestPosition)}.`));
+  for (const star of featuredStars.slice(0, 3)) targets.appendChild(item(star.name, `A bright star, ${whereToLook(star)}.`));
+  if (!targets.children.length) targets.appendChild(element('li', 'Nothing bright is up at this time. Try a later time tonight.'));
+  const tips = element('ul', '', 'tips');
+  for (const tip of [
+    'Stretch out your arm and make a fist: one fist is about 10° of sky. Count fists up from the horizon.',
+    'Not sure which way is which? The Sun sets in the west. Face west and north is on your right.',
+    'Planets shine with a steady light. Stars twinkle more.',
+    'Let your eyes get used to the dark for 15–20 minutes, and keep screens dim.',
+    'Go out with a grown-up, and never look at the Sun.',
+  ]) tips.appendChild(element('li', tip));
+  card.replaceChildren(
+    element('h2', 'My sky tonight'),
+    element('p', `Night of ${fmtDate(offset)} · ${formatTime(selectedTime)} · ${location.label}`, 'print-meta'),
+    element('h3', 'Find these'), targets,
+    element('h3', 'The Moon'), element('p', moonText),
+    element('h3', 'Draw what you see'), element('div', '', 'sketch'),
+    element('h3', 'Tips'), tips,
+    element('p', 'tinyastronomer.com/sky-tonight · positions for a clear sky and a flat horizon', 'print-foot'),
+  );
+}
+// The card prints only for the print its button asked for. beforeprint may
+// come late (iOS) or never, and afterprint may never come, so no timer
+// decides: the request is used up by the first print, and dropped by the next
+// tap or key press on the page, which means the print sheet has gone. A later
+// print from the browser menu, or the guide's own Print, prints normally.
+let printCardRequested = false;
+function dropPrintCard() {
+  printCardRequested = false;
+  document.body.classList.remove('printing-sky');
+  removeEventListener('pointerdown', dropPrintCard, true);
+  removeEventListener('keydown', dropPrintCard, true);
+}
+document.getElementById('print-sky').onclick = () => {
+  buildPrintCard();
+  document.body.classList.add('printing-sky');
+  printCardRequested = true;
+  print();
+  // Where print() blocks, afterprint has already tidied up. Where it returns
+  // at once (iOS), wait for the next interaction. The click that got here
+  // has already passed through pointerdown and keydown.
+  if (document.body.classList.contains('printing-sky')) {
+    addEventListener('pointerdown', dropPrintCard, true);
+    addEventListener('keydown', dropPrintCard, true);
+  }
+};
+addEventListener('beforeprint', () => {
+  if (!printCardRequested) document.body.classList.remove('printing-sky');
+  printCardRequested = false;
+});
+addEventListener('afterprint', dropPrintCard);
+telescopeDetails.addEventListener('toggle', () => { if (!allPositions.length) return; updateChartBodies(); highlightBody(null); });
 horizonButton.onclick = () => setView('horizon');
 orbitButton.onclick = () => setView('orbit');
 latitudeInput.onfocus = () => latitudeInput.select();
@@ -694,13 +883,13 @@ longitudeInput.onfocus = () => longitudeInput.select();
 
 useLocationButton.onclick = async () => {
   useLocationButton.disabled = true; locationStatus.textContent = 'Asking your browser for your location…';
-  try { location = await requestDeviceLocation(); locationStatus.textContent = 'Using your rounded device location.'; update(); accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}.`); }
+  try { location = await requestDeviceLocation(); locationStatus.textContent = 'Using your rounded device location.'; update(); announceForecast(); }
   catch (error) { locationStatus.textContent = error.message; }
   finally { useLocationButton.disabled = false; }
 };
 locationForm.onsubmit = (event) => {
   event.preventDefault();
-  try { location = setManualLocation(latitudeInput.value, longitudeInput.value); locationStatus.textContent = 'Using your manual location.'; update(); document.getElementById('location-change').open = false; accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}.`); }
+  try { location = setManualLocation(latitudeInput.value, longitudeInput.value); locationStatus.textContent = 'Using your manual location.'; update(); document.getElementById('location-change').open = false; announceForecast(); }
   catch (error) { locationStatus.textContent = error.message; }
 };
 
@@ -758,7 +947,7 @@ SPACE.buildNav('sky');
     <p>Wait until it is properly dark; the forecast shows a <strong>Dark from</strong> time. Give your eyes about 20 minutes to adjust, and use a red light rather than a bright phone screen. A bright Moon washes out faint stars, so the nights around new moon are best for stars. The Moon itself looks wonderful through binoculars around first quarter, when shadows show off its craters.</p>
 
     <h3>How to use Sky Tonight</h3>
-    <p>Press <strong>Use my location</strong> (it stays on your device and is never sent anywhere) or type in a latitude and longitude. For each planet and the Moon, the list shows the compass direction to face, how high it is in degrees, the best time to look, and when it sets. Step the date and time forward to plan a night, or to see how the sky changes from week to week.</p>
+    <p>Press <strong>Use my location</strong> (it stays on your device and is never sent anywhere) or type in a latitude and longitude. <strong>Up now</strong> lists the Moon and planets you can see at the chosen time: which way to face and how many fists up to look (one fist at arm’s length is about 10°). <strong>Later tonight</strong> shows what rises after that, and the best time to look. Press <strong>Print</strong> for a card to take outside. Step the date and time forward to plan a night, or to see how the sky changes from week to week.</p>
     <p>Clouds, trees, buildings and city lights all hide part of the sky, and the forecast assumes a clear, flat horizon.</p>
 
     <section class="guide-teach" aria-labelledby="guide-teach-title">

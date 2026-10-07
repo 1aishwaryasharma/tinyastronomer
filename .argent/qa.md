@@ -115,10 +115,14 @@ compositor for readiness captures; these snapshots do not verify 3D rendering.
 | `qa-home-open-light-study` | `observation-presets` | `#presets`, seven labels, free observation selected |
 | `qa-home-open-seasons` | `season-picker` | `#picker`, four stops, initial selection |
 | `qa-home-open-seasons` | `season-controls` | `#seasons-controls`, initial slider and buttons |
-| `qa-sky-tonight-manual-location` | `london-night-window` | `#night-window`, London (51.5, -0.1), September 9, 2026, device in UTC, times in London time |
 
-The forecast snapshot belongs to the manual-location flow, so the silent
-timezone-location flow retains its original purpose. The Next day button advances September 8 to September 9; hard checks prove
+The manual-location flow checks the London forecast (51.5, -0.1, September 9,
+2026, device in UTC) as text, not as an image: sunset **7:28 pm**, dark from
+**9:27 pm**, sunrise **6:27 am** and **New Moon · 2% lit**, all in London time.
+It used to crop `#night-window` against a baseline, but that crop only guarded
+these four values, and any layout change above the card moved it by a
+sub-pixel and changed the crop size, forcing a baseline regeneration with no
+real regression. The text checks catch a wrong time exactly and ignore layout. The Next day button advances September 8 to September 9; hard checks prove
 both the initial and committed dates. Native date-field segments differ
 between macOS and Ubuntu, so the flow does not depend on their hit targets. The frozen clock prevents the input's
 today-to-one-year range from invalidating this fixture as calendar time passes.
@@ -140,11 +144,8 @@ the crops; a missing baseline fails instead of silently adopting an image.
    labelled in the job summary and does **not** count as a regression pass.
    Only a successful generation run uploads `argent-baselines-node22` and
    `argent-baselines-node24`. The workflow never commits images.
-3. Download the artifacts and review all five images in each leg for correct
+3. Download the artifacts and review all four images in each leg for correct
    text, spacing, active states, closed science note, and no scene pixels.
-   In the London window expect sunset **7:28 pm**, dark from **9:27 pm**,
-   sunrise **6:27 am**, and **New Moon · 2% lit** (all times London/BST:
-   manual locations read in the site's own clock, not the UTC device).
    Reject incorrect, clipped, incomplete, or inconsistent candidates.
 4. After human approval, place one reviewed set under
    `.argent/flows/__baselines__/`, preserving each flow's subdirectory, and
@@ -160,9 +161,10 @@ Keep local current images in `artifacts/`; do not seed or commit macOS images
 as CI baselines. A local run that stops at a missing baseline has verified
 only its preceding steps, not subsequent snapshots or the complete flow.
 
-The five committed Ubuntu baselines come from
+The committed Ubuntu baselines come from
 [generation run 34557935919](https://github.com/1aishwaryasharma/tinyastronomer/actions/runs/34557935919).
-All five images were visually reviewed; Node 22 and Node 24 produced
+All five images then committed (the London crop has since been retired, see
+above) were visually reviewed; Node 22 and Node 24 produced
 byte-identical sets. The generated set remained byte-identical after pausing
 the visual fixture's continuous scene loops. Earlier candidates were rejected
 for blank or scaled content, which the native-scale readiness capture

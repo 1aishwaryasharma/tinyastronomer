@@ -187,7 +187,19 @@ body {
   pointer-events: auto;
 }
 
-/* The plain-language guide and teacher notes (guide.js) open from here. */
+/* Tonight's sky is what most visitors search for, so it sits beside the
+   plain-language guide and teacher notes (guide.js). */
+.observatory-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-md);
+  margin-block-start: var(--space-xs);
+}
+
+.launch-deck .observatory-links .observatory-guide {
+  margin-block-start: 0;
+}
+
 .launch-deck .observatory-guide {
   display: inline-flex;
   align-items: center;

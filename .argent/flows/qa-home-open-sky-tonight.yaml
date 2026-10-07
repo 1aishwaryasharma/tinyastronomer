@@ -22,7 +22,7 @@ steps:
       text:
         in:
           id: location-source
-        matches: '^(From your time zone|Approximate from UTC offset)$'
+        matches: '^(From your time zone|Use my location to be accurate)$'
   - assert:
       text:
         in:
