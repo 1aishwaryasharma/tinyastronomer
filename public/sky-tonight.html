@@ -235,10 +235,10 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20260909-2';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=18e046c94b';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=af6548def7';
-import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=d0fb9efa11';
-import { layoutSkyLabels } from './sky-labels.js';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=9c0db87c52';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=338a649d11';
+import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=e7717d6463';
+import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
 const clamp = SPACE.clamp;
 const BODIES = SPACE_DATA.planets();
@@ -553,7 +553,7 @@ function sourceDescription() {
 function locationMeta() {
   if (location.source === 'geo') return `${describeLocation(location)} (device)`;
   if (location.source === 'manual') return `${describeLocation(location)} (manual)`;
-  return location.approximate ? describeLocation(location) : `${describeLocation(location)} (from time zone)`;
+  return location.approximate ? capitalize(describeLocation(location)) : `${describeLocation(location)} (from time zone)`;
 }
 function updateLocationCopy() {
   location.label = describeLocation(location);
@@ -604,11 +604,11 @@ function updateMoon(window, sampleTime) {
 }
 
 function skyRow(report) {
-  const row = document.createElement('div'); row.className = 'sky-item'; row.id = `sky-body-${report.key}`; row.dataset.body = report.key;
-  const data = BODY_DATA[report.key], dot = document.createElement('span');
-  dot.className = 'sky-dot'; dot.style.background = data.dot; dot.style.color = data.dot; dot.setAttribute('aria-hidden', 'true');
-  const copy = document.createElement('span'); copy.className = 'sky-item-copy';
-  const name = document.createElement('strong'); name.textContent = report.name; copy.appendChild(name);
+  const row = element('div', '', 'sky-item'); row.id = `sky-body-${report.key}`; row.dataset.body = report.key;
+  const data = BODY_DATA[report.key], dot = element('span', '', 'sky-dot');
+  dot.style.background = data.dot; dot.style.color = data.dot; dot.setAttribute('aria-hidden', 'true');
+  const copy = element('span', '', 'sky-item-copy');
+  copy.appendChild(element('strong', report.name));
   row.addEventListener('pointerenter', () => { highlightedBody = report.key; drawing.invalidate(); });
   row.addEventListener('pointerleave', () => { if (highlightedBody === report.key) highlightedBody = null; drawing.invalidate(); });
   row.append(dot, copy); return { row, copy };
@@ -623,9 +623,8 @@ function rowLine(copy, className, text) { return copy.appendChild(element('span'
 // Each object links to the study that explains it, so a search visitor who
 // came for tonight's sky can go and meet what they just saw.
 function exploreLink(report) {
-  const link = document.createElement('a');
+  const link = element('a', report.key === 'moon' ? 'Why the Moon changes shape →' : `Fly to ${report.name} in 3D →`);
   link.href = report.key === 'moon' ? '/#light-study' : `/solar-system#${report.key}`;
-  link.textContent = report.key === 'moon' ? 'Why the Moon changes shape →' : `Fly to ${report.name} in 3D →`;
   return link;
 }
 function setsText(report) {
@@ -649,7 +648,7 @@ function makeLaterItem(report) {
 function makeOtherItem(report, position, note = report.note) {
   const { row, copy } = skyRow(report);
   copy.append(` · ${note}`);
-  rowLine(copy, 'tag', position.altitude > 0 ? `${position.compass}, ${Math.round(position.altitude)}° up at ${formatTime(selectedTime)}` : 'Below the horizon at the selected time');
+  rowLine(copy, 'tag', position.altitude > 0 ? `${whereToLookShort(position)} at ${formatTime(selectedTime)}` : 'Below the horizon at the selected time');
   return row;
 }
 const orList = new Intl.ListFormat('en', { type: 'disjunction' });
@@ -680,10 +679,8 @@ function renderLists(positions) {
 
   listEl.replaceChildren(...up.map(makeUpNowItem));
   if (!up.length) {
-    const empty = document.createElement('p'); empty.className = 'empty-list';
     const next = [later.length && 'see Later tonight', featuredStars.length && 'try the bright stars'].filter(Boolean);
-    empty.textContent = `No Moon or planet is up at this time.${next.length ? ` ${capitalize(orList.format(next))}.` : ''}`;
-    listEl.appendChild(empty);
+    listEl.appendChild(element('p', `No Moon or planet is up at this time.${next.length ? ` ${capitalize(orList.format(next))}.` : ''}`, 'empty-list'));
   }
   laterSection.hidden = later.length === 0;
   laterList.replaceChildren(...later.map(makeLaterItem));
@@ -718,9 +715,9 @@ function updateChartBodies() {
   currentHorizonPositions = allPositions.filter((body) => telescopeDetails.open || !TELESCOPE_BODIES.has(body.key));
   const visibleNow = currentHorizonPositions.filter((body) => body.key !== 'sun' && body.altitude > 0);
   const summary = visibleNow.length
-    ? visibleNow.map((body) => `${body.name} ${body.compass}, ${Math.round(body.altitude)} degrees up`).join('; ')
+    ? visibleNow.map((body) => `${body.name}: ${whereToLook(body)}`).join('; ')
     : 'the Moon and planets are below the horizon';
-  skySummary.textContent = `At ${formatTime(selectedTime)} from ${location.label}: ${summary}. Stars: ${featuredStars.map(star => `${star.name} ${star.compass}, ${Math.round(star.altitude)} degrees up`).join('; ') || 'none in the bright-star guide'}.`;
+  skySummary.textContent = `At ${formatTime(selectedTime)} from ${location.label}: ${summary}. Stars: ${featuredStars.map((star) => `${star.name}: ${whereToLook(star)}`).join('; ') || 'none in the bright-star guide'}.`;
 }
 
 function updateTimeState() {
@@ -736,12 +733,11 @@ function updateTimeState() {
     ? 'The sky is too bright for this star guide. Move the time into the night.'
     : `At ${formatTime(selectedTime)} · tap a star below to find it on the horizon chart.`;
   document.getElementById('star-list').replaceChildren(...featuredStars.map(star => {
-    const button = document.createElement('button');
-    button.type = 'button'; button.className = 'sky-item star-item'; button.dataset.body = star.key;
+    const button = element('button', '', 'sky-item star-item');
+    button.type = 'button'; button.dataset.body = star.key;
     button.id = `sky-body-${star.key}`;
     button.setAttribute('aria-label', `Show ${star.name} on the horizon chart: ${whereToLook(star)}`);
-    const name = document.createElement('strong'); name.textContent = star.name;
-    button.append(name, ` · ${whereToLookShort(star)}`);
+    button.append(element('strong', star.name), ` · ${whereToLookShort(star)}`);
     button.onclick = () => { if (viewMode !== 'horizon') setView('horizon', false); highlightBody(star.key);
       const panel = document.getElementById('sky-info-panel');
       const toggle = width <= 820 ? panel.querySelector('.mobile-info-toggle') : document.querySelector('.desktop-info-toggle');
@@ -765,7 +761,7 @@ function renderHighlights(observer, window) {
   }
   for (const shower of meteorShowers(dateAt(offset))) items.push(`${shower.name} meteor shower peaks within two nights. Look from a dark place after midnight.`);
   highlightsEl.hidden = items.length === 0;
-  highlightList.replaceChildren(...items.map((text) => { const paragraph = document.createElement('p'); paragraph.textContent = text; return paragraph; }));
+  highlightList.replaceChildren(...items.map((text) => element('p', text)));
 }
 
 function renderForecast() {

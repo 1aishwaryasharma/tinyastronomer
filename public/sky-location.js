@@ -35,12 +35,8 @@ function storeLocation(location, env) {
   return location;
 }
 
-function canonicalZone(timeZone) {
-  return TZ_ALIASES[timeZone] ?? timeZone;
-}
 
-function timezoneLabel(timeZone) {
-  const zone = canonicalZone(timeZone);
+function timezoneLabel(zone) {
   const city = zone.includes('/') ? zone.split('/').at(-1) : zone;
   return `${city.replaceAll('_', ' ')} area`;
 }
@@ -60,7 +56,7 @@ const TABLES = { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS };
 export function locateZone(timeZone, tables = TABLES) {
   const coordinates = (zone) => tables.TZ_COORDS[zone] ?? tables.TZ_CITY_COORDS[zone];
   const exact = coordinates(tables.TZ_ALIASES[timeZone] ?? timeZone);
-  if (exact) return { lat: exact[0], lon: exact[1], approximate: false };
+  if (exact) return { lat: exact[0], lon: exact[1], approximate: false, zone: tables.TZ_ALIASES[timeZone] ?? timeZone };
   const shared = coordinates(tables.TZ_SHARED_CLOCKS[timeZone]);
   return shared ? { lat: shared[0], lon: shared[1], approximate: true } : null;
 }
@@ -83,7 +79,7 @@ function timezoneGuess(env) {
 
 export function describeLocation(location) {
   if (location.source === 'tz' && location.timeZone && !location.approximate) {
-    return timezoneLabel(location.timeZone);
+    return timezoneLabel(location.zone ?? location.timeZone);
   }
   if (location.source === 'tz' && location.approximate) {
     // Read inside sentences ("updated for …", "At 9:30 pm from …").

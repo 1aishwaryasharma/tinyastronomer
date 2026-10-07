@@ -30,11 +30,27 @@ unless the code they rely on changes or new evidence contradicts them.
 - **`bodyReport` keeps `set` beside `sets`.** `set` (first setting after the
   window opens) predates this work on `main` and is covered by the San
   Francisco fixture; the page reads `sets`.
+- **`bodyReport`'s `constellation`, `altitude`, `azimuth`, `compass` and
+  `mag`.** Pre-existing API on `main`, covered by its fixtures; the page reads
+  the selected-time values from `sortSkyLists` instead.
+- **Overhead wording.** One `OVERHEAD` constant; `whereToLook` and
+  `whereToLookShort` word it differently on purpose (list vs. phone line).
+- **"Later tonight" missing a second rise in a polar night.** Not possible in
+  practice: a second rise comes about 23 h 56 min after the first (the Moon
+  about 24 h 50 min), so inside a 24-hour window the first rise would fall in
+  its opening minutes and still be shown. A sweep of 7,664 "Later" rows over
+  every 2026–27 polar night at Tromsø and Longyearbyen found none missing.
+- **`#=` successors for shared-clock links.** tzdb's `backward` has no `#=`
+  note on `Atlantic/Jan_Mayen` or `Pacific/Yap`; there is no nearer place to
+  use. Check the file before raising this for another zone.
+- **Hash-versioning shared modules.** `chrome.js`, `frame-loop.js` and
+  `data.js` serve every page and the common bundle and keep the site's
+  hand-bumped dates; switching the whole site is its own change.
 
 ## Conventions
 
 - Sky Tonight module imports carry a content hash (`?v=`). After editing
-  `sky-forecast.js`, `sky-stars.js`, `sky-location.js` or `tz-coords.js`, run
+  any module in `VERSIONED_MODULES` (tools/stamp-module-versions.ts), run
   `bun tools/stamp-module-versions.ts`; `site.test.ts` fails until you do.
   The tool also refreshes the inline-script CSP hashes in `public/_headers`,
   so run it after editing any inline script too.

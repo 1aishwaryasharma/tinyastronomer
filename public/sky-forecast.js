@@ -233,11 +233,11 @@ function darkBounds(window) {
 }
 
 
-// The Moon is plain to see in twilight, and even by day, so it is up for the
-// whole night window. Venus is bright enough to find in early twilight, once
-// the Sun is a few degrees down. Everything else, Mercury included, needs
-// civil twilight to end.
-const SUN_LIMIT = { Moon: 0, Venus: -3 };
+// The Moon is plain to see in twilight, and even by day, so no Sun altitude
+// hides it: under the midnight sun a high Moon is still there to find. Venus
+// is bright enough to find in early twilight, once the Sun is a few degrees
+// down. Everything else, Mercury included, needs civil twilight to end.
+const SUN_LIMIT = { Moon: Infinity, Venus: -3 };
 
 // Below this altitude an object is too low to see clearly.
 export const MIN_ALTITUDE = 5;

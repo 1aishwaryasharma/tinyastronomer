@@ -232,7 +232,7 @@ test('a shared-clock zone finds its target wherever the generator put it', async
     TZ_SHARED_CLOCKS: { 'Europe/Somewhere': 'Europe/Amsterdam' },
   };
   expect(locateZone('Europe/Somewhere', tables)).toEqual({ lat: 52.37, lon: 4.9, approximate: true });
-  expect(locateZone('Europe/Amsterdam', tables)).toEqual({ lat: 52.37, lon: 4.9, approximate: false });
+  expect(locateZone('Europe/Amsterdam', tables)).toEqual({ lat: 52.37, lon: 4.9, approximate: false, zone: 'Europe/Amsterdam' });
   expect(locateZone('Etc/Unknown', tables)).toBeNull();
 });
 
@@ -240,4 +240,10 @@ test('a rough location reads as a place inside sentences', () => {
   // The label is dropped into "Sky forecast updated for …" and "At 9:30 pm from …".
   const location = resolveLocation(fakeEnvironment('Etc/Unknown'));
   expect(`Sky forecast updated for ${location.label}.`).toBe('Sky forecast updated for your area (rough guess).');
+});
+
+test('one lookup gives both the coordinates and the zone used for the label', async () => {
+  const { locateZone } = await import('./public/sky-location.js');
+  expect(locateZone('Asia/Calcutta')).toMatchObject({ zone: 'Asia/Kolkata', approximate: false });
+  expect(resolveLocation(fakeEnvironment('Asia/Calcutta')).label).toBe('Kolkata area');
 });

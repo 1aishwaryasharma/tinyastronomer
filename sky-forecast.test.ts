@@ -174,7 +174,7 @@ test('heights read in fists and directions in words', async () => {
   expect(darkEnoughFor('Venus', -4)).toBe(true);
   // The Moon is plain to see in twilight.
   expect(darkEnoughFor('Moon', -3)).toBe(true);
-  expect(darkEnoughFor('Moon', 2)).toBe(false);
+  expect(darkEnoughFor('Moon', 30)).toBe(true); // and by day
 });
 
 describe('Sky Tonight review regressions (written before their fixes)', () => {
@@ -285,4 +285,15 @@ describe('Sky Tonight round-five regressions (written before their fixes)', () =
     expect(lists.up.map((item: any) => item.key)).toContain('saturn');
     expect(lists.missing.map((item: any) => item.key)).not.toContain('saturn');
   });
+});
+
+describe('Sky Tonight round-six regressions (written before their fixes)', () => {
+  test('under the midnight sun, a high Moon is still visible', () => {
+    // Tromsø, 10 June 2026: polar day, a waning crescent 34° up.
+    const tromso = new Astronomy.Observer(69.65, 18.96, 0);
+    const w = nightWindow(tromso, new Date(2026, 5, 10, 12));
+    expect(w.polar).toBe('day');
+    expect(bodyReport('Moon', tromso, w).visible).toBe(true);
+  });
+
 });

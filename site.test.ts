@@ -1236,6 +1236,8 @@ test('Sky Tonight module versions are content hashes', () => {
   // two instances. A version that is the file's hash cannot be forgotten, and
   // because each importer contains its imports' hashes, a change ripples up.
   const modules = VERSIONED_MODULES;
+  // Modules only Sky Tonight imports are versioned too.
+  expect(modules).toContain('sky-labels.js');
   const hash = (file: string) => moduleHash(readFileSync(file));
   for (const file of readdirSync('.').filter((name) => /\.(?:html|js)$/.test(name))) {
     for (const match of readFileSync(file, 'utf8').matchAll(/from\s+['"]\.\/([\w-]+\.js)(?:\?v=([^'"]*))?['"]/g)) {
@@ -1243,6 +1245,30 @@ test('Sky Tonight module versions are content hashes', () => {
       expect(match[2], `${file} imports ${match[1]}: run bun tools/stamp-module-versions.ts`).toBe(hash(match[1]));
     }
   }
+});
+
+test('inline-script CSP hashes ignore CRLF line endings', async () => {
+  // The browser hashes the LF bytes git serves, not a Windows checkout's CRLF.
+  const { inlineScriptHash } = await import('./tools/stamp-module-versions.ts');
+  expect(inlineScriptHash('a\r\nb\r\n')).toBe(inlineScriptHash('a\nb\n'));
+  expect(inlineScriptHash('a\nb\n')).toBe(`'sha256-${createHash('sha256').update('a\nb\n').digest('base64')}'`);
+});
+
+test('the CSP refresh adds hashes to an empty list and keeps pages in folders', async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync: write } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { stampVersions, inlineScriptHash } = await import('./tools/stamp-module-versions.ts');
+  const dir = mkdtempSync(join(tmpdir(), 'csp-'));
+  mkdirSync(join(dir, 'guides'));
+  write(join(dir, '_headers'), "/*\n  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'\n");
+  write(join(dir, 'a.html'), '<script>one()</script>');
+  write(join(dir, 'guides', 'b.html'), '<script>two()</script>');
+  stampVersions(dir);
+  const policy = readFileSync(join(dir, '_headers'), 'utf8');
+  expect(policy).toContain(inlineScriptHash('one()'));
+  expect(policy).toContain(inlineScriptHash('two()'));
+  expect(policy).toContain("; style-src 'self'");
 });
 
 test('module hashes ignore CRLF line endings', () => {
