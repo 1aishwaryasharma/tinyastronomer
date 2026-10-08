@@ -134,20 +134,12 @@ body {
   animation: observatory-arrive var(--dur-long) var(--ease-out) both;
 }
 
-.observatory-kicker,
 .study-index-label,
-.observatory-hint,
-.map-legend,
 .observatory-footer {
   font-family: var(--font-label);
   font-size: var(--text-xs);
   letter-spacing: 0.11em;
   text-transform: uppercase;
-}
-
-.observatory-kicker {
-  margin: 0 0 var(--space-md);
-  color: var(--color-accent);
 }
 
 .observatory-intro h1 {
@@ -171,15 +163,6 @@ body {
   font-size: var(--text-md);
   font-weight: 300;
   line-height: 1.38;
-}
-
-.observatory-hint {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin: var(--space-md) 0 0;
-  color: var(--color-muted);
-  letter-spacing: 0.06em;
 }
 
 .observatory-viewport {
@@ -211,10 +194,8 @@ body {
   color: var(--color-ink);
 }
 
-.observatory-actions,
-.observatory-scroll {
+.observatory-actions {
   display: none;
-  text-decoration: none;
 }
 
 .launch-deck .observatory-cta {
@@ -239,8 +220,8 @@ body {
 
 /* Phones: the composition stacks, so the hero must hand over a choice inside
    the first screen. The copy tightens, a primary action launches the first
-   study directly, and the Earth preview yields height so the study list
-   starts at the fold instead of a full screen below it. */
+   study directly, and the Earth preview stays near a fifth of the fold so
+   study row 02 is on screen. */
 @media not all and (min-width: 60rem) {
   .observatory-nav {
     padding-block: max(var(--space-xs), env(safe-area-inset-top)) var(--space-xs);
@@ -252,10 +233,6 @@ body {
 
   .observatory-intro {
     padding-block-start: 0;
-  }
-
-  .observatory-kicker {
-    margin-block-end: var(--space-xs);
   }
 
   .observatory-lede {
@@ -270,22 +247,8 @@ body {
     margin-block-start: var(--space-md);
   }
 
-  .launch-deck .observatory-scroll {
-    display: inline-flex;
-    gap: var(--space-2xs);
-    min-height: 3rem;
-    margin: 0;
-    color: var(--color-accent);
-  }
-
-  .launch-deck .observatory-scroll span {
-    width: auto;
-    height: auto;
-    background: none;
-  }
-
   .observatory-viewport {
-    height: clamp(11rem, min(70vw, 38svh), 28rem);
+    height: clamp(7.5rem, 20svh, 16rem);
     margin-block: var(--space-xs);
   }
 
@@ -329,16 +292,6 @@ body:not(.is-study-open) #canvas-container canvas {
   touch-action: none;
 }
 
-.observatory-hint span {
-  display: grid;
-  width: 1.8rem;
-  height: 1.8rem;
-  place-items: center;
-  border-radius: var(--radius-pill);
-  background: var(--color-paper-3);
-  color: var(--color-accent);
-}
-
 .study-index {
   max-width: 30rem;
   margin-block-start: var(--space-xl);
@@ -373,21 +326,11 @@ body:not(.is-study-open) #canvas-container canvas {
   transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
 }
 
-.study-index .is-current a {
-  background: var(--color-paper-3);
-  box-shadow: inset var(--rule-heavy) 0 0 var(--color-accent);
-}
-
 .study-number {
   color: var(--color-muted);
   font-family: var(--font-label);
   font-size: var(--text-xs);
   letter-spacing: 0.08em;
-}
-
-.is-current .study-number,
-.is-current .study-arrow {
-  color: var(--color-accent);
 }
 
 .study-name {
@@ -420,35 +363,6 @@ body:not(.is-study-open) #canvas-container canvas {
   color: var(--color-ink-2);
   font-family: var(--font-label);
   transition: color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
-}
-
-.map-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  margin-block-start: var(--space-xl);
-  color: var(--color-muted);
-}
-
-.map-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.map-legend i {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-ink-2);
-}
-
-.map-legend .legend-sun {
-  background: var(--color-accent);
-}
-
-.map-legend .legend-earth {
-  background: var(--color-accent-2);
 }
 
 .observatory-footer {
@@ -662,8 +576,8 @@ body:not(.is-study-open) > .loader {
   }
 
   .observatory-intro h1 {
-    max-width: 12ch;
-    font-size: clamp(3rem, 4.4vw, 5.2rem);
+    max-width: 16ch;
+    font-size: clamp(2.4rem, 3.5vw, 3.6rem);
   }
 
   .observatory-viewport {
@@ -719,14 +633,6 @@ body:not(.is-study-open) > .loader {
 
   .study-index a {
     background: var(--color-overlay-soft);
-  }
-
-  .map-legend {
-    position: absolute;
-    inset-inline-start: 52%;
-    inset-block-end: 6.5rem;
-    margin: 0;
-    transform: translateX(-50%);
   }
 
   /* The note is pinned to the bottom of the first screen. Source links follow the map. */
