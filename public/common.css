@@ -220,6 +220,8 @@ canvas { display: block; }
 .info-body { font-size: 14px; line-height: 1.55; color: var(--ink-dim); font-weight: 300; }
 .info-body strong { color: var(--ink); font-weight: 500; }
 .mobile-info-toggle { display: none; }
+/* The preview line belongs to the drawer. It stays hidden until that same layout turns it on. */
+.mobile-peek-line { display: none; }
 
 /* ──── Shared side-rail picker (presets / bodies / seasons / stops) ──── */
 .side-rail {
@@ -771,6 +773,7 @@ canvas { display: block; }
     text-overflow: ellipsis;
   }
   .info-panel.mobile-info-panel > .mobile-peek-line {
+    display: block;
     margin: 0 0 19px;
     color: var(--accent);
     font-family: 'Fragment Mono', monospace;
