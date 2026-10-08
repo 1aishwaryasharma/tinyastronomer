@@ -54,6 +54,8 @@ body {
 .observatory-nav,
 .observatory-intro,
 .study-index,
+.study-column,
+.observatory-guide,
 .observatory-footer {
   pointer-events: auto;
 }
@@ -187,19 +189,13 @@ body {
   pointer-events: auto;
 }
 
-/* The guide sits under the study list. Sky Tonight stays study 06 only. */
+/* The guide sits under the study list, outside the list scroller. */
 .launch-deck .observatory-guide {
   display: inline-flex;
   align-items: center;
-  align-self: flex-start;
   gap: var(--space-2xs);
-  width: fit-content;
-  max-width: 100%;
   min-height: 2.75rem;
   margin-block-start: var(--space-sm);
-  padding: 0;
-  background: none;
-  box-shadow: none;
   color: var(--color-accent);
   font-family: var(--font-label);
   font-size: var(--text-xs);
@@ -528,6 +524,7 @@ body:not(.is-study-open) #canvas-container canvas {
 }
 
 .observatory-credit-note {
+  margin: 0;
   padding-top: var(--space-xs);
   border-top: var(--rule-hair) solid var(--color-rule);
   color: var(--color-muted);
@@ -676,24 +673,48 @@ body:not(.is-study-open) > .loader {
     margin: 0;
   }
 
-  .study-index {
+  .study-column {
     position: absolute;
     inset-inline-end: var(--page-gutter);
     inset-block-start: 5rem;
     inset-block-end: 6.5rem;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     justify-content: safe center;
     width: min(25vw, 27rem);
     max-width: none;
     margin: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
+  }
+
+  .study-column .study-index {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .study-column .study-index-label {
+    flex: none;
+  }
+
+  .study-column .observatory-guide {
+    flex: none;
+    align-self: flex-start;
+    width: fit-content;
+    max-width: 100%;
   }
 
   .study-index ol {
     grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .study-index a {
@@ -708,28 +729,27 @@ body:not(.is-study-open) > .loader {
     transform: translateX(-50%);
   }
 
-  /* The note occupies the bottom of the fold. Source links follow in flow. */
-  .observatory-footer {
-    --fold-note: 2.75rem;
-    position: relative;
+  /* The note is pinned to the bottom of the first screen. Source links follow the map. */
+  .observatory-map > .observatory-credit-note {
+    position: absolute;
+    inset-inline: var(--page-gutter);
+    inset-block-end: 0;
     z-index: 2;
-    margin-top: calc(-1 * var(--fold-note));
-    padding-block-start: 0;
-    background: none;
+    margin: 0;
+    padding-block: var(--space-xs) max(var(--space-sm), env(safe-area-inset-bottom));
+    border-top: 0;
   }
 
-  .observatory-credit-note {
-    display: flex;
-    align-items: center;
-    height: var(--fold-note);
-    margin: 0;
-    padding: 0;
-    white-space: nowrap;
+  .observatory-footer {
+    position: static;
+    margin-top: 0;
+    padding-block-start: 0;
+    background: none;
   }
 }
 
 @media (min-width: 90rem) {
-  .study-index {
+  .study-column {
     width: min(25vw, 28rem);
   }
 

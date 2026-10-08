@@ -43,7 +43,7 @@
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="common.css?v=20260927-1">
-<link rel="stylesheet" href="home.css?v=20261008-1">
+<link rel="stylesheet" href="home.css?v=20261008-2">
 <style>
   /* Shared design tokens & component styles live in common.css.
      Only page-specific rules for the light study remain here. */
@@ -108,6 +108,7 @@
       <img class="earth-preview" src="assets/earth/home-preview.webp" alt="Earth, with sunlit oceans and clouds" width="922" height="912" fetchpriority="high">
     </div>
 
+    <div class="study-column">
     <nav class="study-index" id="observations" aria-label="Interactive astronomy studies">
       <p class="study-index-label">Choose an observation</p>
       <ol>
@@ -154,18 +155,20 @@
           </a>
         </li>
       </ol>
-      <a class="observatory-guide" href="#guide" id="home-guide" data-guide-open>Guide for parents &amp; teachers <span aria-hidden="true">→</span></a>
     </nav>
+    <a class="observatory-guide" href="#guide" id="home-guide" data-guide-open>Guide for parents &amp; teachers <span aria-hidden="true">→</span></a>
+    </div>
 
     <div class="map-legend" aria-hidden="true">
       <span><i class="legend-sun"></i>Sol</span>
       <span><i class="legend-earth"></i>Terra</span>
       <span><i class="legend-moon"></i>Luna</span>
     </div>
+
+    <p class="observatory-credit-note">Free, ad-free astronomy for curious kids.</p>
   </div>
 
   <footer class="observatory-footer" aria-label="Project credits">
-    <p class="observatory-credit-note">Free, ad-free astronomy for curious kids.</p>
     <div class="observatory-credit-band">
       <div class="observatory-credit-group">
         <span class="observatory-credit-label">Science &amp; model sources</span>
