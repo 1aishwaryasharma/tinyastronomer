@@ -1123,23 +1123,30 @@ test('mobile interaction hint is shown only once across pages', () => {
 test('phone landing offers a first action above the fold and no drag hint', () => {
   const home = readFileSync('index.html', 'utf8');
   const homeCss = readFileSync('home.css', 'utf8');
-  // The primary action launches the first study in place, like card 01.
+  // The primary action launches the first study in place. It is the only
+  // highlighted Light Study control: row 01 is not a second accent, and the
+  // Earth preview is not a launcher.
   expect(home).toMatch(/<a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>/);
-  expect(home).toContain('class="observatory-hint observatory-scroll" href="#observations"');
+  expect(home).not.toContain('All six studies');
+  expect(home).not.toContain('observatory-scroll');
+  expect(home).not.toContain('observatory-kicker');
+  expect(home).not.toContain('map-legend');
+  expect(home).not.toContain('is-current');
+  expect(home).not.toMatch(/id="home-earth-viewport"[^>]*data-launch-study/);
+  expect(home).not.toMatch(/class="earth-preview"[^>]*data-launch-study/);
   expect(home).not.toContain('Open a study to explore in 3D');
   const narrow = homeCss.slice(
     homeCss.indexOf('@media not all and (min-width: 60rem)'),
     homeCss.indexOf('@media (max-width: 39.999rem)')
   );
   expect(narrow).toMatch(/\.observatory-actions\s*\{\s*display:\s*flex/);
-  // The Earth preview yields height on short phones instead of pushing the
-  // study list a full screen down.
-  expect(narrow).toMatch(/\.observatory-viewport\s*\{\s*height:\s*clamp\([^)]*svh/);
-  // "All six studies" is the phone scroll affordance. The primary action is
-  // hidden until a breakpoint turns the row on, including wide screens.
-  expect(homeCss).toMatch(/\.observatory-actions,\s*\.observatory-scroll\s*\{\s*display:\s*none/);
+  // The Earth preview stays near a fifth of the fold so study row 02 fits.
+  expect(narrow).toMatch(/\.observatory-viewport\s*\{\s*height:\s*clamp\([^)]*20svh/);
+  // The primary action is hidden until a breakpoint turns it on, including wide screens.
+  expect(homeCss).toMatch(/\.observatory-actions\s*\{\s*display:\s*none/);
   const wide = homeCss.slice(homeCss.indexOf('@media (min-width: 60rem)'));
   expect(wide).toMatch(/\.observatory-actions\s*\{\s*display:\s*flex/);
+  expect(wide).toMatch(/\.observatory-intro h1\s*\{[^}]*max-width:\s*16ch/);
   expect(wide).not.toMatch(/\.observatory-footer\s*\{[^}]*position:\s*fixed/);
 });
 
