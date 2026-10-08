@@ -305,6 +305,11 @@ function initMobileInfoPanels() {
     const peek = document.createElement('p');
     peek.className = 'mobile-peek-line';
     peek.id = panel.id + '-peek';
+    // Phone-drawer preview. From 821px up it only repeats the headline.
+    const desktopWidth = window.matchMedia('(min-width: 821px)');
+    const syncPeek = () => { peek.hidden = desktopWidth.matches; };
+    syncPeek();
+    desktopWidth.addEventListener('change', syncPeek);
 
     // First child so position:sticky can pin Close to the top of the
     // same overflow box the finger actually scrolls.

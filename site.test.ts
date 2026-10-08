@@ -1307,6 +1307,22 @@ test('stamping module versions also refreshes the inline-script CSP hashes', asy
   }
 });
 
+test('sky tonight keeps one set of 3D links and drops the repeated row detail', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  const chrome = readFileSync('chrome.js', 'utf8');
+  // Fists stay on the first line. The degree and the per-row constellation
+  // line do not: one shared set of the same links sits at the bottom.
+  expect(sky).toContain('copy.append(` · ${whereToLook(item.position)}`)');
+  expect(sky).toContain('rowLine(copy, \'detail\', `${item.brightness} · ${setsText(item)}`)');
+  expect(sky).not.toContain('° up ·');
+  expect(sky).not.toContain('In ${item.constellation}');
+  expect(sky).toContain('id="sky-3d-links"');
+  expect(sky).toContain('explore.replaceChildren(...up.map((item) => exploreLink(item)))');
+  expect(sky).toContain("report.key === 'moon' ? '/#light-study' : `/solar-system#${report.key}`");
+  expect(chrome).toContain("window.matchMedia('(min-width: 821px)')");
+  expect(chrome).toContain('peek.hidden = desktopWidth.matches');
+});
+
 test('sky tonight speaks to children: fists, words, and no telescope-only planets up front', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   expect(sky).toContain('id="sky-headline"');

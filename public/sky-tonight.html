@@ -105,7 +105,10 @@
   .star-item { width: 100%; min-height: 44px; border: 0; border-bottom: 1px solid var(--line); color: var(--ink-dim); background: transparent; text-align: left; font: inherit; cursor: pointer; flex-wrap: wrap; gap: 4px; }
   .star-item:focus-visible { outline: 2px solid #f4c560; outline-offset: 2px; }
   .sky-item-copy .detail { display: block; margin-top: 1px; }
-  .sky-item-copy .tag a, .sky-explore a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .sky-item-copy .tag a, .sky-explore a, .sky-3d-links a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .sky-3d-links { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .sky-3d-links[hidden] { display: none; }
+  .sky-3d-links a { font-family: 'Fragment Mono', monospace; font-size: 8px; letter-spacing: 0.08em; line-height: 1.4; text-transform: uppercase; }
   #later-section[hidden] { display: none; }
   #print-sky { margin-top: 14px; }
   #print-sky + .guide-open { margin-top: 8px; }
@@ -205,6 +208,7 @@
     <p class="science-sources"><a href="https://github.com/astronexus/HYG-Database">HYG · David Nash / Astronexus</a><a href="https://creativecommons.org/licenses/by-sa/4.0/">Star data: CC BY-SA 4.0 (filtered subset)</a></p>
     <p class="science-sources"><span>Sources</span><a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a><a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a><a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a><span>Reviewed Sep 27, 2026</span></p>
   </details>
+  <nav class="sky-3d-links" id="sky-3d-links" aria-label="See them in 3D" hidden></nav>
 </aside>
 </main>
 
@@ -634,8 +638,7 @@ function setsText(report) {
 function makeUpNowItem(item) {
   const { row, copy } = skyRow(item);
   copy.append(` · ${whereToLook(item.position)}`);
-  rowLine(copy, 'detail', `${Math.round(item.position.altitude)}° up · ${item.brightness} · ${setsText(item)}`);
-  rowLine(copy, 'tag', `In ${item.constellation} · `).appendChild(exploreLink(item));
+  rowLine(copy, 'detail', `${item.brightness} · ${setsText(item)}`);
   return row;
 }
 function makeLaterItem(report) {
@@ -678,6 +681,9 @@ function renderLists(positions) {
   renderNowWording();
 
   listEl.replaceChildren(...up.map(makeUpNowItem));
+  const explore = document.getElementById('sky-3d-links');
+  explore.replaceChildren(...up.map((item) => exploreLink(item)));
+  explore.hidden = up.length === 0;
   if (!up.length) {
     const next = [later.length && 'see Later tonight', featuredStars.length && 'try the bright stars'].filter(Boolean);
     listEl.appendChild(element('p', `No Moon or planet is up at this time.${next.length ? ` ${capitalize(orList.format(next))}.` : ''}`, 'empty-list'));
