@@ -627,6 +627,11 @@ body:not(.is-study-open) > .loader {
   .launch-deck {
     overflow-x: clip;
     overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .launch-deck::-webkit-scrollbar {
+    display: none;
   }
 
   .observatory-actions {
