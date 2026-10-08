@@ -1126,17 +1126,21 @@ test('phone landing offers a first action above the fold and no drag hint', () =
   // The primary action launches the first study in place, like card 01.
   expect(home).toMatch(/<a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>/);
   expect(home).toContain('class="observatory-hint observatory-scroll" href="#observations"');
+  expect(home).not.toContain('Open a study to explore in 3D');
   const narrow = homeCss.slice(
     homeCss.indexOf('@media not all and (min-width: 60rem)'),
     homeCss.indexOf('@media (max-width: 39.999rem)')
   );
-  expect(narrow).toMatch(/\.observatory-intro > p\.observatory-hint\s*\{\s*display:\s*none/);
   expect(narrow).toMatch(/\.observatory-actions\s*\{\s*display:\s*flex/);
   // The Earth preview yields height on short phones instead of pushing the
   // study list a full screen down.
   expect(narrow).toMatch(/\.observatory-viewport\s*\{\s*height:\s*clamp\([^)]*svh/);
-  // Wide screens keep the composition: the actions row exists only on phones.
+  // "All six studies" is the phone scroll affordance. The primary action is
+  // hidden until a breakpoint turns the row on, including wide screens.
   expect(homeCss).toMatch(/\.observatory-actions,\s*\.observatory-scroll\s*\{\s*display:\s*none/);
+  const wide = homeCss.slice(homeCss.indexOf('@media (min-width: 60rem)'));
+  expect(wide).toMatch(/\.observatory-actions\s*\{\s*display:\s*flex/);
+  expect(wide).not.toMatch(/\.observatory-footer\s*\{[^}]*position:\s*fixed/);
 });
 
 test('short phones fold display toggles behind one Display button', () => {
@@ -1326,7 +1330,8 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   expect(sky).toContain("addEventListener('pointerdown', dropPrintCard, true)");
   expect(sky).toContain("removeEventListener('pointerdown', dropPrintCard, true)");
   expect(sky).not.toContain('printCardRequestedAt');
-  expect(readFileSync('index.html', 'utf8')).toContain('href="/sky-tonight" id="home-sky-tonight"');
+  expect(readFileSync('index.html', 'utf8')).toContain('href="/sky-tonight" id="launch-sky-tonight"');
+  expect(readFileSync('index.html', 'utf8')).not.toContain('id="home-sky-tonight"');
 });
 
 test('sky tonight offers one horizon canvas with time and orbit controls', () => {

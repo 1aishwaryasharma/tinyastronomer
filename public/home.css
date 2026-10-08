@@ -187,25 +187,19 @@ body {
   pointer-events: auto;
 }
 
-/* Tonight's sky is what most visitors search for, so it sits beside the
-   plain-language guide and teacher notes (guide.js). */
-.observatory-links {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--space-md);
-  margin-block-start: var(--space-xs);
-}
-
-.launch-deck .observatory-links .observatory-guide {
-  margin-block-start: 0;
-}
-
+/* The guide sits under the study list. Sky Tonight stays study 06 only. */
 .launch-deck .observatory-guide {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   gap: var(--space-2xs);
+  width: fit-content;
+  max-width: 100%;
   min-height: 2.75rem;
-  margin-block-start: var(--space-xs);
+  margin-block-start: var(--space-sm);
+  padding: 0;
+  background: none;
+  box-shadow: none;
   color: var(--color-accent);
   font-family: var(--font-label);
   font-size: var(--text-xs);
@@ -215,7 +209,9 @@ body {
   text-underline-offset: 0.3em;
 }
 
-.launch-deck .observatory-guide:hover {
+.launch-deck .observatory-guide:hover,
+.launch-deck .observatory-guide:focus-visible {
+  background: none;
   color: var(--color-ink);
 }
 
@@ -223,6 +219,26 @@ body {
 .observatory-scroll {
   display: none;
   text-decoration: none;
+}
+
+.launch-deck .observatory-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 3rem;
+  padding: 0 var(--space-md);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+
+.observatory-cta:active {
+  background: var(--color-accent-deep);
 }
 
 /* Phones: the composition stacks, so the hero must hand over a choice inside
@@ -250,36 +266,12 @@ body {
     margin-block-start: var(--space-sm);
   }
 
-  .observatory-intro > p.observatory-hint {
-    display: none;
-  }
-
   .observatory-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2xs) var(--space-sm);
     margin-block-start: var(--space-md);
-  }
-
-  .launch-deck .observatory-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    min-height: 3rem;
-    padding: 0 var(--space-md);
-    background: var(--color-accent);
-    color: var(--color-accent-ink);
-    font-family: var(--font-label);
-    font-size: var(--text-sm);
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-    text-decoration: none;
-    transition: background-color var(--dur-short) var(--ease-out);
-  }
-
-  .observatory-cta:active {
-    background: var(--color-accent-deep);
   }
 
   .launch-deck .observatory-scroll {
@@ -633,7 +625,13 @@ body:not(.is-study-open) > .loader {
 
 @media (min-width: 60rem) {
   .launch-deck {
-    overflow: hidden;
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+
+  .observatory-actions {
+    display: flex;
+    margin-block-start: var(--space-md);
   }
 
   .launch-deck::before {
@@ -647,9 +645,9 @@ body:not(.is-study-open) > .loader {
   }
 
   .observatory-map {
-    position: fixed;
-    inset: 0;
-    min-height: 0;
+    position: relative;
+    height: 100dvh;
+    min-height: 100dvh;
     padding: 0;
   }
 
@@ -705,11 +703,23 @@ body:not(.is-study-open) > .loader {
     transform: translateX(-50%);
   }
 
+  /* The note occupies the bottom of the fold. Source links follow in flow. */
   .observatory-footer {
-    position: fixed;
-    inset: auto 0 0;
+    --fold-note: 2.75rem;
+    position: relative;
+    z-index: 2;
+    margin-top: calc(-1 * var(--fold-note));
     padding-block-start: 0;
-    background: linear-gradient(180deg, var(--color-transparent), var(--color-overlay-soft) 18%);
+    background: none;
+  }
+
+  .observatory-credit-note {
+    display: flex;
+    align-items: center;
+    height: var(--fold-note);
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
   }
 }
 
