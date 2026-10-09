@@ -1307,6 +1307,47 @@ test('stamping module versions also refreshes the inline-script CSP hashes', asy
   }
 });
 
+function cssMediaBlock(css: string, needle: string) {
+  const at = css.indexOf(needle);
+  const start = css.lastIndexOf('@media', at);
+  let depth = 0;
+  for (let index = css.indexOf('{', start); index < css.length; index += 1) {
+    if (css[index] === '{') depth += 1;
+    else if (css[index] === '}') {
+      depth -= 1;
+      if (depth === 0) return css.slice(start, index + 1);
+    }
+  }
+  throw new Error(`unclosed media block around ${needle}`);
+}
+
+test('sky tonight keeps one set of 3D links and drops the repeated row detail', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  const chrome = readFileSync('chrome.js', 'utf8');
+  const commonCss = readFileSync('common.css', 'utf8');
+  // Fists stay on the first line. The degree and the per-row constellation
+  // line do not. The same links live in the existing explore box.
+  expect(sky).toContain('copy.append(` · ${whereToLook(item.position)}`)');
+  expect(sky).toContain('rowLine(copy, \'detail\', `${item.brightness} · ${setsText(item)}`)');
+  expect(sky).not.toContain('° up ·');
+  expect(sky).not.toContain('In ${item.constellation}');
+  expect(sky).not.toContain('sky-3d-links');
+  expect(sky).toContain('id="sky-explore-links"');
+  expect(sky).toContain('class="fact-callout framed sky-explore"');
+  expect(sky).toContain("report.key === 'moon' ? 'Why the Moon changes shape →'");
+  expect(sky).toContain("report.key === 'moon' ? '/#light-study' : `/solar-system#${report.key}`");
+  expect(sky).not.toContain('.sky-item-copy .tag a');
+  // The preview line is hidden until the drawer layout, and that show rule
+  // sits in the drawer's own block rather than a second width query.
+  const panels = chrome.slice(chrome.indexOf('function initMobileInfoPanels'), chrome.indexOf('function initDesktopInfoPanels'));
+  expect(panels).not.toContain('matchMedia');
+  expect(panels).not.toContain('peek.hidden');
+  expect(commonCss).toMatch(/(?:^|\n)\.mobile-peek-line\s*\{[^}]*display:\s*none/);
+  const drawer = cssMediaBlock(commonCss, '.info-panel.mobile-info-panel {');
+  expect(drawer).toMatch(/\.info-panel\.mobile-info-panel > \.mobile-peek-line\s*\{[^}]*display:\s*block/);
+  expect(commonCss.slice(0, commonCss.indexOf(drawer))).toMatch(/\.mobile-peek-line\s*\{[^}]*display:\s*none/);
+});
+
 test('sky tonight speaks to children: fists, words, and no telescope-only planets up front', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   expect(sky).toContain('id="sky-headline"');
@@ -1319,7 +1360,7 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   expect(sky).toContain('whereToLookShort(best)');
   // Which body is "up now" is decided by sortSkyLists (tested with real
   // astronomy in sky-forecast.test.ts), not by a rule copied into the page.
-  expect(sky).toContain('sortSkyLists(currentReports, positions, observer, selectedTime)');
+  expect(sky).toContain('sortSkyLists(currentReports, positions, selectedTime)');
   // Going stale relabels "now" without rebuilding rows under the reader.
   expect(sky).toContain('if (listsSayNow && !selectedIsNow()) renderNowWording()');
   // Crawlers and failed script loads see the searched question, not a placeholder.

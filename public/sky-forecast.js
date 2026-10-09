@@ -457,16 +457,15 @@ export function displayName(name) {
 }
 
 // Sorts tonight's reports for the selected moment. Reports are computed once
-// per night; positions are at `time`, and "up" rows carry the constellation
-// at `time` too, since the Moon can cross into another during the night.
-export function sortSkyLists(reports, positions, observer, time) {
+// per night; positions are at `time`.
+export function sortSkyLists(reports, positions, time) {
   const naked = reports.filter((report) => !TELESCOPE_BODIES.has(report.key));
   const up = [], later = [], earlier = [], missing = [];
   for (const report of naked) {
     // The chosen moment is checked exactly, so a body visible now is up even
     // when no 10-minute sample of the night caught it.
     if (isVisibleAt(report.name, positions[report.key].altitude, positions.sun.altitude)) {
-      up.push({ ...report, position: positions[report.key], constellation: constellationAt(report.name, observer, time) });
+      up.push({ ...report, position: positions[report.key] });
       continue;
     }
     if (!report.visible) { missing.push(report); continue; }

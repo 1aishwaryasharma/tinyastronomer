@@ -209,19 +209,21 @@ describe('Sky Tonight review regressions (written before their fixes)', () => {
     }
   });
 
-  test('lists sort by the selected moment, with its constellation', async () => {
+  test('lists sort by the selected moment', async () => {
     const { sortSkyLists } = await import('./public/sky-forecast.js');
-    // Sep 23: the Moon is in Capricornus at dusk and Aquarius five hours later.
     const w = night(2026, 9, 23);
     const dusk = w.astroDusk!;
     const later = new Date(dusk.getTime() + 5 * 3600e3);
     const reports = ['Moon', 'Saturn', 'Neptune'].map((body) => bodyReport(body, london, w, dusk));
     const positions = Object.fromEntries(['Sun', 'Moon', 'Saturn', 'Neptune']
       .map((body) => [body.toLowerCase(), positionAt(body, london, later)]));
-    const lists = sortSkyLists(reports, positions, london, later);
+    const lists = sortSkyLists(reports, positions, later);
     const moon = lists.up.find((item: any) => item.key === 'moon');
+    // The row uses the position at the selected moment. It no longer asks for a
+    // new constellation then, so it keeps the report's own.
+    expect(moon.position).toBe(positions.moon);
+    expect(moon.constellation).toBe('Capricornus');
     expect(reports[0].constellation).toBe('Capricornus');
-    expect(moon.constellation).toBe('Aquarius');
     // Telescope planets never join the naked-eye lists.
     expect([...lists.up, ...lists.later, ...lists.earlier, ...lists.missing].map((item: any) => item.key)).not.toContain('neptune');
     expect(lists.telescope.map((item: any) => item.key)).toEqual(['neptune']);
@@ -253,7 +255,7 @@ describe('Sky Tonight round-four regressions (written before their fixes)', () =
     const time = new Date('2026-12-20T03:44:00Z');
     const reports = FORECAST_BODIES.map((body: string) => bodyReport(body, tromso, w));
     const positions = Object.fromEntries(['Sun', ...FORECAST_BODIES].map((body: string) => [body.toLowerCase(), positionAt(body, tromso, time)]));
-    const lists = sortSkyLists(reports, positions, tromso, time);
+    const lists = sortSkyLists(reports, positions, time);
     const moon = lists.later.find((item: any) => item.key === 'moon');
     expect(lists.earlier.map((item: any) => item.key)).not.toContain('moon');
     expect(moon).toBeDefined();
@@ -281,7 +283,7 @@ describe('Sky Tonight round-five regressions (written before their fixes)', () =
     const time = new Date('2026-05-22T03:09:00Z');
     const reports = FORECAST_BODIES.map((body: string) => bodyReport(body, london, w));
     const positions = Object.fromEntries(['Sun', ...FORECAST_BODIES].map((body: string) => [body.toLowerCase(), positionAt(body, london, time)]));
-    const lists = sortSkyLists(reports, positions, london, time);
+    const lists = sortSkyLists(reports, positions, time);
     expect(lists.up.map((item: any) => item.key)).toContain('saturn');
     expect(lists.missing.map((item: any) => item.key)).not.toContain('saturn');
   });

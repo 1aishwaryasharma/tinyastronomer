@@ -24,7 +24,7 @@
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20260927-1">
+<link rel="stylesheet" href="common.css?v=20261008-1">
 <style>
   #sky { position: fixed; inset: 0; z-index: 0; display: block; }
   .info-panel { top: 112px; width: 380px; max-height: calc(100dvh - 224px); overflow: auto; }
@@ -105,7 +105,7 @@
   .star-item { width: 100%; min-height: 44px; border: 0; border-bottom: 1px solid var(--line); color: var(--ink-dim); background: transparent; text-align: left; font: inherit; cursor: pointer; flex-wrap: wrap; gap: 4px; }
   .star-item:focus-visible { outline: 2px solid #f4c560; outline-offset: 2px; }
   .sky-item-copy .detail { display: block; margin-top: 1px; }
-  .sky-item-copy .tag a, .sky-explore a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .sky-explore a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
   #later-section[hidden] { display: none; }
   #print-sky { margin-top: 14px; }
   #print-sky + .guide-open { margin-top: 8px; }
@@ -197,7 +197,7 @@
   <div class="fact-callout"><span class="fact-tag">✦ Measure with your fist</span>Stretch your arm out and make a fist: it covers about 10° of sky. “2 fists up” means two fists stacked above the horizon. Planets usually shine steadily while stars twinkle. Go out with a grown-up, and never look at the Sun.</div>
   <button type="button" class="guide-open" id="print-sky"><span class="science-kind">Print</span><span>My sky tonight · a card to take outside</span></button>
   <button type="button" class="guide-open" data-guide-open><span class="science-kind">Guide</span><span>For kids, parents &amp; teachers</span></button>
-  <nav class="fact-callout framed sky-explore" aria-label="Explore what you saw"><span class="fact-tag">✦ Saw something?</span>Fly to any planet in the <a href="/solar-system">Grand Tour</a>, see why the Moon changes shape in the <a href="/#light-study">Light Study</a>, or find out why the stars change with the <a href="/seasons">Seasons</a>.</nav>
+  <nav class="fact-callout framed sky-explore" aria-label="Explore what you saw"><span class="fact-tag">✦ Saw something?</span>Fly to any planet in the <a href="/solar-system">Grand Tour</a>, see why the Moon changes shape in the <a href="/#light-study">Light Study</a>, or find out why the stars change with the <a href="/seasons">Seasons</a>.<span id="sky-explore-links"></span></nav>
   <details class="science-note">
     <summary><span class="science-kind">Local forecast</span><span>Accuracy &amp; sources</span></summary>
     <p>Positions come from astronomy-engine's VSOP87-based model and are topocentric with standard atmospheric refraction. This guide assumes a flat horizon and clear sky. Location precision is about 10 km from the device, or about a city from the time zone.</p>
@@ -233,10 +233,10 @@
 </div>
 
 <script type="module">
-import { SPACE } from './chrome.js?v=20260909-2';
+import { SPACE } from './chrome.js?v=20261008-1';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=9c0db87c52';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=338a649d11';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=4fb5dd2281';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=e45dc70d01';
 import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=e7717d6463';
 import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
@@ -634,8 +634,7 @@ function setsText(report) {
 function makeUpNowItem(item) {
   const { row, copy } = skyRow(item);
   copy.append(` · ${whereToLook(item.position)}`);
-  rowLine(copy, 'detail', `${Math.round(item.position.altitude)}° up · ${item.brightness} · ${setsText(item)}`);
-  rowLine(copy, 'tag', `In ${item.constellation} · `).appendChild(exploreLink(item));
+  rowLine(copy, 'detail', `${item.brightness} · ${setsText(item)}`);
   return row;
 }
 function makeLaterItem(report) {
@@ -671,13 +670,22 @@ setInterval(() => { if (listsSayNow && !selectedIsNow()) renderNowWording(); }, 
 
 // Lists follow the time slider: "up now" is about the selected moment, while
 // the heavier per-night reports are computed once per date and location.
+function renderExploreLinks(up) {
+  const slot = document.getElementById('sky-explore-links');
+  const nodes = [];
+  up.forEach((item, index) => {
+    if (index) nodes.push(' · ');
+    nodes.push(exploreLink(item));
+  });
+  slot.replaceChildren(...(nodes.length ? [' ', ...nodes] : []));
+}
 function renderLists(positions) {
-  const observer = new Astronomy.Observer(location.lat, location.lon, 0);
-  const { up, later, earlier, missing, telescope } = sortSkyLists(currentReports, positions, observer, selectedTime);
+  const { up, later, earlier, missing, telescope } = sortSkyLists(currentReports, positions, selectedTime);
   currentLists = { up, later };
   renderNowWording();
 
   listEl.replaceChildren(...up.map(makeUpNowItem));
+  renderExploreLinks(up);
   if (!up.length) {
     const next = [later.length && 'see Later tonight', featuredStars.length && 'try the bright stars'].filter(Boolean);
     listEl.appendChild(element('p', `No Moon or planet is up at this time.${next.length ? ` ${capitalize(orList.format(next))}.` : ''}`, 'empty-list'));

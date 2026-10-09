@@ -7,7 +7,7 @@ const result = await Bun.build({
   naming: 'common.bundle.js',
   target: 'browser',
   minify: true,
-  external: ['three', './chrome.js?v=20260909-2'],
+  external: ['three', './chrome.js?v=20261008-1'],
   plugins: [{
     name: 'three-addons',
     setup(build) {
