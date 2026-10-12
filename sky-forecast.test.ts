@@ -333,6 +333,16 @@ describe('Sky Tonight Moon timing', () => {
   });
 });
 
+test('a planet that sets in bright twilight is lost in the glare, not below the horizon', () => {
+  // Venus near inferior conjunction sets minutes after the Sun.
+  const nyc = new Astronomy.Observer(40.7, -74.0, 0);
+  const night = nightWindow(nyc, new Date(2026, 9, 11, 12));
+  const venus = bodyReport('Venus', nyc, night);
+  expect(venus.visible).toBe(false);
+  expect(venus.set!.getTime()).toBeGreaterThan(night.sunset!.getTime());
+  expect(venus.note).toBe("Lost in the Sun's glare.");
+});
+
 describe('Sky Tonight night in progress', () => {
   const sf = new Astronomy.Observer(37.77, -122.42, 10);
   const calendarDay = (date: Date) => [date.getFullYear(), date.getMonth(), date.getDate()];

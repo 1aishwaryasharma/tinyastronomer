@@ -269,19 +269,30 @@ export function isVisibleAt(body, altitude, sunAltitudeDegrees) {
 // own darkness rule. Pairings match samples by timestamp, so a grid that
 // started at each body's own twilight limit never lined the Moon or Venus up
 // with the other planets.
-function visibilitySamples(body, observer, window) {
+function skySamples(body, observer, window) {
   return samplesBetween(window.start, window.end).map((time) => ({
     time,
     position: horizontal(body, observer, time),
     sunAltitude: sunAltitude(observer, time),
-  })).filter((sample) => darkEnoughFor(body, sample.sunAltitude));
+  }));
 }
 
-function invisibleNote(samples) {
-  if (samples.length === 0) return 'No dark observing window tonight.';
-  const maxAltitude = Math.max(...samples.map((sample) => sample.position.altitude));
-  if (maxAltitude <= 0) return 'Below the horizon all night.';
-  if (maxAltitude <= MIN_ALTITUDE) return 'Too low on the horizon to see clearly.';
+function visibilitySamples(body, observer, window) {
+  return skySamples(body, observer, window).filter((sample) => darkEnoughFor(body, sample.sunAltitude));
+}
+
+const highest = (samples) => Math.max(...samples.map((sample) => sample.position.altitude));
+
+// `all` covers the whole night; `dark` only the part dark enough for the body.
+// A body that is up only while the sky is still too bright, like Venus
+// setting soon after the Sun, is lost in the glare, not below the horizon.
+function invisibleNote(all, dark) {
+  if (dark.length === 0) return 'No dark observing window tonight.';
+  const darkMax = highest(dark);
+  const twilightMax = highest(all);
+  if (darkMax <= MIN_ALTITUDE && twilightMax > Math.max(0, darkMax)) return "Lost in the Sun's glare.";
+  if (darkMax <= 0) return 'Below the horizon all night.';
+  if (darkMax <= MIN_ALTITUDE) return 'Too low on the horizon to see clearly.';
   return 'Lost in twilight tonight.';
 }
 
@@ -303,7 +314,8 @@ function settings(body, observer, window) {
 
 export function bodyReport(body, observer, window, sampleTime) {
   const at = asDate(sampleTime ?? window.astroDusk ?? window.civilDusk ?? window.start);
-  const samples = visibilitySamples(body, observer, window);
+  const allSamples = skySamples(body, observer, window);
+  const samples = allSamples.filter((sample) => darkEnoughFor(body, sample.sunAltitude));
   const candidates = samples.filter((sample) => isVisibleAt(body, sample.position.altitude, sample.sunAltitude));
   const withCompass = (sample) => sample && { time: sample.time, position: { ...sample.position, compass: compassDirection(sample.position.azimuth) } };
   const best = candidates.reduce(
@@ -334,7 +346,7 @@ export function bodyReport(body, observer, window, sampleTime) {
     set: sets.first,
     sets: sets.within,
     constellation: constellationAt(body, observer, at),
-    note: best ? '' : invisibleNote(samples),
+    note: best ? '' : invisibleNote(allSamples, samples),
   };
 }
 
