@@ -192,7 +192,7 @@
     <p class="privacy-note">A 360° horizon chart: north appears at both edges. Star positions are real; dot sizes are enlarged. Clouds, moonlight and city lights affect what you can see.</p>
   </section>
   <details class="not-tonight" id="not-tonight"><summary id="not-tonight-summary">Not tonight</summary><div id="sky-hidden-list"></div></details>
-  <details class="not-tonight" id="telescope-planets"><summary>Telescope planets · Uranus &amp; Neptune</summary><p class="privacy-note">Too faint to find by eye. Open this to show them on the chart too.</p><div id="telescope-list"></div></details>
+  <details class="not-tonight" id="telescope-planets"><summary>Faint planets · Uranus &amp; Neptune</summary><p class="privacy-note">Too faint to find by eye. Open this to show them on the chart too.</p><div id="telescope-list"></div></details>
   <p class="sr-only" id="sky-summary"></p>
   <div class="fact-callout"><span class="fact-tag">✦ Measure with your fist</span>Stretch your arm out and make a fist: it covers about 10° of sky. “2 fists up” means two fists stacked above the horizon. Planets usually shine steadily while stars twinkle. Go out with a grown-up, and never look at the Sun.</div>
   <button type="button" class="guide-open" id="print-sky"><span class="science-kind">Print</span><span>My sky tonight · a card to take outside</span></button>
@@ -235,8 +235,8 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20261008-1';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, currentNightDate, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=a6752346e8';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=635cd2250d';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, currentNightDate, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=fdccf229a1';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=2a43e12f65';
 import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=e7717d6463';
 import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
@@ -972,7 +972,7 @@ SPACE.buildNav('sky');
     <p>Planets usually shine with a steadier light, while stars twinkle more. Planets also stay near the same path across the sky that the Sun and Moon follow. After the Moon, Venus and Jupiter are often the brightest things in the night sky.</p>
 
     <h3>Which planets can I see without a telescope?</h3>
-    <p>Five: <strong>Mercury, Venus, Mars, Jupiter and Saturn</strong>. Mercury and Venus stay close to the Sun in our sky, so look for them low in the west after sunset or low in the east before sunrise. Mars, Jupiter and Saturn can be up for much of the night at some times of year. Uranus is only just visible from a very dark place, and Neptune needs a telescope.</p>
+    <p>Five: <strong>Mercury, Venus, Mars, Jupiter and Saturn</strong>. Mercury and Venus stay close to the Sun in our sky, so look for them low in the west after sunset or low in the east before sunrise. Mars, Jupiter and Saturn can be up for much of the night at some times of year. Uranus is only just visible from a very dark place, and Neptune needs binoculars or a telescope.</p>
 
     <h3>When is the best time to look?</h3>
     <p>Wait until it is properly dark; the forecast shows a <strong>Dark from</strong> time. Give your eyes about 20 minutes to adjust, and use a red light rather than a bright phone screen. A bright Moon washes out faint stars, so the nights around new moon are best for stars. The Moon itself looks wonderful through binoculars around first quarter, when shadows show off its craters.</p>

@@ -121,7 +121,8 @@ export function whereToLookShort(position) {
 // unless asked for. The value is what to say instead of a brightness.
 const TELESCOPE_NOTES = {
   uranus: 'optical aid recommended',
-  neptune: 'telescope required',
+  // About magnitude 7.8: past the eye, but a dot in ordinary binoculars.
+  neptune: 'binoculars or a telescope',
 };
 export const TELESCOPE_BODIES = new Set(Object.keys(TELESCOPE_NOTES));
 
