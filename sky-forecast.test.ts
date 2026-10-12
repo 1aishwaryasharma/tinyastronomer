@@ -96,7 +96,8 @@ describe('Sky Tonight time-within-window', () => {
   test('defaults to astronomical dusk when the clock is outside the window', () => {
     expect(duskMinutes).toBeGreaterThan(0);
     const dusk = timeInNight(window, duskMinutes);
-    expect(Math.abs(dusk.getTime() - window.astroDusk.getTime())).toBeLessThan(5 * 60 * 1000);
+    expect(dusk.getTime()).toBeGreaterThanOrEqual(window.astroDusk.getTime());
+    expect(dusk.getTime() - window.astroDusk.getTime()).toBeLessThan(5 * 60 * 1000);
     expect(positionAt('Sun', observer, dusk).altitude).toBeLessThan(-6);
   });
 

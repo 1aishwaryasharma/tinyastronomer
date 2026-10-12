@@ -220,11 +220,15 @@ export function timeInNight(window, minutesFromStart) {
   return new Date(window.start.getTime() + minutes * 60000);
 }
 
+// The slider moves in 5-minute steps from sunset. "Now" takes the nearest
+// step; otherwise the first step at or after full dark, so the opening view
+// is never a few minutes short of it.
 export function defaultNightMinutes(window, now, isToday) {
-  const pick = isToday && now >= window.start && now <= window.end
-    ? now
-    : window.astroDusk ?? window.civilDusk ?? window.start;
-  return Math.round((pick - window.start) / 300000) * 5;
+  if (isToday && now >= window.start && now <= window.end) {
+    return Math.round((now - window.start) / 300000) * 5;
+  }
+  const dark = window.astroDusk ?? window.civilDusk ?? window.start;
+  return Math.ceil((dark - window.start) / 300000) * 5;
 }
 
 function samplesBetween(start, end) {
