@@ -523,7 +523,9 @@ function formatTime(date) {
     catch { format = new Intl.DateTimeFormat(undefined, options); }
     timeFormats.set(displayTimeZone, format);
   }
-  return format.format(date).toLowerCase();
+  // Round to the nearest minute, as almanacs do: the formatter drops the
+  // seconds, which would put a 6:16:59 sunset at 6:16.
+  return format.format(new Date(Math.round(date.getTime() / 60000) * 60000)).toLowerCase();
 }
 function zoneOffset(timeZone, date) {
   try { return new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' }).formatToParts(date).find(part => part.type === 'timeZoneName')?.value; }
