@@ -350,14 +350,20 @@ export function bodyReport(body, observer, window, sampleTime) {
   };
 }
 
-function moonPhaseName(angle) {
-  if (angle < 22.5 || angle >= 337.5) return 'New Moon';
-  if (angle < 67.5) return 'Waxing crescent';
-  if (angle < 112.5) return 'First quarter';
-  if (angle < 157.5) return 'Waxing gibbous';
-  if (angle < 202.5) return 'Full Moon';
-  if (angle < 247.5) return 'Waning gibbous';
-  if (angle < 292.5) return 'Last quarter';
+// New, quarter and full are moments, not stretches of the month: name them
+// only within about a day (the Moon gains about 12° a day on the Sun), and
+// call the days between crescent or gibbous.
+const PRINCIPAL_PHASE_DEGREES = 12;
+
+export function moonPhaseName(angle) {
+  const near = (target) => Math.abs(((angle - target + 540) % 360) - 180) <= PRINCIPAL_PHASE_DEGREES;
+  if (near(0)) return 'New Moon';
+  if (near(90)) return 'First quarter';
+  if (near(180)) return 'Full Moon';
+  if (near(270)) return 'Last quarter';
+  if (angle < 90) return 'Waxing crescent';
+  if (angle < 180) return 'Waxing gibbous';
+  if (angle < 270) return 'Waning gibbous';
   return 'Waning crescent';
 }
 

@@ -90,4 +90,4 @@ steps:
       text:
         in:
           id: moon-summary
-        contains: New Moon · 2% lit
+        contains: Waning crescent · 2% lit

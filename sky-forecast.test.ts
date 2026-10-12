@@ -7,6 +7,7 @@ import {
   conjunctions,
   currentNightDate,
   defaultNightMinutes,
+  moonPhaseName,
   moonReport,
   nightSpanMinutes,
   nightWindow,
@@ -353,6 +354,21 @@ test('orbit positions are ecliptic longitudes that increase as the planets move'
   expect(Math.abs(earth.z)).toBeLessThan(0.001);
   const later = orbitPositions(new Date(date.getTime() + 10 * 24 * 60 * 60 * 1000)).earth;
   expect(later.longitude).toBeGreaterThan(earth.longitude);
+});
+
+test('principal Moon phases are named only within about a day of the moment', () => {
+  expect(moonPhaseName(0)).toBe('New Moon');
+  expect(moonPhaseName(355)).toBe('New Moon');
+  expect(moonPhaseName(11)).toBe('New Moon');
+  expect(moonPhaseName(20)).toBe('Waxing crescent');
+  expect(moonPhaseName(70)).toBe('Waxing crescent');
+  expect(moonPhaseName(95)).toBe('First quarter');
+  expect(moonPhaseName(160)).toBe('Waxing gibbous');
+  expect(moonPhaseName(185)).toBe('Full Moon');
+  expect(moonPhaseName(200)).toBe('Waning gibbous');
+  expect(moonPhaseName(268)).toBe('Last quarter');
+  expect(moonPhaseName(300)).toBe('Waning crescent');
+  expect(moonPhaseName(340)).toBe('Waning crescent');
 });
 
 describe('Sky Tonight night in progress', () => {

@@ -118,7 +118,7 @@ compositor for readiness captures; these snapshots do not verify 3D rendering.
 
 The manual-location flow checks the London forecast (51.5, -0.1, September 9,
 2026, device in UTC) as text, not as an image: sunset **7:28 pm**, dark from
-**9:27 pm**, sunrise **6:27 am** and **New Moon · 2% lit**, all in London time.
+**9:27 pm**, sunrise **6:27 am** and **Waning crescent · 2% lit**, all in London time.
 It used to crop `#night-window` against a baseline, but that crop only guarded
 these four values, and any layout change above the card moved it by a
 sub-pixel and changed the crop size, forcing a baseline regeneration with no
