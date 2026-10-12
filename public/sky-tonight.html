@@ -235,8 +235,8 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20261008-1';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=ac96da311a';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=a48622bdda';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, currentNightDate, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=a6752346e8';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=635cd2250d';
 import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=e7717d6463';
 import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
@@ -487,7 +487,7 @@ const nowButton = document.getElementById('now-btn');
 const horizonButton = document.getElementById('view-horizon');
 const orbitButton = document.getElementById('view-orbit');
 const MAX_OFFSET = parseInt(slider.max, 10);
-const baseDate = new Date(); baseDate.setHours(12, 0, 0, 0);
+let baseDate = new Date(); baseDate.setHours(12, 0, 0, 0);
 let offset = 0;
 let location = resolveLocation();
 let activeWindow = null;
@@ -816,7 +816,17 @@ function applyDateInput(announce) {
   else update();
 }
 
-dateInput.min = isoLocal(dateAt(0)); dateInput.max = isoLocal(dateAt(MAX_OFFSET));
+// Offset 0 is the night in progress at the observing site, which before
+// sunrise began yesterday. A new location can move it: "Today" stays on the
+// night in progress, and any other chosen date is kept.
+function syncBaseDate() {
+  const next = currentNightDate(new Astronomy.Observer(location.lat, location.lon, 0));
+  const shift = Math.round((baseDate - next) / DAY_MS);
+  baseDate = next;
+  if (offset) offset = clamp(offset + shift, 0, MAX_OFFSET);
+  slider.value = offset;
+  dateInput.min = isoLocal(dateAt(0)); dateInput.max = isoLocal(dateAt(MAX_OFFSET));
+}
 slider.oninput = () => { offset = parseInt(slider.value, 10); update(); }; slider.onchange = commitDate;
 prevBtn.onclick = () => setOffset(offset - 1); nextBtn.onclick = () => setOffset(offset + 1);
 // Mobile hides the 800-day slider, so the native picker is the precise control.
@@ -904,17 +914,17 @@ longitudeInput.onfocus = () => longitudeInput.select();
 
 useLocationButton.onclick = async () => {
   useLocationButton.disabled = true; locationStatus.textContent = 'Asking your browser for your location…';
-  try { location = await requestDeviceLocation(); locationStatus.textContent = 'Using your rounded device location.'; update(); announceForecast(); }
+  try { location = await requestDeviceLocation(); locationStatus.textContent = 'Using your rounded device location.'; syncBaseDate(); update(); announceForecast(); }
   catch (error) { locationStatus.textContent = error.message; }
   finally { useLocationButton.disabled = false; }
 };
 locationForm.onsubmit = (event) => {
   event.preventDefault();
-  try { location = setManualLocation(latitudeInput.value, longitudeInput.value); locationStatus.textContent = 'Using your manual location.'; update(); document.getElementById('location-change').open = false; announceForecast(); }
+  try { location = setManualLocation(latitudeInput.value, longitudeInput.value); locationStatus.textContent = 'Using your manual location.'; syncBaseDate(); update(); document.getElementById('location-change').open = false; announceForecast(); }
   catch (error) { locationStatus.textContent = error.message; }
 };
 
-updateViewButtons(); update();
+updateViewButtons(); syncBaseDate(); update();
 const startTime = performance.now();
 function loop() {
   const time = SPACE.prefersReducedMotion ? 0 : (performance.now() - startTime) * 0.001;

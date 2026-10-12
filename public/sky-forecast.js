@@ -197,6 +197,17 @@ export function nightWindow(observer, localDate) {
   };
 }
 
+// The calendar date (at local noon) of the night in progress. Before sunrise
+// the night began at yesterday's sunset, so someone out at 2 am gets the sky
+// above them, not the evening still to come.
+export function currentNightDate(observer, now = new Date()) {
+  const today = new Date(now);
+  today.setHours(12, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  return now <= nightWindow(observer, yesterday).end ? yesterday : today;
+}
+
 export function nightSpanMinutes(window) {
   if (!window?.start || !window?.end) return 5;
   return Math.max(5, Math.round((window.end - window.start) / 60000));

@@ -5,6 +5,7 @@ import {
   brightnessDescription,
   compassDirection,
   conjunctions,
+  currentNightDate,
   defaultNightMinutes,
   moonReport,
   nightSpanMinutes,
@@ -329,5 +330,25 @@ describe('Sky Tonight Moon timing', () => {
     expect(moon.upAtStart).toBe(true);
     expect(moon.upAtEnd).toBe(false);
     expect(positionAt('Moon', nyc, night.sunset!).altitude).toBeGreaterThan(0);
+  });
+});
+
+describe('Sky Tonight night in progress', () => {
+  const sf = new Astronomy.Observer(37.77, -122.42, 10);
+  const calendarDay = (date: Date) => [date.getFullYear(), date.getMonth(), date.getDate()];
+  // An hour either side of sunrise on Sep 8, 2026 (13:40 UTC), which is
+  // Sep 8 on the device clock in any zone from UTC-11 to UTC+9.
+
+  test('before sunrise, the night in progress began yesterday', () => {
+    const night = nightWindow(sf, new Date(2026, 8, 7, 12));
+    const beforeSunrise = new Date(night.end.getTime() - 60 * 60 * 1000);
+    expect(calendarDay(currentNightDate(sf, beforeSunrise))).toEqual([2026, 8, 7]);
+    expect(currentNightDate(sf, beforeSunrise).getHours()).toBe(12);
+  });
+
+  test('after sunrise, tonight is the coming night', () => {
+    const night = nightWindow(sf, new Date(2026, 8, 7, 12));
+    const afterSunrise = new Date(night.end.getTime() + 60 * 60 * 1000);
+    expect(calendarDay(currentNightDate(sf, afterSunrise))).toEqual([2026, 8, 8]);
   });
 });
