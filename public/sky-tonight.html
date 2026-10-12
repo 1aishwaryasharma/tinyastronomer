@@ -235,8 +235,8 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20261008-1';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=4fb5dd2281';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=e45dc70d01';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=ac96da311a';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=a48622bdda';
 import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=e7717d6463';
 import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
@@ -593,12 +593,25 @@ function moonPath(angle, southern) {
   if (southern) for (const point of points) point[0] = 2 * center - point[0];
   return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`).join(' ') + ' Z';
 }
+// Rise and set in the order they happen tonight, framed by whether the Moon
+// is already up at sunset and still up at sunrise.
+function moonTiming(moon, window) {
+  const night = (date) => date && insideWindow(date, window);
+  if (!night(moon.rise) && !night(moon.set)) {
+    return moon.upAtStart ? 'up all night' : 'below the horizon all night';
+  }
+  const parts = [
+    night(moon.rise) && { time: moon.rise, text: `rises ${formatTime(moon.rise)}` },
+    night(moon.set) && { time: moon.set, text: `sets ${formatTime(moon.set)}` },
+  ].filter(Boolean).sort((a, b) => a.time - b.time).map((part) => part.text);
+  if (moon.upAtStart) parts.unshift(window.sunset ? 'up at sunset' : 'already up');
+  if (moon.upAtEnd) parts.push(window.sunrise ? 'up past sunrise' : 'still up');
+  return parts.join(' · ');
+}
 function updateMoon(window, sampleTime) {
   const moon = moonReport(new Astronomy.Observer(location.lat, location.lon, 0), window, sampleTime);
   moonLit.setAttribute('d', moonPath(moon.phaseAngle, location.lat < 0)); moonGlyphTitle.textContent = `${moon.phase}, ${moon.illuminationPercent}% illuminated`;
-  const rise = moon.rise && moon.rise <= window.end ? `rises ${formatTime(moon.rise)}` : 'already up or rises later';
-  const set = moon.set && moon.set <= window.end ? `sets ${formatTime(moon.set)}` : 'up past sunrise';
-  const timing = `${rise} · ${set}${moon.washesOutSky ? ' · bright enough to wash out faint objects' : ''}`;
+  const timing = moonTiming(moon, window) + (moon.washesOutSky ? ' · bright enough to wash out faint objects' : '');
   moonSummary.innerHTML = `<strong>${moon.phase} · ${moon.illuminationPercent}% lit</strong><br>${timing}`;
   moonText = `${moon.phase} · ${moon.illuminationPercent}% lit · ${timing}`;
 }

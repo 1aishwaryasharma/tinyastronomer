@@ -299,3 +299,35 @@ describe('Sky Tonight round-six regressions (written before their fixes)', () =>
   });
 
 });
+
+describe('Sky Tonight Moon timing', () => {
+  const nyc = new Astronomy.Observer(40.7, -74.0, 0);
+
+  test('a Moon that never rises tonight is down at both ends of the night', () => {
+    // New Moon: sets before sunset on Oct 10, 2026 and rises after sunrise.
+    const night = nightWindow(nyc, new Date(2026, 9, 10, 12));
+    const moon = moonReport(nyc, night);
+    expect(moon.rise!.getTime()).toBeGreaterThan(night.end.getTime());
+    expect(moon.set!.getTime()).toBeGreaterThan(night.end.getTime());
+    expect(moon.upAtStart).toBe(false);
+    expect(moon.upAtEnd).toBe(false);
+  });
+
+  test('a Moon that rises in the night is still up at sunrise', () => {
+    const night = nightWindow(nyc, new Date(2026, 9, 3, 12));
+    const moon = moonReport(nyc, night);
+    expect(moon.rise!.getTime()).toBeLessThan(night.end.getTime());
+    expect(moon.upAtStart).toBe(false);
+    expect(moon.upAtEnd).toBe(true);
+    expect(positionAt('Moon', nyc, night.sunrise!).altitude).toBeGreaterThan(0);
+  });
+
+  test('a Moon that is up at sunset and sets in the night is down at sunrise', () => {
+    const night = nightWindow(nyc, new Date(2026, 9, 17, 12));
+    const moon = moonReport(nyc, night);
+    expect(moon.set!.getTime()).toBeLessThan(night.end.getTime());
+    expect(moon.upAtStart).toBe(true);
+    expect(moon.upAtEnd).toBe(false);
+    expect(positionAt('Moon', nyc, night.sunset!).altitude).toBeGreaterThan(0);
+  });
+});

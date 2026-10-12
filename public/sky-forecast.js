@@ -345,14 +345,27 @@ export function moonReport(observer, window, sampleTime) {
   const samples = samplesBetween(bounds.start, bounds.end);
   const upDuringDark = samples.some((time) => horizontal('Moon', observer, time).altitude > 0);
   const position = horizontal('Moon', observer, at);
+  const rise = window.moonRise ?? searchRiseSet('Moon', observer, +1, window.start, 2);
+  const set = window.moonSet ?? searchRiseSet('Moon', observer, -1, window.start, 2);
+  // Whether the Moon is up as the night opens and closes. A rise or set
+  // inside the night settles it; with neither, the Moon stays up or stays
+  // down all night, so one altitude check in the middle says which.
+  const events = [
+    rise && withinNight(rise, window.start, window.end) && { time: rise, up: true },
+    set && withinNight(set, window.start, window.end) && { time: set, up: false },
+  ].filter(Boolean).sort((a, b) => a.time - b.time);
+  const middle = new Date((window.start.getTime() + window.end.getTime()) / 2);
+  const upAllAlong = events.length ? null : horizontal('Moon', observer, middle).altitude > 0;
 
   return {
     phase: moonPhaseName(phaseAngle),
     phaseAngle,
     illumination,
     illuminationPercent: Math.round(illumination * 100),
-    rise: window.moonRise ?? searchRiseSet('Moon', observer, +1, window.start, 2),
-    set: window.moonSet ?? searchRiseSet('Moon', observer, -1, window.start, 2),
+    rise,
+    set,
+    upAtStart: events.length ? !events[0].up : upAllAlong,
+    upAtEnd: events.length ? events.at(-1).up : upAllAlong,
     washesOutSky: illumination > 0.6 && upDuringDark,
     altitude: position.altitude,
     azimuth: position.azimuth,
