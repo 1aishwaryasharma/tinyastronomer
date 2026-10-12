@@ -75,12 +75,12 @@ steps:
       text:
         in:
           id: sunset-time
-        equals: 7:28 pm
+        equals: 7:29 pm
   - assert:
       text:
         in:
           id: dark-time
-        equals: 9:27 pm
+        equals: 9:28 pm
   - assert:
       text:
         in:
@@ -90,4 +90,4 @@ steps:
       text:
         in:
           id: moon-summary
-        contains: New Moon · 2% lit
+        contains: Waning crescent · 2% lit

@@ -200,7 +200,8 @@ approximate refraction adjustment. [JPL Horizons manual](https://ssd.jpl.nasa.go
 - Say “forecast” or “observing guide,” never “weather forecast.”
 - Put compass words before whole-degree altitude and show times in the browser's
   local time zone.
-- Treat Uranus as “optical aid recommended” and Neptune as “telescope required.”
+- Treat Uranus as “optical aid recommended” and Neptune (about magnitude 7.8)
+  as “binoculars or a telescope.”
 - Describe the location precision beside the control and never request device
   location until the user presses the button.
 - Keep the visible model label explicit: positions are topocentric with standard

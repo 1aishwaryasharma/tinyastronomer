@@ -1382,6 +1382,15 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   expect(readFileSync('index.html', 'utf8')).not.toContain('id="home-sky-tonight"');
 });
 
+test('sky tonight accepts coordinates pasted from a map', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  // A 0.1 step makes the browser refuse 40.7128 before the form submits;
+  // setManualLocation rounds instead.
+  for (const id of ['latitude', 'longitude']) {
+    expect(sky).toMatch(new RegExp(`<input type="number" id="${id}"[^>]*step="any"`));
+  }
+});
+
 test('sky tonight offers one horizon canvas with time and orbit controls', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   expect(sky.match(/<canvas\b/g)?.length).toBe(1);
@@ -1391,6 +1400,10 @@ test('sky tonight offers one horizon canvas with time and orbit controls', () =>
   expect(sky).toContain('id="view-orbit" aria-pressed="false"');
   expect(sky).toContain("localStorage.setItem('sky.view', viewMode)");
   expect(sky).toContain("if (viewMode === 'horizon') drawHorizon(time); else drawOrbit(time)");
+  // Today lands on now during the night, and Now turns on once the night
+  // starts on a page left open.
+  expect(sky).toContain("document.getElementById('today-btn').onclick = () => { selectedTime = null; setOffset(0); };");
+  expect(sky).toMatch(/setInterval\(\(\) => \{[^\n]*updateNowButton\(\); \}, 60000\)/);
 });
 
 test('mission cards fold to their hook on phones and stay open without JavaScript', () => {

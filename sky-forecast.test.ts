@@ -5,10 +5,13 @@ import {
   brightnessDescription,
   compassDirection,
   conjunctions,
+  currentNightDate,
   defaultNightMinutes,
+  moonPhaseName,
   moonReport,
   nightSpanMinutes,
   nightWindow,
+  orbitPositions,
   positionAt,
   timeInNight,
 } from './public/sky-forecast.js';
@@ -93,7 +96,8 @@ describe('Sky Tonight time-within-window', () => {
   test('defaults to astronomical dusk when the clock is outside the window', () => {
     expect(duskMinutes).toBeGreaterThan(0);
     const dusk = timeInNight(window, duskMinutes);
-    expect(Math.abs(dusk.getTime() - window.astroDusk.getTime())).toBeLessThan(5 * 60 * 1000);
+    expect(dusk.getTime()).toBeGreaterThanOrEqual(window.astroDusk.getTime());
+    expect(dusk.getTime() - window.astroDusk.getTime()).toBeLessThan(5 * 60 * 1000);
     expect(positionAt('Sun', observer, dusk).altitude).toBeLessThan(-6);
   });
 
@@ -298,4 +302,92 @@ describe('Sky Tonight round-six regressions (written before their fixes)', () =>
     expect(bodyReport('Moon', tromso, w).visible).toBe(true);
   });
 
+});
+
+describe('Sky Tonight Moon timing', () => {
+  const nyc = new Astronomy.Observer(40.7, -74.0, 0);
+
+  test('a Moon that never rises tonight is down at both ends of the night', () => {
+    // New Moon: sets before sunset on Oct 10, 2026 and rises after sunrise.
+    const night = nightWindow(nyc, new Date(2026, 9, 10, 12));
+    const moon = moonReport(nyc, night);
+    expect(moon.rise!.getTime()).toBeGreaterThan(night.end.getTime());
+    expect(moon.set!.getTime()).toBeGreaterThan(night.end.getTime());
+    expect(moon.upAtStart).toBe(false);
+    expect(moon.upAtEnd).toBe(false);
+  });
+
+  test('a Moon that rises in the night is still up at sunrise', () => {
+    const night = nightWindow(nyc, new Date(2026, 9, 3, 12));
+    const moon = moonReport(nyc, night);
+    expect(moon.rise!.getTime()).toBeLessThan(night.end.getTime());
+    expect(moon.upAtStart).toBe(false);
+    expect(moon.upAtEnd).toBe(true);
+    expect(positionAt('Moon', nyc, night.sunrise!).altitude).toBeGreaterThan(0);
+  });
+
+  test('a Moon that is up at sunset and sets in the night is down at sunrise', () => {
+    const night = nightWindow(nyc, new Date(2026, 9, 17, 12));
+    const moon = moonReport(nyc, night);
+    expect(moon.set!.getTime()).toBeLessThan(night.end.getTime());
+    expect(moon.upAtStart).toBe(true);
+    expect(moon.upAtEnd).toBe(false);
+    expect(positionAt('Moon', nyc, night.sunset!).altitude).toBeGreaterThan(0);
+  });
+});
+
+test('a planet that sets in bright twilight is lost in the glare, not below the horizon', () => {
+  // Venus near inferior conjunction sets minutes after the Sun.
+  const nyc = new Astronomy.Observer(40.7, -74.0, 0);
+  const night = nightWindow(nyc, new Date(2026, 9, 11, 12));
+  const venus = bodyReport('Venus', nyc, night);
+  expect(venus.visible).toBe(false);
+  expect(venus.set!.getTime()).toBeGreaterThan(night.sunset!.getTime());
+  expect(venus.note).toBe("Lost in the Sun's glare.");
+});
+
+test('orbit positions are ecliptic longitudes that increase as the planets move', () => {
+  const date = new Date('2026-10-11T00:00:00Z');
+  const earth = orbitPositions(date).earth;
+  const ecliptic = Astronomy.Ecliptic(Astronomy.HelioVector('Earth', date));
+  // Same angle as the J2000 ecliptic longitude, to within precession since 2000.
+  expect(Math.abs(earth.longitude * 180 / Math.PI - ecliptic.elon)).toBeLessThan(0.5);
+  expect(Math.abs(earth.z)).toBeLessThan(0.001);
+  const later = orbitPositions(new Date(date.getTime() + 10 * 24 * 60 * 60 * 1000)).earth;
+  expect(later.longitude).toBeGreaterThan(earth.longitude);
+});
+
+test('principal Moon phases are named only within about a day of the moment', () => {
+  expect(moonPhaseName(0)).toBe('New Moon');
+  expect(moonPhaseName(355)).toBe('New Moon');
+  expect(moonPhaseName(11)).toBe('New Moon');
+  expect(moonPhaseName(20)).toBe('Waxing crescent');
+  expect(moonPhaseName(70)).toBe('Waxing crescent');
+  expect(moonPhaseName(95)).toBe('First quarter');
+  expect(moonPhaseName(160)).toBe('Waxing gibbous');
+  expect(moonPhaseName(185)).toBe('Full Moon');
+  expect(moonPhaseName(200)).toBe('Waning gibbous');
+  expect(moonPhaseName(268)).toBe('Last quarter');
+  expect(moonPhaseName(300)).toBe('Waning crescent');
+  expect(moonPhaseName(340)).toBe('Waning crescent');
+});
+
+describe('Sky Tonight night in progress', () => {
+  const sf = new Astronomy.Observer(37.77, -122.42, 10);
+  const calendarDay = (date: Date) => [date.getFullYear(), date.getMonth(), date.getDate()];
+  // An hour either side of sunrise on Sep 8, 2026 (13:40 UTC), which is
+  // Sep 8 on the device clock in any zone from UTC-11 to UTC+9.
+
+  test('before sunrise, the night in progress began yesterday', () => {
+    const night = nightWindow(sf, new Date(2026, 8, 7, 12));
+    const beforeSunrise = new Date(night.end.getTime() - 60 * 60 * 1000);
+    expect(calendarDay(currentNightDate(sf, beforeSunrise))).toEqual([2026, 8, 7]);
+    expect(currentNightDate(sf, beforeSunrise).getHours()).toBe(12);
+  });
+
+  test('after sunrise, tonight is the coming night', () => {
+    const night = nightWindow(sf, new Date(2026, 8, 7, 12));
+    const afterSunrise = new Date(night.end.getTime() + 60 * 60 * 1000);
+    expect(calendarDay(currentNightDate(sf, afterSunrise))).toEqual([2026, 8, 8]);
+  });
 });

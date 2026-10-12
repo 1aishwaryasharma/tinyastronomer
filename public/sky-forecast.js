@@ -121,7 +121,8 @@ export function whereToLookShort(position) {
 // unless asked for. The value is what to say instead of a brightness.
 const TELESCOPE_NOTES = {
   uranus: 'optical aid recommended',
-  neptune: 'telescope required',
+  // About magnitude 7.8: past the eye, but a dot in ordinary binoculars.
+  neptune: 'binoculars or a telescope',
 };
 export const TELESCOPE_BODIES = new Set(Object.keys(TELESCOPE_NOTES));
 
@@ -197,6 +198,17 @@ export function nightWindow(observer, localDate) {
   };
 }
 
+// The calendar date (at local noon) of the night in progress. Before sunrise
+// the night began at yesterday's sunset, so someone out at 2 am gets the sky
+// above them, not the evening still to come.
+export function currentNightDate(observer, now = new Date()) {
+  const today = new Date(now);
+  today.setHours(12, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  return now <= nightWindow(observer, yesterday).end ? yesterday : today;
+}
+
 export function nightSpanMinutes(window) {
   if (!window?.start || !window?.end) return 5;
   return Math.max(5, Math.round((window.end - window.start) / 60000));
@@ -208,11 +220,15 @@ export function timeInNight(window, minutesFromStart) {
   return new Date(window.start.getTime() + minutes * 60000);
 }
 
+// The slider moves in 5-minute steps from sunset. "Now" takes the nearest
+// step; otherwise the first step at or after full dark, so the opening view
+// is never a few minutes short of it.
 export function defaultNightMinutes(window, now, isToday) {
-  const pick = isToday && now >= window.start && now <= window.end
-    ? now
-    : window.astroDusk ?? window.civilDusk ?? window.start;
-  return Math.round((pick - window.start) / 300000) * 5;
+  if (isToday && now >= window.start && now <= window.end) {
+    return Math.round((now - window.start) / 300000) * 5;
+  }
+  const dark = window.astroDusk ?? window.civilDusk ?? window.start;
+  return Math.ceil((dark - window.start) / 300000) * 5;
 }
 
 function samplesBetween(start, end) {
@@ -257,19 +273,30 @@ export function isVisibleAt(body, altitude, sunAltitudeDegrees) {
 // own darkness rule. Pairings match samples by timestamp, so a grid that
 // started at each body's own twilight limit never lined the Moon or Venus up
 // with the other planets.
-function visibilitySamples(body, observer, window) {
+function skySamples(body, observer, window) {
   return samplesBetween(window.start, window.end).map((time) => ({
     time,
     position: horizontal(body, observer, time),
     sunAltitude: sunAltitude(observer, time),
-  })).filter((sample) => darkEnoughFor(body, sample.sunAltitude));
+  }));
 }
 
-function invisibleNote(samples) {
-  if (samples.length === 0) return 'No dark observing window tonight.';
-  const maxAltitude = Math.max(...samples.map((sample) => sample.position.altitude));
-  if (maxAltitude <= 0) return 'Below the horizon all night.';
-  if (maxAltitude <= MIN_ALTITUDE) return 'Too low on the horizon to see clearly.';
+function visibilitySamples(body, observer, window) {
+  return skySamples(body, observer, window).filter((sample) => darkEnoughFor(body, sample.sunAltitude));
+}
+
+const highest = (samples) => Math.max(...samples.map((sample) => sample.position.altitude));
+
+// `all` covers the whole night; `dark` only the part dark enough for the body.
+// A body that is up only while the sky is still too bright, like Venus
+// setting soon after the Sun, is lost in the glare, not below the horizon.
+function invisibleNote(all, dark) {
+  if (dark.length === 0) return 'No dark observing window tonight.';
+  const darkMax = highest(dark);
+  const twilightMax = highest(all);
+  if (darkMax <= MIN_ALTITUDE && twilightMax > Math.max(0, darkMax)) return "Lost in the Sun's glare.";
+  if (darkMax <= 0) return 'Below the horizon all night.';
+  if (darkMax <= MIN_ALTITUDE) return 'Too low on the horizon to see clearly.';
   return 'Lost in twilight tonight.';
 }
 
@@ -291,7 +318,8 @@ function settings(body, observer, window) {
 
 export function bodyReport(body, observer, window, sampleTime) {
   const at = asDate(sampleTime ?? window.astroDusk ?? window.civilDusk ?? window.start);
-  const samples = visibilitySamples(body, observer, window);
+  const allSamples = skySamples(body, observer, window);
+  const samples = allSamples.filter((sample) => darkEnoughFor(body, sample.sunAltitude));
   const candidates = samples.filter((sample) => isVisibleAt(body, sample.position.altitude, sample.sunAltitude));
   const withCompass = (sample) => sample && { time: sample.time, position: { ...sample.position, compass: compassDirection(sample.position.azimuth) } };
   const best = candidates.reduce(
@@ -322,18 +350,24 @@ export function bodyReport(body, observer, window, sampleTime) {
     set: sets.first,
     sets: sets.within,
     constellation: constellationAt(body, observer, at),
-    note: best ? '' : invisibleNote(samples),
+    note: best ? '' : invisibleNote(allSamples, samples),
   };
 }
 
-function moonPhaseName(angle) {
-  if (angle < 22.5 || angle >= 337.5) return 'New Moon';
-  if (angle < 67.5) return 'Waxing crescent';
-  if (angle < 112.5) return 'First quarter';
-  if (angle < 157.5) return 'Waxing gibbous';
-  if (angle < 202.5) return 'Full Moon';
-  if (angle < 247.5) return 'Waning gibbous';
-  if (angle < 292.5) return 'Last quarter';
+// New, quarter and full are moments, not stretches of the month: name them
+// only within about a day (the Moon gains about 12° a day on the Sun), and
+// call the days between crescent or gibbous.
+const PRINCIPAL_PHASE_DEGREES = 12;
+
+export function moonPhaseName(angle) {
+  const near = (target) => Math.abs(((angle - target + 540) % 360) - 180) <= PRINCIPAL_PHASE_DEGREES;
+  if (near(0)) return 'New Moon';
+  if (near(90)) return 'First quarter';
+  if (near(180)) return 'Full Moon';
+  if (near(270)) return 'Last quarter';
+  if (angle < 90) return 'Waxing crescent';
+  if (angle < 180) return 'Waxing gibbous';
+  if (angle < 270) return 'Waning gibbous';
   return 'Waning crescent';
 }
 
@@ -345,14 +379,27 @@ export function moonReport(observer, window, sampleTime) {
   const samples = samplesBetween(bounds.start, bounds.end);
   const upDuringDark = samples.some((time) => horizontal('Moon', observer, time).altitude > 0);
   const position = horizontal('Moon', observer, at);
+  const rise = window.moonRise ?? searchRiseSet('Moon', observer, +1, window.start, 2);
+  const set = window.moonSet ?? searchRiseSet('Moon', observer, -1, window.start, 2);
+  // Whether the Moon is up as the night opens and closes. A rise or set
+  // inside the night settles it; with neither, the Moon stays up or stays
+  // down all night, so one altitude check in the middle says which.
+  const events = [
+    rise && withinNight(rise, window.start, window.end) && { time: rise, up: true },
+    set && withinNight(set, window.start, window.end) && { time: set, up: false },
+  ].filter(Boolean).sort((a, b) => a.time - b.time);
+  const middle = new Date((window.start.getTime() + window.end.getTime()) / 2);
+  const upAllAlong = events.length ? null : horizontal('Moon', observer, middle).altitude > 0;
 
   return {
     phase: moonPhaseName(phaseAngle),
     phaseAngle,
     illumination,
     illuminationPercent: Math.round(illumination * 100),
-    rise: window.moonRise ?? searchRiseSet('Moon', observer, +1, window.start, 2),
-    set: window.moonSet ?? searchRiseSet('Moon', observer, -1, window.start, 2),
+    rise,
+    set,
+    upAtStart: events.length ? !events[0].up : upAllAlong,
+    upAtEnd: events.length ? events.at(-1).up : upAllAlong,
     washesOutSky: illumination > 0.6 && upDuringDark,
     altitude: position.altitude,
     azimuth: position.azimuth,
@@ -420,10 +467,15 @@ export function meteorShowers(date) {
     .map((shower) => ({ ...shower, source: NASA_METEOR_SOURCE }));
 }
 
+// Heliocentric positions in the plane of Earth's orbit (J2000 ecliptic), so
+// `longitude` is each planet's angle around the Sun as seen from above the
+// solar system's north side, increasing in the direction the planets move.
+const EQJ_TO_ECL = A.Rotation_EQJ_ECL();
+
 export function orbitPositions(date) {
   const positions = {};
   for (const body of ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']) {
-    const vector = A.HelioVector(body, date);
+    const vector = A.RotateVector(EQJ_TO_ECL, A.HelioVector(body, date));
     positions[body.toLowerCase()] = {
       x: vector.x,
       y: vector.y,
