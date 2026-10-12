@@ -1400,6 +1400,10 @@ test('sky tonight offers one horizon canvas with time and orbit controls', () =>
   expect(sky).toContain('id="view-orbit" aria-pressed="false"');
   expect(sky).toContain("localStorage.setItem('sky.view', viewMode)");
   expect(sky).toContain("if (viewMode === 'horizon') drawHorizon(time); else drawOrbit(time)");
+  // Today lands on now during the night, and Now turns on once the night
+  // starts on a page left open.
+  expect(sky).toContain("document.getElementById('today-btn').onclick = () => { selectedTime = null; setOffset(0); };");
+  expect(sky).toMatch(/setInterval\(\(\) => \{[^\n]*updateNowButton\(\); \}, 60000\)/);
 });
 
 test('mission cards fold to their hook on phones and stay open without JavaScript', () => {

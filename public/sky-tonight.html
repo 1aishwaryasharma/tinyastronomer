@@ -539,8 +539,12 @@ function applyNightMinutes(window, minutes) {
   timeSlider.max = String(maxMinutes);
   timeSlider.value = String(next);
   selectedTime = timeInNight(window, next);
-  const now = new Date();
-  nowButton.disabled = !(offset === 0 && insideWindow(now, window));
+  updateNowButton();
+}
+// Now works only while tonight's night is in progress; a page left open
+// from the afternoon turns it on once the Sun sets.
+function updateNowButton() {
+  nowButton.disabled = !(activeWindow && offset === 0 && insideWindow(new Date(), activeWindow));
 }
 function setDefaultTime(window) {
   applyNightMinutes(window, defaultNightMinutes(window, new Date(), offset === 0));
@@ -683,7 +687,7 @@ function renderNowWording() {
 // The page does not move the time on by itself, so once the moment shown is
 // more than a few minutes old, stop calling it "now". Only the wording
 // changes: rebuilding the rows would drop the reader's focus.
-setInterval(() => { if (listsSayNow && !selectedIsNow()) renderNowWording(); }, 60000);
+setInterval(() => { if (listsSayNow && !selectedIsNow()) renderNowWording(); updateNowButton(); }, 60000);
 
 // Lists follow the time slider: "up now" is about the selected moment, while
 // the heavier per-night reports are computed once per date and location.
@@ -838,7 +842,9 @@ prevBtn.onclick = () => setOffset(offset - 1); nextBtn.onclick = () => setOffset
 // slider already does, so the forecast cannot stay on the previous date.
 dateInput.oninput = () => applyDateInput(false);
 dateInput.onchange = () => applyDateInput(true);
-document.getElementById('today-btn').onclick = () => setOffset(0);
+// Today drops the chosen time, so it lands on now during the night (and on
+// dark otherwise) instead of the same slider minutes on today's night.
+document.getElementById('today-btn').onclick = () => { selectedTime = null; setOffset(0); };
 timeSlider.oninput = () => {
   selectedTime = new Date(activeWindow.start.getTime() + Number(timeSlider.value) * 60000);
   updateTimeState();
