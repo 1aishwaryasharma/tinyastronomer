@@ -457,10 +457,15 @@ export function meteorShowers(date) {
     .map((shower) => ({ ...shower, source: NASA_METEOR_SOURCE }));
 }
 
+// Heliocentric positions in the plane of Earth's orbit (J2000 ecliptic), so
+// `longitude` is each planet's angle around the Sun as seen from above the
+// solar system's north side, increasing in the direction the planets move.
+const EQJ_TO_ECL = A.Rotation_EQJ_ECL();
+
 export function orbitPositions(date) {
   const positions = {};
   for (const body of ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']) {
-    const vector = A.HelioVector(body, date);
+    const vector = A.RotateVector(EQJ_TO_ECL, A.HelioVector(body, date));
     positions[body.toLowerCase()] = {
       x: vector.x,
       y: vector.y,

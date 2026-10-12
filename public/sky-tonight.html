@@ -235,8 +235,8 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20261008-1';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, currentNightDate, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=ea00ffe7bd';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=fa2720a404';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, currentNightDate, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=ad4beb8998';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=d83aa434b9';
 import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=e7717d6463';
 import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
@@ -295,7 +295,9 @@ function drawOrbit(time) {
   ctx.font = "10px 'Fragment Mono', monospace";
   for (const body of BODIES) {
     const position = currentOrbitPositions[body.key], radius = orbitRadiusPx(body.au, maxRadius);
-    const x = centerX + Math.cos(position.longitude) * radius, y = centerY + Math.sin(position.longitude) * radius;
+    // Screen y points down, so subtract: seen from the north the planets go
+    // round counterclockwise.
+    const x = centerX + Math.cos(position.longitude) * radius, y = centerY - Math.sin(position.longitude) * radius;
     const isEarth = body.key === 'earth';
     ctx.fillStyle = body.dot; ctx.beginPath(); ctx.arc(x, y, isEarth ? 4.5 : 3.6, 0, Math.PI * 2); ctx.fill();
     if (isEarth) { ctx.strokeStyle = 'rgba(106,176,255,0.8)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.stroke(); }

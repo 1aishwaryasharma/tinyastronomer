@@ -10,6 +10,7 @@ import {
   moonReport,
   nightSpanMinutes,
   nightWindow,
+  orbitPositions,
   positionAt,
   timeInNight,
 } from './public/sky-forecast.js';
@@ -341,6 +342,17 @@ test('a planet that sets in bright twilight is lost in the glare, not below the 
   expect(venus.visible).toBe(false);
   expect(venus.set!.getTime()).toBeGreaterThan(night.sunset!.getTime());
   expect(venus.note).toBe("Lost in the Sun's glare.");
+});
+
+test('orbit positions are ecliptic longitudes that increase as the planets move', () => {
+  const date = new Date('2026-10-11T00:00:00Z');
+  const earth = orbitPositions(date).earth;
+  const ecliptic = Astronomy.Ecliptic(Astronomy.HelioVector('Earth', date));
+  // Same angle as the J2000 ecliptic longitude, to within precession since 2000.
+  expect(Math.abs(earth.longitude * 180 / Math.PI - ecliptic.elon)).toBeLessThan(0.5);
+  expect(Math.abs(earth.z)).toBeLessThan(0.001);
+  const later = orbitPositions(new Date(date.getTime() + 10 * 24 * 60 * 60 * 1000)).earth;
+  expect(later.longitude).toBeGreaterThan(earth.longitude);
 });
 
 describe('Sky Tonight night in progress', () => {
