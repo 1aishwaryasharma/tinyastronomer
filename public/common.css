@@ -190,7 +190,7 @@ canvas { display: block; }
 /* ──── Info Panel ──── */
 .info-panel {
   position: fixed;
-  top: calc(96px + env(safe-area-inset-top, 0px));
+  top: var(--info-panel-top, calc(96px + env(safe-area-inset-top, 0px)));
   left: calc(24px + env(safe-area-inset-left, 0px));
   width: 320px; max-width: calc(100vw - 48px);
   background: var(--panel);
@@ -1101,6 +1101,17 @@ body .card .more-btn { font-size: 11px; text-decoration: underline; text-underli
     @media (prefers-reduced-motion: reduce) {
       .info-panel.desktop-info-panel, .desktop-info-toggle:not([hidden]) { transition: none; }
     }
+
+    /* Scenes with a keyboard hint lift the dock one row so the hint gets its
+       own line beneath it. The info panel and the scrolling rail stop above
+       the dock and scroll instead of running under it on short laptops. */
+    body:has(> .hint) {
+      --dock-top: calc(64px + var(--dock-height, 64px) + env(safe-area-inset-bottom, 0px));
+    }
+    body:has(> .hint) :is(.controls, .walk-controls) { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+    body:has(> .hint) .hint { left: 50%; transform: translateX(-50%); white-space: nowrap; }
+    body:has(> .hint) .info-panel { max-height: calc(100dvh - var(--info-panel-top) - var(--dock-top) - 8px); overflow-y: auto; }
+    body:has(> .hint) .side-rail.scroll { max-height: min(84dvh, calc(100dvh - 2 * var(--dock-top) - 16px)); }
   }
 
 /* ──── Page guide ────

@@ -32,17 +32,17 @@
 <meta name="twitter:image" content="https://tinyastronomer.com/assets/og-cover.png">
 <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="common.css?v=20261008-1">
+<link rel="stylesheet" href="common.css?v=20261018-1">
 <style>
   /* ── Page-specific styling for the grand tour; shared .facts / .fact-row /
      .fact-callout / .side-rail / .rail-btn live in common.css ── */
-  .info-panel { top: 132px; width: 330px; }
+  .info-panel { --info-panel-top: 132px; width: 330px; }
   .info-title { font-size: 26px; line-height: 1.1; }
 
   .label-3d.selected { color: var(--accent); border-color: rgba(244,197,96,0.5); }
 
   .scale-note {
-    position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: calc(var(--dock-top) + 8px); left: 50%; transform: translateX(-50%);
     max-width: min(560px, calc(100vw - 32px)); text-align: center;
     font-size: 12px; line-height: 1.5; color: var(--ink-dim); font-weight: 300;
     background: var(--panel); border: 1px solid var(--line); border-radius: 2px;
@@ -53,7 +53,7 @@
   .scale-note strong { color: var(--accent); font-weight: 500; }
 
   .stage {
-    position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: calc(var(--dock-top) + 8px); left: 50%; transform: translateX(-50%);
     max-width: min(560px, calc(100vw - 32px)); z-index: 11;
     background: var(--panel-bright); border: 1px solid rgba(244,197,96,0.3); border-radius: 3px;
     padding: 16px 20px; display: none; text-align: center;
