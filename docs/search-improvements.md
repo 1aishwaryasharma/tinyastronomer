@@ -106,11 +106,15 @@ Each proposal was argued for and against. Outcomes are **accepted**,
 
 ## Verification
 
-- `bun test`: 252 pass, including new tests for search ranking, accents, comma
+- `bun test`: 253 pass, including new tests for search ranking, accents, comma
   narrowing, duplicate labels, retry after a failed load, storage and reload,
   unknown-zone fallback, Beijing/Mumbai/London coordinates, coverage on every
-  inhabited continent, every zone accepted by `Intl`, the generator, and
+  inhabited continent, every bundled zone resolving to a clock the runtime accepts, the generator, and
   lazy-loading and hash-stamping of the dynamic import.
+- Deployment CI exposed an older Linux time-zone database that rejects
+  `America/Coyhaique`. The fallback now skips unsupported reference zones too.
+  A regression test simulates that older runtime for both chosen towns and
+  manual coordinates.
 - `bunx html-validate` on all six pages: clean. The listbox needs one scoped
   exception, since a native `<select>` cannot filter as you type.
 - Rendered in Chromium through `bun dev-server.ts`, with production routing and

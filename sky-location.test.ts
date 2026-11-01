@@ -219,7 +219,7 @@ describe('location time zones', () => {
     // Towns on a fixed clock must not capture their daylight-saving neighbours.
     expect(nearestTimeZone(49.5, -115.77)).toBe('America/Edmonton'); // Cranbrook, not Creston
     expect(nearestTimeZone(48.6, -93.4)).toBe('America/Winnipeg'); // Fort Frances, not Atikokan
-    const env = fakeEnvironment('Europe/London');
+    const env = placeEnvironment('Europe/London');
     expect(locationTimeZone({ lat: 35.7, lon: 139.7, source: 'manual' }, env)).toBe('Asia/Tokyo');
     expect(timeZoneLabel('Asia/Tokyo')).toBe('Tokyo time');
   });
@@ -258,11 +258,11 @@ test('one lookup gives both the coordinates and the zone used for the label', as
   expect(resolveLocation(fakeEnvironment('Asia/Calcutta')).label).toBe('Kolkata area');
 });
 
-// A real browser Intl, so zone names are checked; the fake one cannot construct formatters.
-function placeEnvironment(timeZone = 'America/Chicago') {
+function placeEnvironment(timeZone = 'America/Chicago', unsupportedZones: readonly string[] = []) {
   const env = fakeEnvironment(timeZone);
-  function DateTimeFormat(...args: any[]) {
-    return args.length ? new Intl.DateTimeFormat(...args) : { resolvedOptions: () => ({ timeZone }) };
+  function DateTimeFormat(locales?: string, options?: Intl.DateTimeFormatOptions) {
+    if (options?.timeZone && unsupportedZones.includes(options.timeZone)) throw new RangeError('Unsupported time zone');
+    return locales === undefined ? { resolvedOptions: () => ({ timeZone }) } : new Intl.DateTimeFormat(locales, options);
   }
   return { ...env, Intl: { DateTimeFormat } };
 }
@@ -352,8 +352,13 @@ describe('the bundled place list', () => {
     }
   });
 
-  test('every zone in the list is one browsers accept', () => {
-    for (const zone of PLACE_DATA.ZONES) expect(() => new Intl.DateTimeFormat('en', { timeZone: zone }), zone).not.toThrow();
+  test('every bundled zone resolves to a clock this runtime accepts', () => {
+    const placesByZone = new Map(PLACES.map((place) => [place.timeZone, place]));
+    expect(placesByZone.size).toBe(PLACE_DATA.ZONES.length);
+    for (const place of placesByZone.values()) {
+      const zone = locationTimeZone({ ...place, source: 'city' });
+      expect(() => new Intl.DateTimeFormat('en', { timeZone: zone }), place.timeZone).not.toThrow();
+    }
   });
 
   test('typed coordinates take the nearest town\'s clock, not the nearest reference city\'s', () => {
@@ -371,6 +376,16 @@ describe('the bundled place list', () => {
 });
 
 describe('chosen places', () => {
+  test('an older runtime never gets the unsupported zone back as its fallback', () => {
+    const env = placeEnvironment('Europe/London', ['America/Coyhaique']);
+    for (const source of ['city', 'manual']) {
+      const location = { lat: -45.6, lon: -72.1, source, name: 'Coyhaique', country: 'CL', timeZone: 'America/Coyhaique' };
+      const zone = locationTimeZone(location, env);
+      expect(zone).toBe('America/Argentina/Rio_Gallegos');
+      expect(() => new env.Intl.DateTimeFormat('en', { timeZone: zone })).not.toThrow();
+    }
+  });
+
   test('store the place, its own zone, and survive a reload', () => {
     const env = placeEnvironment('America/Chicago');
     const [springfield] = searchPlaces(PLACES, 'springfield, massachusetts');

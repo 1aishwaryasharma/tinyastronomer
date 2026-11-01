@@ -277,11 +277,11 @@ function knownTimeZone(timeZone, env) {
 // Only one city per distinct clock is searched: a country's own reference
 // town on another zone's clock (Creston, Atikokan) would pull its neighbours
 // onto a clock without daylight saving.
-export function nearestTimeZone(latitude, longitude) {
+export function nearestTimeZone(latitude, longitude, env = globalThis) {
   let best = null, bestDistance = Infinity;
   for (const [timeZone, [lat, lon]] of Object.entries(TZ_COORDS)) {
     const distance = closeness(latitude, longitude, lat, lon);
-    if (distance < bestDistance) { bestDistance = distance; best = timeZone; }
+    if (distance < bestDistance && knownTimeZone(timeZone, env)) { bestDistance = distance; best = timeZone; }
   }
   return best;
 }
@@ -294,9 +294,9 @@ export function nearestTimeZone(latitude, longitude) {
 export function locationTimeZone(location, env = globalThis) {
   const deviceZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
   if (location.source !== 'manual' && location.source !== 'city') return deviceZone;
-  // An older browser may not know a newly renamed zone; fall back to the nearest.
+  // Older runtimes may not know a newer zone, including its reference-table entry.
   if (location.timeZone && knownTimeZone(location.timeZone, env)) return location.timeZone;
-  return nearestTimeZone(location.lat, location.lon) ?? deviceZone;
+  return nearestTimeZone(location.lat, location.lon, env) ?? deviceZone;
 }
 
 export function timeZoneLabel(timeZone) {
