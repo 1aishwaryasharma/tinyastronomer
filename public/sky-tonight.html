@@ -49,6 +49,15 @@
   .manual-field span { display: block; margin-bottom: 4px; color: var(--ink-faint); font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
   .manual-field input { width: 100%; min-height: 32px; box-sizing: border-box; padding: 5px 7px; border: 1px solid var(--line); border-radius: 2px; background: rgba(5,8,16,0.7); color: var(--ink); font-family: 'Fragment Mono', monospace; font-size: 11px; }
   .manual-form .small-btn { align-self: end; }
+  .place-search { margin-top: 9px; }
+  .place-results { margin-top: 4px; border: 1px solid var(--line); border-radius: 2px; list-style: none; }
+  .place-results[hidden] { display: none; }
+  .place-option { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px; min-height: 32px; padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--ink-faint); cursor: pointer; font-size: 11px; line-height: 1.3; }
+  .place-option:last-child { border-bottom: 0; }
+  .place-option strong { color: var(--ink); font-size: 13px; font-weight: 400; }
+  .place-option:hover, .place-option[aria-selected="true"] { background: rgba(244,197,96,0.09); }
+  .place-option[aria-selected="true"] strong { color: var(--accent); }
+  .manual-label { margin-top: 12px; color: var(--ink-faint); font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
   .window-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .window-stat { min-width: 0; }
   .window-stat span { display: block; color: var(--ink-faint); font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
@@ -101,7 +110,7 @@
     .date-value { min-width: 48px; }
     .view-toggle .toggle-btn { padding: 5px 7px; }
   }
-  @media (pointer: coarse) { .small-btn, .location-change summary, .manual-field input, .step-btn, .date-input { min-height: 44px; } .step-btn { min-width: 44px; } }
+  @media (pointer: coarse) { .small-btn, .location-change summary, .manual-field input, .place-option, .step-btn, .date-input { min-height: 44px; } .manual-field .place-input { font-size: 16px; } .step-btn { min-width: 44px; } }
   .star-item { width: 100%; min-height: 44px; border: 0; border-bottom: 1px solid var(--line); color: var(--ink-dim); background: transparent; text-align: left; font: inherit; cursor: pointer; flex-wrap: wrap; gap: 4px; }
   .star-item:focus-visible { outline: 2px solid #f4c560; outline-offset: 2px; }
   .sky-item-copy .detail { display: block; margin-top: 1px; }
@@ -158,6 +167,13 @@
     <p class="location-status" id="location-status" role="status"></p>
     <details class="location-change" id="location-change">
       <summary>Change</summary>
+      <div class="place-search">
+        <label class="manual-field"><span>Town or city</span><input type="search" class="place-input" id="place-input" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-results" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="search" placeholder="Start typing a name"></label>
+        <!-- [html-validate-disable-next prefer-native-element -- a combobox's popup is a listbox; a <select> cannot filter as you type] -->
+        <ul class="place-results" id="place-results" role="listbox" aria-label="Matching places" hidden></ul>
+        <p class="privacy-note" id="place-status" aria-live="polite"></p>
+      </div>
+      <p class="manual-label">Or enter latitude and longitude</p>
       <form class="manual-form" id="location-form">
         <label class="manual-field"><span>Latitude</span><input type="number" id="latitude" min="-90" max="90" step="any" inputmode="decimal" required></label>
         <label class="manual-field"><span>Longitude</span><input type="number" id="longitude" min="-180" max="180" step="any" inputmode="decimal" required></label>
@@ -200,9 +216,10 @@
   <nav class="fact-callout framed sky-explore" aria-label="Explore what you saw"><span class="fact-tag">✦ Saw something?</span>Fly to any planet in the <a href="/solar-system">Grand Tour</a>, see why the Moon changes shape in the <a href="/#light-study">Light Study</a>, or find out why the stars change with the <a href="/seasons">Seasons</a>.<span id="sky-explore-links"></span></nav>
   <details class="science-note">
     <summary><span class="science-kind">Local forecast</span><span>Accuracy &amp; sources</span></summary>
-    <p>Planet positions come from astronomy-engine's VSOP87-based model, and the Moon's from its separate lunar model; all are topocentric with standard atmospheric refraction. This guide assumes a flat horizon and clear sky. Location precision is about 10 km from the device, or about a city from the time zone.</p>
+    <p>Planet positions come from astronomy-engine's VSOP87-based model, and the Moon's from its separate lunar model; all are topocentric with standard atmospheric refraction. This guide assumes a flat horizon and clear sky. Location precision is about 10 km from the device or a chosen town, or about a city from the time zone.</p>
     <p>Stars use a local HYG catalog of 925 bright stars, with proper motion, precession, nutation and standard refraction. Magnitudes are catalog values. Fainter stars and small astrometric effects are omitted; twilight fading is illustrative. Orbit-view background stars are decorative.</p>
     <p class="science-sources"><a href="https://github.com/astronexus/HYG-Database">HYG · David Nash / Astronexus</a><a href="https://creativecommons.org/licenses/by-sa/4.0/">Star data: CC BY-SA 4.0 (filtered subset)</a></p>
+    <p class="science-sources"><a href="https://www.geonames.org/">Places · GeoNames</a><a href="https://creativecommons.org/licenses/by/4.0/">Place data: CC BY 4.0 (towns of 15,000+)</a></p>
     <p class="science-sources"><span>Sources</span><a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a><a href="https://science.nasa.gov/solar-system/skywatching/">NASA Skywatching</a><a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a><span>Reviewed Sep 27, 2026</span></p>
   </details>
 </aside>
@@ -237,7 +254,7 @@ import { SPACE } from './chrome.js?v=20261008-1';
 import { SPACE_DATA } from './data.js';
 import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, currentNightDate, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=7281d3339f';
 import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=3f5ea95fe7';
-import { describeLocation, locationTimeZone, requestDeviceLocation, resolveLocation, setManualLocation, timeZoneLabel } from './sky-location.js?v=e7717d6463';
+import { describeLocation, loadPlaces, locationTimeZone, placeOptions, requestDeviceLocation, resolveLocation, searchPlaces, setManualLocation, setPlaceLocation, timeZoneLabel } from './sky-location.js?v=782b1dab40';
 import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
 const clamp = SPACE.clamp;
@@ -467,6 +484,10 @@ const useLocationButton = document.getElementById('use-location');
 const locationForm = document.getElementById('location-form');
 const latitudeInput = document.getElementById('latitude');
 const longitudeInput = document.getElementById('longitude');
+const locationChange = document.getElementById('location-change');
+const placeInput = document.getElementById('place-input');
+const placeResults = document.getElementById('place-results');
+const placeStatus = document.getElementById('place-status');
 const sunsetTime = document.getElementById('sunset-time');
 const darkTime = document.getElementById('dark-time');
 const sunriseTime = document.getElementById('sunrise-time');
@@ -551,16 +572,18 @@ function setDefaultTime(window) {
 }
 function sourceDescription() {
   if (location.source === 'geo') return 'Device · rounded to about 10 km';
-  if (location.source === 'manual') {
+  if (location.source === 'manual' || location.source === 'city') {
+    const kind = location.source === 'city' ? 'Chosen place' : 'Manual coordinates';
     const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone, now = new Date();
     return zoneOffset(displayTimeZone, now) === zoneOffset(deviceZone, now)
-      ? 'Manual coordinates' : `Manual coordinates · times in ${timeZoneLabel(displayTimeZone)}`;
+      ? kind : `${kind} · times in ${timeZoneLabel(displayTimeZone)}`;
   }
   return location.approximate ? 'Use my location to be accurate' : 'From your time zone';
 }
 function locationMeta() {
   if (location.source === 'geo') return `${describeLocation(location)} (device)`;
   if (location.source === 'manual') return `${describeLocation(location)} (manual)`;
+  if (location.source === 'city') return describeLocation(location);
   return location.approximate ? capitalize(describeLocation(location)) : `${describeLocation(location)} (from time zone)`;
 }
 function updateLocationCopy() {
@@ -928,10 +951,83 @@ useLocationButton.onclick = async () => {
   catch (error) { locationStatus.textContent = error.message; }
   finally { useLocationButton.disabled = false; }
 };
-locationForm.onsubmit = (event) => {
+// Closing the panel hides the focused field, so focus returns to Change.
+function applyLocation(next, status) {
+  location = next; locationStatus.textContent = status;
+  syncBaseDate(); update();
+  locationChange.open = false; locationChange.querySelector('summary').focus();
+  announceForecast();
+}
+locationForm.onsubmit = async (event) => {
   event.preventDefault();
-  try { location = setManualLocation(latitudeInput.value, longitudeInput.value); locationStatus.textContent = 'Using your manual location.'; syncBaseDate(); update(); document.getElementById('location-change').open = false; announceForecast(); }
+  // The place list gives typed coordinates the nearest town's time zone.
+  const nearby = await loadPlaces().catch(() => null);
+  try { applyLocation(setManualLocation(latitudeInput.value, longitudeInput.value, globalThis, nearby), 'Using your manual location.'); }
   catch (error) { locationStatus.textContent = error.message; }
+};
+
+// Place search: a combobox over the bundled list. Typing never leaves the device.
+let places = null, placeMatches = [], activePlace = -1;
+function showPlaces(matches) {
+  placeMatches = matches; activePlace = -1;
+  placeResults.replaceChildren(...placeOptions(matches).map(({ place, area }, index) => {
+    const option = element('li', '', 'place-option');
+    option.id = `place-option-${index}`; option.dataset.index = String(index);
+    option.setAttribute('role', 'option'); option.setAttribute('aria-selected', 'false');
+    option.setAttribute('aria-label', `${place.name}, ${area}`);
+    option.append(element('strong', place.name), element('span', area));
+    return option;
+  }));
+  placeResults.hidden = !matches.length;
+  placeInput.setAttribute('aria-expanded', String(matches.length > 0));
+  placeInput.removeAttribute('aria-activedescendant');
+}
+function setActivePlace(index) {
+  activePlace = index;
+  placeResults.querySelectorAll('[role="option"]').forEach((option, optionIndex) => option.setAttribute('aria-selected', String(optionIndex === index)));
+  const option = document.getElementById(`place-option-${index}`);
+  placeInput.setAttribute('aria-activedescendant', option.id); option.scrollIntoView({ block: 'nearest' });
+}
+function choosePlace(place) {
+  placeInput.value = ''; showPlaces([]); placeStatus.textContent = '';
+  const next = setPlaceLocation(place);
+  applyLocation(next, `Using ${next.label}.`);
+}
+async function searchPlaceInput() {
+  const query = placeInput.value;
+  if (query.trim().length < 2) { showPlaces([]); placeStatus.textContent = ''; return; }
+  if (!places) {
+    placeStatus.textContent = 'Loading places…';
+    try { places = await loadPlaces(); }
+    catch { placeStatus.textContent = 'Could not load the place list. Enter latitude and longitude below.'; return; }
+    // A later keystroke ran its own search while this one waited.
+    if (placeInput.value !== query) return;
+  }
+  const matches = searchPlaces(places, query);
+  showPlaces(matches);
+  placeStatus.textContent = matches.length ? '' : 'No match. Try the local spelling, or a larger town nearby.';
+}
+// Both ways of changing the location use the list, so fetch it when Change
+// opens rather than with the page.
+locationChange.addEventListener('toggle', () => { if (locationChange.open) loadPlaces().catch(() => {}); });
+placeInput.oninput = searchPlaceInput;
+placeInput.onkeydown = (event) => {
+  const count = placeMatches.length;
+  if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && count) {
+    event.preventDefault();
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    setActivePlace(activePlace < 0 ? (step > 0 ? 0 : count - 1) : (activePlace + step + count) % count);
+  } else if (event.key === 'Enter' && count) {
+    event.preventDefault();
+    choosePlace(placeMatches[Math.max(activePlace, 0)]);
+  } else if (event.key === 'Escape' && count) {
+    event.preventDefault(); event.stopPropagation();
+    showPlaces([]);
+  }
+};
+placeResults.onclick = (event) => {
+  const option = event.target.closest('[role="option"]');
+  if (option) choosePlace(placeMatches[Number(option.dataset.index)]);
 };
 
 updateViewButtons(); syncBaseDate(); update();
@@ -988,7 +1084,7 @@ SPACE.buildNav('sky');
     <p>Wait until it is properly dark; the forecast shows a <strong>Dark from</strong> time. Give your eyes about 20 minutes to adjust, and use a red light rather than a bright phone screen. A bright Moon washes out faint stars, so the nights around new moon are best for stars. The Moon itself looks wonderful through binoculars around first quarter, when shadows show off its craters.</p>
 
     <h3>How to use Sky Tonight</h3>
-    <p>Press <strong>Use my location</strong> (it stays on your device and is never sent anywhere) or type in a latitude and longitude. <strong>Up now</strong> lists the Moon and planets you can see at the chosen time: which way to face and how many fists up to look (one fist at arm’s length is about 10°). <strong>Later tonight</strong> shows what rises after that, and the best time to look. Press <strong>Print</strong> for a card to take outside. Step the date and time forward to plan a night, or to see how the sky changes from week to week.</p>
+    <p>Press <strong>Use my location</strong> (it stays on your device and is never sent anywhere), or press <strong>Change</strong> and search for your town or city. You can also type in a latitude and longitude. <strong>Up now</strong> lists the Moon and planets you can see at the chosen time: which way to face and how many fists up to look (one fist at arm’s length is about 10°). <strong>Later tonight</strong> shows what rises after that, and the best time to look. Press <strong>Print</strong> for a card to take outside. Step the date and time forward to plan a night, or to see how the sky changes from week to week.</p>
     <p>Clouds, trees, buildings and city lights all hide part of the sky, and the forecast assumes a clear, flat horizon.</p>
 
     <section class="guide-teach" aria-labelledby="guide-teach-title">

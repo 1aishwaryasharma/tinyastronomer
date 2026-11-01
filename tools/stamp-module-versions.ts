@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 // Modules only Sky Tonight imports. chrome.js, frame-loop.js and data.js are
 // shared with every page and the common bundle, and keep the site's
 // hand-bumped dates.
-export const VERSIONED_MODULES = ['sky-forecast.js', 'sky-stars.js', 'sky-location.js', 'sky-labels.js', 'tz-coords.js'];
+export const VERSIONED_MODULES = ['sky-forecast.js', 'sky-stars.js', 'sky-location.js', 'sky-labels.js', 'tz-coords.js', 'sky-places.js'];
 
 // Hash the text as git stores it: a CRLF checkout must stamp what CI and the
 // deploy will serve.
@@ -53,7 +53,8 @@ function refreshCsp(dir: string) {
 
 export function stampVersions(dir: string) {
   const files = readdirSync(dir).filter((name) => /\.(?:html|js)$/.test(name));
-  const pattern = new RegExp(`(from\\s+['"]\\./)(${VERSIONED_MODULES.join('|').replaceAll('.', '\\.')})(?:\\?v=[^'"]*)?(['"])`, 'g');
+  // Static imports and import('./…') calls, such as the lazily loaded place list.
+  const pattern = new RegExp(`((?:from\\s+|import\\()['"]\\./)(${VERSIONED_MODULES.join('|').replaceAll('.', '\\.')})(?:\\?v=[^'"]*)?(['"])`, 'g');
   for (let pass = 0; pass < 10; pass += 1) {
     let changed = false;
     for (const file of files) {

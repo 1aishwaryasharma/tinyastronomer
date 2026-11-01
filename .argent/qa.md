@@ -62,7 +62,7 @@ Use this to pick what to replay locally and to read the CI table. The flows mark
 | `public/solar-system.html`, `planet-models.js`, `tour-*.js` | Grand Tour | `qa-home-open-grand-tour` | body deep link and framing tests |
 | `public/scale-walk.html` | Scale Walk | `qa-home-open-scale-walk` | Scale Walk texture test in `startup.test.ts` |
 | `public/missions.html` | Missions | `qa-home-open-missions` | missions cross-link test |
-| `public/sky-tonight.html`, `sky-forecast.js`, `sky-location.js`, `tz-coords.js` | Sky Tonight | `qa-home-open-sky-tonight`, `qa-sky-tonight-manual-location` | `sky-forecast.test.ts`, `sky-location.test.ts` |
+| `public/sky-tonight.html`, `sky-forecast.js`, `sky-location.js`, `sky-places.js`, `tz-coords.js` | Sky Tonight | `qa-home-open-sky-tonight`, `qa-sky-tonight-manual-location` | `sky-forecast.test.ts`, `sky-location.test.ts` |
 | `public/chrome.js`, `common.js`, `common.css`, `tokens.css`, `_headers`, `_redirects`, `wrangler.jsonc`, `dev-server.ts` | Shared | the whole directory | CSP hash test, routing tests |
 | `public/teachers.html` (planned) | Teachers | planned `qa-home-open-teachers` | new-page checklist tests |
 | `docs/**`, `*.test.ts`, `.github/**`, `.argent/**` only | none | CI still runs the directory; nothing to replay by hand | all |

@@ -14,7 +14,9 @@ function validLocation(location) {
   return location
     && validCoordinate(location.lat, -90, 90)
     && validCoordinate(location.lon, -180, 180)
-    && ['tz', 'geo', 'manual'].includes(location.source);
+    && ['tz', 'geo', 'manual', 'city'].includes(location.source)
+    && (location.timeZone === undefined || typeof location.timeZone === 'string')
+    && (location.source !== 'city' || (typeof location.name === 'string' && typeof location.country === 'string' && typeof location.timeZone === 'string'));
 }
 
 function readStoredLocation(env) {
@@ -77,7 +79,37 @@ function timezoneGuess(env) {
   return location;
 }
 
+const countryNames = (() => {
+  try { return new Intl.DisplayNames(['en'], { type: 'region' }); } catch { return null; }
+})();
+
+function countryName(code) {
+  try { return countryNames?.of(code) ?? code; } catch { return code; }
+}
+
+// The region is kept only where a country has two places of one name, so
+// "Paris, France" but "Springfield, Illinois, United States".
+export function placeArea(place) {
+  return [place.region, countryName(place.country)].filter(Boolean).join(', ');
+}
+
+export function placeLabel(place) {
+  return `${place.name}, ${placeArea(place)}`;
+}
+
+// What a search result shows under its name. A few places still share a name
+// and region (two Udaipurs in Rajasthan), so those also show where they are.
+export function placeOptions(matches) {
+  const labels = matches.map(placeLabel);
+  return matches.map((place, index) => ({
+    place,
+    area: labels.indexOf(labels[index]) === labels.lastIndexOf(labels[index])
+      ? placeArea(place) : `${placeArea(place)} · ${coordinateLabel(place.lat, place.lon)}`,
+  }));
+}
+
 export function describeLocation(location) {
+  if (location.source === 'city') return placeLabel(location);
   if (location.source === 'tz' && location.timeZone && !location.approximate) {
     return timezoneLabel(location.zone ?? location.timeZone);
   }
@@ -126,7 +158,10 @@ export function requestDeviceLocation(env = globalThis) {
   });
 }
 
-export function setManualLocation(latitude, longitude, env = globalThis) {
+// With the place list, typed coordinates take the nearest town's time zone.
+// Without it (offline before the list ever loaded) they fall back to the
+// nearest reference city in locationTimeZone.
+export function setManualLocation(latitude, longitude, env = globalThis, places = null) {
   if (latitude === '' || latitude === null || latitude === undefined
       || longitude === '' || longitude === null || longitude === undefined) {
     throw new RangeError('Enter both latitude and longitude.');
@@ -140,8 +175,101 @@ export function setManualLocation(latitude, longitude, env = globalThis) {
     throw new RangeError('Longitude must be between −180 and 180.');
   }
   const location = { lat: roundCoordinate(lat), lon: roundCoordinate(lon), source: 'manual' };
+  const nearest = places && nearestPlace(places, location.lat, location.lon);
+  if (nearest) location.timeZone = nearest.timeZone;
   location.label = describeLocation(location);
   return storeLocation(location, env);
+}
+
+// Search text: lower case, no accents, punctuation as spaces, so "st. louis"
+// finds "St. Louis" and "sao paulo" finds "São Paulo". The place list's
+// generator uses the same rule to decide which names need an ASCII spelling.
+export function normalizePlaceName(text) {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+// sky-places.js lists places most populous first, one "|"-separated row each:
+// name, country, lat, lon, zone index, region (only where needed), ASCII name.
+export function parsePlaces({ PLACES, ZONES }) {
+  return PLACES.map((row) => {
+    const [name, country, lat, lon, zone, region, ascii] = row.split('|');
+    return {
+      name, country, region: region || undefined, lat: Number(lat), lon: Number(lon), timeZone: ZONES[Number(zone)],
+      keys: [normalizePlaceName(name), ...(ascii ? [normalizePlaceName(ascii)] : [])],
+    };
+  });
+}
+
+let placesPromise;
+// The list is about 1 MB (300 KB compressed), so it loads only when someone
+// opens Change to set a location.
+// A failed load is not cached: going back online lets the next try work.
+export function loadPlaces(load = () => import('./sky-places.js?v=38fdfe645c')) {
+  placesPromise ??= load().then(parsePlaces, (error) => { placesPromise = undefined; throw error; });
+  return placesPromise;
+}
+
+// Whole name, then name start, then a later word ("york" finds New York).
+// Ties keep list order, which is by population. Each part after a comma
+// narrows by region or country: "springfield, mass", "paris, fr", or a whole
+// pasted label.
+export function searchPlaces(places, query, limit = 8) {
+  const [nameQuery, ...rest] = query.split(',');
+  const name = normalizePlaceName(nameQuery);
+  const areas = rest.map(normalizePlaceName).filter(Boolean);
+  if (name.length < 2) return [];
+  const tiers = [[], [], []];
+  for (const place of places) {
+    let tier = 3;
+    for (const key of place.keys) {
+      if (key === name) tier = 0;
+      else if (key.startsWith(name)) tier = Math.min(tier, 1);
+      else if (key.includes(` ${name}`)) tier = Math.min(tier, 2);
+    }
+    if (tier === 3 || !areas.every((area) => matchesArea(place, area))) continue;
+    tiers[tier].push(place);
+    if (tier === 0 && tiers[0].length >= limit) break;
+  }
+  return tiers.flat().slice(0, limit);
+}
+
+function matchesArea(place, within) {
+  const country = normalizePlaceName(countryName(place.country));
+  return normalizePlaceName(place.country) === within
+    || country.startsWith(within)
+    || (place.region && normalizePlaceName(place.region).startsWith(within));
+}
+
+// A chosen place keeps its own time zone, so its times are right even where
+// the nearest reference city runs on another clock.
+export function setPlaceLocation(place, env = globalThis) {
+  const location = {
+    lat: place.lat, lon: place.lon, source: 'city',
+    name: place.name, country: place.country, timeZone: place.timeZone,
+    ...(place.region ? { region: place.region } : {}),
+  };
+  location.label = describeLocation(location);
+  return storeLocation(location, env);
+}
+
+function closeness(latitude, longitude, lat, lon) {
+  const toRadians = Math.PI / 180;
+  const dLat = (lat - latitude) * toRadians, dLon = (lon - longitude) * toRadians;
+  return Math.sin(dLat / 2) ** 2 + Math.cos(latitude * toRadians) * Math.cos(lat * toRadians) * Math.sin(dLon / 2) ** 2;
+}
+
+export function nearestPlace(places, latitude, longitude) {
+  let best = null, bestDistance = Infinity;
+  for (const place of places) {
+    const distance = closeness(latitude, longitude, place.lat, place.lon);
+    if (distance < bestDistance) { bestDistance = distance; best = place; }
+  }
+  return best;
+}
+
+function knownTimeZone(timeZone, env) {
+  try { new env.Intl.DateTimeFormat('en', { timeZone }); return true; } catch { return false; }
 }
 
 // The IANA zone whose reference city is closest to the coordinates. Borders
@@ -150,22 +278,24 @@ export function setManualLocation(latitude, longitude, env = globalThis) {
 // town on another zone's clock (Creston, Atikokan) would pull its neighbours
 // onto a clock without daylight saving.
 export function nearestTimeZone(latitude, longitude) {
-  const toRadians = Math.PI / 180;
   let best = null, bestDistance = Infinity;
   for (const [timeZone, [lat, lon]] of Object.entries(TZ_COORDS)) {
-    const dLat = (lat - latitude) * toRadians, dLon = (lon - longitude) * toRadians;
-    const h = Math.sin(dLat / 2) ** 2
-      + Math.cos(latitude * toRadians) * Math.cos(lat * toRadians) * Math.sin(dLon / 2) ** 2;
-    if (h < bestDistance) { bestDistance = h; best = timeZone; }
+    const distance = closeness(latitude, longitude, lat, lon);
+    if (distance < bestDistance) { bestDistance = distance; best = timeZone; }
   }
   return best;
 }
 
 // Time-zone and device locations are where the device is, so its clock fits.
-// Manual coordinates may be anywhere, so their times use the nearest zone.
+// A chosen place, and typed coordinates set with the place list, carry their
+// own zone. Otherwise typed coordinates use the nearest reference city's zone,
+// which is wrong for about one town in five (Beijing is nearer Pyongyang's
+// reference point than Shanghai's).
 export function locationTimeZone(location, env = globalThis) {
   const deviceZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
-  if (location.source !== 'manual') return deviceZone;
+  if (location.source !== 'manual' && location.source !== 'city') return deviceZone;
+  // An older browser may not know a newly renamed zone; fall back to the nearest.
+  if (location.timeZone && knownTimeZone(location.timeZone, env)) return location.timeZone;
   return nearestTimeZone(location.lat, location.lon) ?? deviceZone;
 }
 

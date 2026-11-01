@@ -31,6 +31,11 @@ scenes work fully offline once the site is served. WebGL pages load it
 through an import map (`three` → `vendor/three/three.module.min.js`).
 Missions imports only `chrome.js`. Sky Tonight adds small local forecast and
 location modules plus the vendored Astronomy Engine; neither page loads Three.js.
+Its town search uses `sky-places.js`, a GeoNames list of towns of 15,000+ people
+with their time zones. The list loads only when someone opens
+**Change**, and searching happens on the device. Rebuild it with
+`bun tools/build-places.ts`; [the search decision record](docs/search-improvements.md)
+explains why it exists.
 
 ## Verify
 
@@ -196,5 +201,7 @@ Original code (the HTML, CSS, JavaScript, and shaders in this repository) is
 released under the [MIT License](LICENSE). Bundled third-party assets in
 `assets/` retain the terms of their original sources, noted under Credits and in
 the `LICENSE` file.
+
+Sky Tonight's place search uses [GeoNames](https://www.geonames.org/) towns of 15,000+ people (CC BY 4.0), filtered and rounded to 0.1° by `tools/build-places.ts`.
 
 Sky Tonight includes a [925-star HYG subset](public/assets/stars/README.md) by David Nash / Astronexus (CC BY-SA 4.0), computed locally for the selected time and location. See [the research and implementation rationale](docs/sky-tonight-stars-research.md).

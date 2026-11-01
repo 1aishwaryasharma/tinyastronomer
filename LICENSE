@@ -33,6 +33,11 @@ MIT license above and retain the terms of their original sources:
   from NASA Visible Earth "Blue Marble" imagery
   (https://visibleearth.nasa.gov/collection/1484/planet-textures). NASA imagery
   is generally free of copyright; acknowledgement is appreciated.
+- `sky-places.js` is generated from GeoNames (https://www.geonames.org/), licensed
+  under Creative Commons Attribution 4.0
+  (https://creativecommons.org/licenses/by/4.0/). It keeps towns of 15,000 or
+  more people, rounds coordinates to 0.1°, and keeps regions only where needed
+  to tell places apart.
 - Planet models in `assets/planet-models/` are adapted for web delivery from
   NASA Visualization Technology Applications and Development (VTAD) models
   published in NASA Science's 3D Resources collection

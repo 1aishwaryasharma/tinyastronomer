@@ -1251,7 +1251,8 @@ test('Sky Tonight module versions are content hashes', () => {
   expect(modules).toContain('sky-labels.js');
   const hash = (file: string) => moduleHash(readFileSync(file));
   for (const file of readdirSync('.').filter((name) => /\.(?:html|js)$/.test(name))) {
-    for (const match of readFileSync(file, 'utf8').matchAll(/from\s+['"]\.\/([\w-]+\.js)(?:\?v=([^'"]*))?['"]/g)) {
+    // import('./…') too: the place list loads lazily.
+    for (const match of readFileSync(file, 'utf8').matchAll(/(?:from\s+|import\()['"]\.\/([\w-]+\.js)(?:\?v=([^'"]*))?['"]/g)) {
       if (!modules.includes(match[1])) continue;
       expect(match[2], `${file} imports ${match[1]}: run bun tools/stamp-module-versions.ts`).toBe(hash(match[1]));
     }
@@ -1280,6 +1281,19 @@ test('the CSP refresh adds hashes to an empty list and keeps pages in folders', 
   expect(policy).toContain(inlineScriptHash('one()'));
   expect(policy).toContain(inlineScriptHash('two()'));
   expect(policy).toContain("; style-src 'self'");
+});
+
+test('stamping versions dynamic imports as well as static ones', async () => {
+  const { mkdtempSync, writeFileSync: write } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { stampVersions } = await import('./tools/stamp-module-versions.ts');
+  const dir = mkdtempSync(join(tmpdir(), 'stamp-dynamic-'));
+  write(join(dir, '_headers'), "/*\n  Content-Security-Policy: script-src 'self'\n");
+  write(join(dir, 'sky-places.js'), 'export const PLACES = [];\n');
+  write(join(dir, 'loader.js'), "export const load = () => import('./sky-places.js?v=0');\n");
+  stampVersions(dir);
+  expect(readFileSync(join(dir, 'loader.js'), 'utf8')).toContain(`import('./sky-places.js?v=${moduleHash('export const PLACES = [];\n')}')`);
 });
 
 test('module hashes ignore CRLF line endings', () => {
@@ -1380,6 +1394,30 @@ test('sky tonight speaks to children: fists, words, and no telescope-only planet
   expect(sky).not.toContain('printCardRequestedAt');
   expect(readFileSync('index.html', 'utf8')).toContain('href="/sky-tonight" id="launch-sky-tonight"');
   expect(readFileSync('index.html', 'utf8')).not.toContain('id="home-sky-tonight"');
+});
+
+test('sky tonight searches towns on the device and loads the list only on demand', () => {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  const location = readFileSync('sky-location.js', 'utf8');
+  // Search sits inside Change, before the coordinates it replaces for most people.
+  const change = sky.slice(sky.indexOf('id="location-change"'), sky.indexOf('</details>', sky.indexOf('id="location-change"')));
+  expect(change.indexOf('id="place-input"')).toBeGreaterThan(-1);
+  expect(change.indexOf('id="place-input"')).toBeLessThan(change.indexOf('id="location-form"'));
+  expect(sky).toMatch(/<input type="search"[^>]*id="place-input"[^>]*role="combobox"[^>]*aria-expanded="false"[^>]*aria-controls="place-results"/);
+  expect(sky).toContain('<ul class="place-results" id="place-results" role="listbox"');
+  expect(sky).toContain("placeInput.setAttribute('aria-activedescendant', option.id)");
+  // About 300 KB compressed: never part of the page load, only a search.
+  expect(sky).not.toContain('sky-places.js');
+  expect(location).not.toMatch(/from\s+['"]\.\/sky-places\.js/);
+  expect(location).toContain("import('./sky-places.js?v=");
+  expect(sky).toContain("locationChange.addEventListener('toggle', () => { if (locationChange.open) loadPlaces().catch(() => {}); });");
+  // The list is searched locally; the page makes no other requests for it.
+  expect(sky).not.toMatch(/fetch\(/);
+  expect(location).not.toMatch(/fetch\(/);
+  // CC BY 4.0 attribution, and the guide names the new way to set a place.
+  expect(sky).toContain('<a href="https://www.geonames.org/">Places · GeoNames</a>');
+  expect(sky).toContain('search for your town or city');
+  expect(readFileSync('sky-places.js', 'utf8')).toContain('CC BY 4.0');
 });
 
 test('sky tonight accepts coordinates pasted from a map', () => {

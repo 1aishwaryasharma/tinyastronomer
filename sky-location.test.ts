@@ -3,14 +3,24 @@ import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './publi
 import {
   LOCATION_STORAGE_KEY,
   describeLocation,
+  loadPlaces,
   locationTimeZone,
+  nearestPlace,
   nearestTimeZone,
+  normalizePlaceName,
+  parsePlaces,
+  placeLabel,
+  placeOptions,
+  searchPlaces,
+  setPlaceLocation,
   requestDeviceLocation,
   resolveLocation,
   setManualLocation,
   timeZoneLabel,
 } from './public/sky-location.js';
 import { buildModule, parseIso6709 } from './tools/build-tz-coords.ts';
+import { buildModule as buildPlacesModule, parseAdmin1, parseCities } from './tools/build-places.ts';
+import * as PLACE_DATA from './public/sky-places.js';
 
 function fakeEnvironment(timeZone = 'America/Chicago') {
   const values = new Map<string, string>();
@@ -246,4 +256,167 @@ test('one lookup gives both the coordinates and the zone used for the label', as
   const { locateZone } = await import('./public/sky-location.js');
   expect(locateZone('Asia/Calcutta')).toMatchObject({ zone: 'Asia/Kolkata', approximate: false });
   expect(resolveLocation(fakeEnvironment('Asia/Calcutta')).label).toBe('Kolkata area');
+});
+
+// A real browser Intl, so zone names are checked; the fake one cannot construct formatters.
+function placeEnvironment(timeZone = 'America/Chicago') {
+  const env = fakeEnvironment(timeZone);
+  function DateTimeFormat(...args: any[]) {
+    return args.length ? new Intl.DateTimeFormat(...args) : { resolvedOptions: () => ({ timeZone }) };
+  }
+  return { ...env, Intl: { DateTimeFormat } };
+}
+
+const PLACES = parsePlaces(PLACE_DATA);
+
+describe('place search', () => {
+  const fixture = parsePlaces({
+    ZONES: ['America/Chicago', 'America/New_York', 'Europe/Paris', 'Europe/Warsaw'],
+    PLACES: [
+      'Paris|FR|48.9|2.4|2',
+      'New York City|US|40.7|-74|1',
+      'Springfield|US|37.2|-93.3|0|Missouri',
+      'Springfield|US|42.1|-72.6|1|Massachusetts',
+      'Łódź|PL|51.8|19.5|3||Lodz',
+      'Paris|US|33.7|-95.6|0',
+      'West Springfield|US|42.1|-72.6|1',
+      'St. Louis|US|38.6|-90.2|0',
+    ],
+  });
+  const names = (query: string) => searchPlaces(fixture, query).map(placeLabel);
+
+  test('ranks whole names, then name starts, then later words, each by population', () => {
+    expect(names('springfield')).toEqual([
+      'Springfield, Missouri, United States',
+      'Springfield, Massachusetts, United States',
+      'West Springfield, United States',
+    ]);
+    expect(names('york')).toEqual(['New York City, United States']);
+    expect(names('par')).toEqual(['Paris, France', 'Paris, United States']);
+  });
+
+  test('ignores accents, case and punctuation, and knows ASCII spellings', () => {
+    expect(normalizePlaceName('São Paulo')).toBe('sao paulo');
+    expect(names('ST LOUIS')).toEqual(['St. Louis, United States']);
+    expect(names('lodz')).toEqual(['Łódź, Poland']);
+  });
+
+  test('a comma narrows by region or country, part by part', () => {
+    // West Springfield's name is unique, so it carries no region to match.
+    expect(names('springfield, mass')).toEqual(['Springfield, Massachusetts, United States']);
+    expect(names('paris, us')).toEqual(['Paris, United States']);
+    expect(names('paris, fr')).toEqual(['Paris, France']);
+    expect(names('Springfield, Missouri, United States')).toEqual(['Springfield, Missouri, United States']);
+  });
+
+  test('waits for two letters and caps the list', () => {
+    expect(names('p')).toEqual([]);
+    expect(searchPlaces(PLACES, 'san', 5)).toHaveLength(5);
+  });
+
+  test('same-looking results show where they are', () => {
+    const twins = parsePlaces({ ZONES: ['Asia/Kolkata'], PLACES: ['Udaipur|IN|24.6|73.7|0|Rajasthan', 'Udaipur|IN|27.7|75.5|0|Rajasthan', 'Agra|IN|27.2|78|0'] });
+    expect(placeOptions(twins).map((option) => option.area)).toEqual([
+      'Rajasthan, India · 24.6°N 73.7°E', 'Rajasthan, India · 27.7°N 75.5°E', 'India',
+    ]);
+  });
+
+  test('a failed load is retried rather than remembered', async () => {
+    let calls = 0;
+    const flaky = () => (++calls === 1 ? Promise.reject(new Error('offline')) : Promise.resolve({ ZONES: ['Europe/Paris'], PLACES: ['Paris|FR|48.9|2.4|0'] }));
+    await expect(loadPlaces(flaky)).rejects.toThrow('offline');
+    expect((await loadPlaces(flaky)).map(placeLabel)).toEqual(['Paris, France']);
+    expect(calls).toBe(2);
+  });
+});
+
+describe('the bundled place list', () => {
+  test('covers towns on every inhabited continent, with their own clocks', () => {
+    expect(PLACES.length).toBeGreaterThan(30_000);
+    for (const [query, label, zone] of [
+      ['springfield, illinois', 'Springfield, Illinois, United States', 'America/Chicago'],
+      ['springfield, massachusetts', 'Springfield, Massachusetts, United States', 'America/New_York'],
+      ['el paso', 'El Paso, United States', 'America/Denver'],
+      ['sao paulo', 'São Paulo, Brazil', 'America/Sao_Paulo'],
+      ['lagos', 'Lagos, Nigeria', 'Africa/Lagos'],
+      ['mumbai', 'Mumbai, India', 'Asia/Kolkata'],
+      ['beijing', 'Beijing, China', 'Asia/Shanghai'],
+      ['tromso', 'Tromsø, Norway', 'Europe/Oslo'],
+      ['auckland', 'Auckland, New Zealand', 'Pacific/Auckland'],
+      ['reykjavik', 'Reykjavík, Iceland', 'Atlantic/Reykjavik'],
+    ]) {
+      const [first] = searchPlaces(PLACES, query);
+      // ICU builds name CN "China" or "China mainland"; either is the place.
+      expect(placeLabel(first).replace('China mainland', 'China'), query).toBe(label);
+      expect(first.timeZone, query).toBe(zone);
+    }
+  });
+
+  test('every zone in the list is one browsers accept', () => {
+    for (const zone of PLACE_DATA.ZONES) expect(() => new Intl.DateTimeFormat('en', { timeZone: zone }), zone).not.toThrow();
+  });
+
+  test('typed coordinates take the nearest town\'s clock, not the nearest reference city\'s', () => {
+    // The reference-city rule puts Beijing on Pyongyang time and Mumbai on Karachi time.
+    expect(nearestTimeZone(39.9, 116.4)).toBe('Asia/Pyongyang');
+    expect(nearestTimeZone(19.1, 72.9)).toBe('Asia/Karachi');
+    const env = placeEnvironment('Europe/London');
+    expect(locationTimeZone(setManualLocation(39.9, 116.4, env, PLACES), env)).toBe('Asia/Shanghai');
+    expect(locationTimeZone(setManualLocation(19.1, 72.9, env, PLACES), env)).toBe('Asia/Kolkata');
+    expect(locationTimeZone(setManualLocation(51.5, -0.1, env, PLACES), env)).toBe('Europe/London');
+    expect(nearestPlace(PLACES, 51.5, -0.1)?.name).toBe('London');
+    // Without the list (offline), the old rule still gives an answer.
+    expect(locationTimeZone(setManualLocation(39.9, 116.4, env), env)).toBe('Asia/Pyongyang');
+  });
+});
+
+describe('chosen places', () => {
+  test('store the place, its own zone, and survive a reload', () => {
+    const env = placeEnvironment('America/Chicago');
+    const [springfield] = searchPlaces(PLACES, 'springfield, massachusetts');
+    const chosen = setPlaceLocation(springfield, env);
+    expect(chosen).toMatchObject({ source: 'city', name: 'Springfield', region: 'Massachusetts', country: 'US', timeZone: 'America/New_York' });
+    expect(chosen.label).toBe('Springfield, Massachusetts, United States');
+    expect(JSON.parse(env.values.get(LOCATION_STORAGE_KEY)!)).toMatchObject({ source: 'city', name: 'Springfield' });
+    const restored = resolveLocation(env);
+    expect(restored.label).toBe('Springfield, Massachusetts, United States');
+    expect(locationTimeZone(restored, env)).toBe('America/New_York');
+    expect(describeLocation(restored)).toBe('Springfield, Massachusetts, United States');
+  });
+
+  test('a zone the browser does not know falls back to the nearest one', () => {
+    const env = placeEnvironment('Europe/London');
+    const location = { lat: 35.7, lon: 139.7, source: 'city', name: 'Tokyo', country: 'JP', timeZone: 'Asia/Not_A_Zone' };
+    expect(locationTimeZone(location, env)).toBe('Asia/Tokyo');
+  });
+
+  test('a malformed stored place is ignored in favour of the time-zone guess', () => {
+    const env = placeEnvironment('Europe/London');
+    env.values.set(LOCATION_STORAGE_KEY, JSON.stringify({ lat: 51.5, lon: -0.1, source: 'city', name: 'London' }));
+    expect(resolveLocation(env).source).toBe('tz');
+  });
+});
+
+describe('the place list generator', () => {
+  const row = (name: string, ascii: string, country: string, admin1: string, population: number, feature = 'PPL') =>
+    ['1', name, ascii, '', '10.04', '-20.06', 'P', feature, country, '', admin1, '', '', '', String(population), '', '', 'Etc/UTC', ''].join('\t');
+
+  test('keeps regions only for repeated names, and ASCII names only when they differ', () => {
+    const cities = parseCities([
+      row('Springfield', 'Springfield', 'US', 'IL', 100), row('Springfield', 'Springfield', 'US', 'MA', 200),
+      row('Łódź', 'Lodz', 'PL', '74', 300), row('São Paulo', 'Sao Paulo', 'BR', '27', 50),
+      row('Brooklyn', 'Brooklyn', 'US', 'NY', 900, 'PPLX'),
+    ].join('\n'));
+    const regions = parseAdmin1('US.IL\tIllinois\tIllinois\t1\nUS.MA\tMassachusetts\tMassachusetts\t2\n');
+    const module = buildPlacesModule(cities, regions, '2026-10-31');
+    expect(module).toContain('GeoNames');
+    expect(module).toContain('CC BY 4.0');
+    const places = JSON.parse(module.match(/export const PLACES = (.*);/)![1]);
+    expect(places).toEqual([
+      'Łódź|PL|10|-20.1|0||Lodz',
+      'Springfield|US|10|-20.1|0|Massachusetts',
+      'Springfield|US|10|-20.1|0|Illinois',
+      'São Paulo|BR|10|-20.1|0',
+    ]);
+  });
 });
