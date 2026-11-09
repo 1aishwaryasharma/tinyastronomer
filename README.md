@@ -93,14 +93,23 @@ not `/seasons.html` or `/seasons/`. One URL per page, and `<link rel=canonical>`
   with a **301**. Cloudflare would redirect them anyway, but only temporarily
   (301 for `.html`, 307 for the slash), which leaves the old URLs sitting in
   Google's index rather than folding them into the canonical.
-- `not_found_handling: "none"` keeps unknown paths a real 404 instead of a
-  soft 404 serving `index.html` with a 200.
+- `not_found_handling: "404-page"` answers unknown paths with
+  `public/404.html` and a real 404 status, instead of a soft 404 serving
+  `index.html` with a 200. The page is static (no script, so no CSP hash),
+  carries `noindex`, and `_headers` marks its own `/404` address noindex too.
 - `public/_headers` marks `*.js`, `*.css`, and `vendor/*` with
   `X-Robots-Tag: noindex`. Google still fetches them to render pages, but no
   longer reports them as pages it "crawled but did not index".
 
 Adding a page means adding it to `sitemap.xml` and `_redirects` too; the checks
 in `site.test.ts` fail if you skip either.
+
+The Grand Tour and the Scale Walk put the selection in the URL:
+`/solar-system?planet=saturn` and `/scale-walk?stop=mars`. A visitor's choice
+pushes a history entry, so Back and Forward step between worlds; Tour steps
+and quiz picks replace the entry instead. The older `#saturn` form from
+Missions and the guides is still read and is rewritten to the query form in
+place. Unknown values fall back to the default view.
 
 ## Search and teaching guides
 
@@ -127,13 +136,16 @@ or its teacher notes.
 - 4K Earth day, 2K night-lights, normal, and specular maps from the
   [three.js example planet textures](https://github.com/mrdoob/three.js/tree/dev/examples/textures/planets)
   (three.js is MIT-licensed), derived from NASA's
-  [Visible Earth "Blue Marble" planet textures](https://visibleearth.nasa.gov/collection/1484/planet-textures)
+  [Visible Earth "Blue Marble" planet textures](https://visibleearth.nasa.gov/collection/1484/planet-textures).
+  The site serves WebP derivatives in two tiers, 2K for laptops and a 1K
+  compact set for phones; see [docs/texture-variants.md](docs/texture-variants.md).
 - Earth cloud overlay from the three.js example planet textures; its drift and altitude are illustrative, not live weather.
 - Moon color (2K) and elevation (1K) maps from [NASA SVS CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/), based on LRO/LROC and LOLA data.
 - Grand Tour planet models and surface composites from NASA's
   [3D Resources](https://science.nasa.gov/3d-resources/), prepared by NASA's
   Visualization Technology Applications and Development team. The bundled
-  copies preserve topology while using geometry quantization and 2K WebP texture compression.
+  copies preserve topology while using geometry quantization, Meshopt packing
+  of the quantized attributes, and 2K WebP texture compression.
 
 ## Scientific model
 

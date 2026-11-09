@@ -7,6 +7,7 @@ process.chdir(fileURLToPath(new URL('./public', import.meta.url)));
 const pages = readdirSync('.').filter((file) => file.endsWith('.html'));
 
 const requiredIds: Record<string, string[]> = {
+  '404.html': ['not-found-title', 'not-found-home'],
   'index.html': [
     'launch-grand-tour',
     'launch-light-study',

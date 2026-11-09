@@ -18,6 +18,14 @@ its topology, and embedded textures were converted to WebP at no more than
 2048 pixels on their longest axis. Shape, UV placement, axial proportions,
 surface composites, and Saturn's ring proportions were not redrawn.
 
+The quantized attributes are additionally packed with Meshopt
+(`EXT_meshopt_compression`, `gltf-transform meshopt --level medium`), which is
+an exact encoding of the same quantized values, not a further loss. The nine
+files total 1.92 MB instead of 2.57 MB; `planet-models.js` loads the vendored
+`meshopt_decoder.module.js` (29 KB, MIT, from three.js r185's examples) with
+the GLTF loader. Mercury's 493 KB surface composite dominates its file and
+does not compress further without visible loss, so it was left as is.
+
 No speculative Eris surface map is included. Spacecraft have not resolved its
 surface well enough for a truthful global map, so the application renders it
 as a deliberately detail-free, mean-color globe.

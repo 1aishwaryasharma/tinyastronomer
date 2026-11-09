@@ -92,7 +92,7 @@ html, body {
   background: var(--panel-bright);
   color: var(--accent);
   font-family: 'Fragment Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   line-height: 1.4;
   text-transform: uppercase;
@@ -119,7 +119,7 @@ canvas { display: block; }
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 0;
   margin-bottom: 12px;
   font-family: 'Fragment Mono', monospace;
   font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
@@ -139,6 +139,7 @@ canvas { display: block; }
 .brand-mark {
   position: relative;
   flex: none;
+  margin-right: 10px;
   width: 18px;
   height: 12px;
   border: 1px solid rgba(106, 176, 255, 0.58);
@@ -176,13 +177,13 @@ canvas { display: block; }
 .title em { font-style: italic; color: var(--accent); }
 .subtitle {
   font-family: 'Fragment Mono', monospace;
-  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--ink-dim); margin-top: 6px;
 }
 .header-meta {
   text-align: right;
   font-family: 'Fragment Mono', monospace;
-  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--ink-dim); line-height: 1.6;
 }
 .header-meta span { color: var(--accent); }
@@ -210,7 +211,7 @@ canvas { display: block; }
 .info-panel::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 .info-label {
   font-family: 'Fragment Mono', monospace;
-  font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--accent); margin-bottom: 10px;
 }
 .info-title {
@@ -279,7 +280,7 @@ canvas { display: block; }
 }
 .rail-btn .num {
   font-family: 'Fragment Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--ink-faint);
   letter-spacing: 0.1em;
   margin-left: auto;
@@ -295,7 +296,7 @@ canvas { display: block; }
 }
 .rail-sep {
   font-family: 'Fragment Mono', monospace;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -318,7 +319,7 @@ canvas { display: block; }
   flex-shrink: 0;
   width: 70px;
   font-family: 'Fragment Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--accent-warm);
@@ -338,7 +339,7 @@ canvas { display: block; }
 .fact-callout .fact-tag {
   display: block;
   font-family: 'Fragment Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--accent);
@@ -387,7 +388,7 @@ canvas { display: block; }
   border-radius: 2px;
   color: var(--accent);
   font-family: 'Fragment Mono', monospace;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 400;
   letter-spacing: 0.12em;
   line-height: 1.25;
@@ -404,7 +405,7 @@ canvas { display: block; }
 .science-sources > span {
   color: var(--ink-faint);
   font-family: 'Fragment Mono', monospace;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -440,7 +441,7 @@ canvas { display: block; }
 
 .speed-group { display: flex; align-items: center; gap: 12px; }
 .speed-label {
-  font-family: 'Fragment Mono', monospace; font-size: 9px;
+  font-family: 'Fragment Mono', monospace; font-size: 11px;
   letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-dim);
 }
 .speed-slider {
@@ -468,7 +469,7 @@ canvas { display: block; }
 .toggle-btn {
   background: transparent; border: 1px solid var(--line); color: var(--ink-dim);
   padding: 7px 12px; font-family: 'Fragment Mono', monospace;
-  font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
   border-radius: 2px; cursor: pointer; transition: all 0.2s; min-height: 32px;
 }
 .toggle-btn:hover { color: var(--ink); border-color: rgba(232,236,244,0.2); }
@@ -484,7 +485,7 @@ canvas { display: block; }
   position: fixed;
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   left: calc(24px + env(safe-area-inset-left, 0px));
-  font-family: 'Fragment Mono', monospace; font-size: 9px;
+  font-family: 'Fragment Mono', monospace; font-size: 11px;
   letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint);
   z-index: 10; line-height: 1.8;
 }
@@ -493,10 +494,29 @@ canvas { display: block; }
   border-radius: 2px; margin: 0 4px; color: var(--ink-dim);
 }
 
+/* ──── On-screen view controls (SPACE.createViewPad) ──── */
+.view-pad {
+  position: fixed;
+  right: calc(24px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 6px; z-index: 10;
+}
+.view-pad-btn {
+  width: 36px; height: 36px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--panel); color: var(--ink-dim);
+  border: 1px solid var(--control-border); border-radius: 2px;
+  font-family: 'Fragment Mono', monospace; font-size: 16px; line-height: 1;
+  cursor: pointer; transition: color 0.2s, border-color 0.2s;
+}
+.view-pad-btn:hover { color: var(--accent); border-color: var(--accent); }
+.view-pad-btn.view-pad-recenter { color: var(--accent); }
+.view-pad-btn[hidden] { display: none; }
+
 /* ──── 3D labels ──── */
 .label-3d {
   position: absolute; left: 0; top: 0; font-family: 'Fragment Mono', monospace;
-  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--ink); pointer-events: none; transform: translate(-50%, -50%);
   padding: 3px 7px; background: rgba(0,0,0,0.4); border: 1px solid var(--line);
   border-radius: 2px; white-space: nowrap; z-index: 5;
@@ -518,11 +538,20 @@ canvas { display: block; }
   transition: opacity 0.8s, visibility 0s 0.8s;
 }
 .loader-text {
-  font-family: 'Fragment Mono', monospace; font-size: 10px;
+  font-family: 'Fragment Mono', monospace; font-size: 11px;
   letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent);
   animation: pulse 1.4s ease-in-out infinite;
 }
 @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+.loader-inner { display: grid; justify-items: center; gap: 18px; }
+.loader-bar {
+  width: min(240px, 60vw); height: 2px; background: rgba(232, 236, 244, 0.12);
+  border-radius: 1px; overflow: hidden;
+}
+.loader-bar-fill {
+  display: block; width: 100%; height: 100%; background: var(--accent);
+  transform-origin: left center; transform: scaleX(0); transition: transform 0.3s ease-out;
+}
 
 /* ──── Scene switcher (SPACE.buildNav) ──── */
 .scene-nav {
@@ -568,7 +597,7 @@ canvas { display: block; }
 /* ──── Journey chrome inside the scene menu ──── */
 .scene-menu-head {
   padding: 7px 12px 5px;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -577,7 +606,7 @@ canvas { display: block; }
 }
 .scene-menu a .step {
   margin-left: auto;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.1em;
   color: var(--ink-faint);
 }
@@ -635,7 +664,7 @@ canvas { display: block; }
     -webkit-backdrop-filter: blur(16px) saturate(140%);
     border: 1px solid var(--line);
     border-radius: 2px;
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.45;
     letter-spacing: 0.12em;
     pointer-events: none;
@@ -713,14 +742,16 @@ canvas { display: block; }
   .side-rail .rail-sep { display: none; }
   .rail-btn {
     width: auto;
-    min-width: 0;
+    min-width: 44px;
     flex: 0 0 auto;
     min-height: 44px;
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 8px 14px;
+    font-size: 13px;
     white-space: nowrap;
     transform: none;
   }
+  .side-rail,
+  .side-rail.scroll { gap: 8px; }
   .rail-btn:hover { transform: none; }
   .rail-btn .num { display: none; }
 
@@ -811,7 +842,7 @@ canvas { display: block; }
     background: var(--panel-bright);
     color: var(--accent);
     font-family: 'Fragment Mono', monospace;
-    font-size: 8px;
+    font-size: 10px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     cursor: pointer;
@@ -839,6 +870,8 @@ canvas { display: block; }
     gap: 8px 10px !important;
     padding: 8px 10px !important;
     overflow: visible;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     -webkit-mask-image: none;
     mask-image: none;
   }
@@ -858,7 +891,7 @@ canvas { display: block; }
   }
   .controls .speed-label,
   .date-controls .date-label {
-    font-size: 8px;
+    font-size: 10px;
     letter-spacing: 0.1em;
   }
   .controls .divider { display: none !important; }
@@ -871,15 +904,15 @@ canvas { display: block; }
   .speed-value { min-width: 40px; }
   .toggle-btn {
     padding: 7px 10px;
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .hint {
-    top: 46%;
+    top: calc(var(--scene-top, 118px) + 10px);
     bottom: auto;
     left: 50%;
     right: auto;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     max-width: calc(100vw - 48px);
     padding: 8px 12px;
     text-align: center;
@@ -896,9 +929,21 @@ canvas { display: block; }
     visibility: hidden;
   }
 
+  .view-pad {
+    right: 8px;
+    bottom: auto;
+    top: calc((var(--scene-top, 118px) + var(--scene-bottom, 70svh)) / 2);
+    transform: translateY(-50%);
+    flex-direction: column;
+    gap: 8px;
+  }
+  .view-pad-btn { width: 44px; height: 44px; }
+
+  /* Tour, Quiz and Distance View hide the drawer, so their notes sit right
+     above the dock. */
   .scale-note,
   .stage {
-    bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(var(--dock-height, 112px) + 20px + env(safe-area-inset-bottom, 0px)) !important;
     left: 10px !important;
     right: 10px !important;
     width: auto !important;
@@ -939,10 +984,10 @@ canvas { display: block; }
   }
 }
 
-/* Short phones: Play and Speed stay in the dock; the display toggles fold
-   behind one Display button that opens a popover above it. The dock drops a
-   row, so the drawer can sit lower and leave more of the scene uncovered. */
-@media (max-width: 820px) and (max-height: 700px), (max-height: 520px) and (orientation: landscape) {
+/* Phones: Play and Speed stay in the dock; the display toggles fold behind
+   one Display button that opens a popover above it. The dock drops a row, so
+   the drawer can sit lower and the scene keeps about 60% of the screen. */
+@media (max-width: 820px), (max-height: 520px) and (orientation: landscape) {
   .display-menu-btn { display: inline-flex; align-items: center; }
   .controls .toggle-group.display-menu {
     display: none; position: absolute; right: 0; bottom: calc(100% + 8px); left: 0;
@@ -1019,7 +1064,7 @@ canvas { display: block; }
     gap: 6px 8px !important;
   }
   .speed-slider { width: 72px; }
-  .toggle-btn { padding: 5px 8px; font-size: 8px; }
+  .toggle-btn { padding: 5px 8px; font-size: 10px; }
 
   .scale-note,
   .stage {
@@ -1095,7 +1140,7 @@ body .card .more-btn { font-size: 11px; text-decoration: underline; text-underli
   @media (min-width: 821px) and (min-height: 521px) {
     .info-panel.desktop-info-panel { transition: transform 0.25s ease, visibility 0.25s; }
     .info-panel.desktop-info-panel.is-collapsed { transform: translateX(calc(-100% - var(--info-left))); visibility: hidden; pointer-events: none; }
-    .desktop-info-toggle:not([hidden]) { display: inline-flex; position: fixed; top: var(--info-top); left: calc(var(--info-left) + var(--info-width)); z-index: 11; align-items: center; gap: 7px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 0 2px 2px 0; background: var(--panel); color: var(--ink-dim); font-family: 'Fragment Mono', monospace; font-size: 9px; letter-spacing: 0.08em; cursor: pointer; transition: left 0.25s ease, color 0.2s, border-color 0.2s; }
+    .desktop-info-toggle:not([hidden]) { display: inline-flex; position: fixed; top: var(--info-top); left: calc(var(--info-left) + var(--info-width)); z-index: 11; align-items: center; gap: 7px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 0 2px 2px 0; background: var(--panel); color: var(--ink-dim); font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.08em; cursor: pointer; transition: left 0.25s ease, color 0.2s, border-color 0.2s; }
     .desktop-info-toggle:hover { color: var(--accent); border-color: var(--accent); }
     .desktop-info-toggle[aria-expanded="false"] { left: var(--info-left); border-radius: 2px; }
     @media (prefers-reduced-motion: reduce) {
@@ -1174,7 +1219,7 @@ body .card .more-btn { font-size: 11px; text-decoration: underline; text-underli
   margin-right: auto;
   color: var(--accent);
   font-family: 'Fragment Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -1249,7 +1294,7 @@ body .card .more-btn { font-size: 11px; text-decoration: underline; text-underli
 .guide-meta dt {
   color: var(--ink-faint);
   font-family: 'Fragment Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -1260,13 +1305,13 @@ body .card .more-btn { font-size: 11px; text-decoration: underline; text-underli
   padding-bottom: 8px;
   color: var(--ink-faint);
   font-family: 'Fragment Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   text-align: left;
   text-transform: uppercase;
 }
 .guide-table th, .guide-table td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-.guide-table thead th { color: var(--ink-faint); font-family: 'Fragment Mono', monospace; font-size: 9px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; }
+.guide-table thead th { color: var(--ink-faint); font-family: 'Fragment Mono', monospace; font-size: 11px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; }
 .guide-table tbody th { color: var(--ink); font-weight: 400; }
 .guide-table td:last-child { white-space: nowrap; }
 

@@ -14,13 +14,40 @@ export const EARTH_SHAPE = Object.freeze({
   polarScale: POLAR_RADIUS_KM / VOLUMETRIC_MEAN_RADIUS_KM
 });
 
+// Two delivery tiers of the same maps (tools/build-texture-variants.py).
+// Phones and other coarse-pointer screens take the compact set: the 2K day map
+// and 1K detail maps, about a third of the full set's bytes. Laptops keep the
+// 4K day map; their normal, specular and cloud maps are WebP re-encodings of
+// the bundled sources at the same resolution.
 const EARTH_TEXTURE_PATHS = Object.freeze({
   day: 'assets/earth/day-4k.jpg',
   lights: 'assets/earth/lights-2k.webp',
-  normal: 'assets/earth/normal.jpg',
-  specular: 'assets/earth/specular.jpg',
-  clouds: 'assets/earth/clouds-1k.png'
+  normal: 'assets/earth/normal-2k.webp',
+  specular: 'assets/earth/specular-2k.webp',
+  clouds: 'assets/earth/clouds-1k.webp'
 });
+const COMPACT_EARTH_TEXTURE_PATHS = Object.freeze({
+  day: 'assets/earth/day-2k.webp',
+  lights: 'assets/earth/lights-1k.webp',
+  normal: 'assets/earth/normal-1k.webp',
+  specular: 'assets/earth/specular-1k.webp',
+  clouds: 'assets/earth/clouds-512.webp'
+});
+export const MOON_TEXTURE_PATHS = Object.freeze({
+  color: 'assets/moon/color-2k.webp',
+  bump: 'assets/moon/height-1k.webp'
+});
+export const COMPACT_MOON_TEXTURE_PATHS = Object.freeze({
+  color: 'assets/moon/color-1k.webp',
+  bump: 'assets/moon/height-512.webp'
+});
+
+// A phone screen shows the whole Earth a few hundred pixels across, where the
+// 1K maps are indistinguishable from the 2K ones; a laptop zooms in closer.
+export function prefersCompactTextures() {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 820px), (pointer: coarse)').matches;
+}
 
 const COLOR_TEXTURES = new Set(['day', 'lights', 'clouds']);
 
@@ -95,7 +122,7 @@ export function loadEarthTextureSet(renderer, loadingManager, keys, { compact = 
   const anisotropy = renderer.capabilities.getMaxAnisotropy();
 
   return Object.fromEntries(keys.map(key => {
-    const path = compact && key === 'day' ? 'assets/earth/day-2k.webp' : EARTH_TEXTURE_PATHS[key];
+    const path = (compact ? COMPACT_EARTH_TEXTURE_PATHS : EARTH_TEXTURE_PATHS)[key];
     if (!path) throw new Error(`Unknown Earth texture: ${key}`);
     const texture = loader.load(path);
     texture.wrapS = THREE.RepeatWrapping;

@@ -18,3 +18,16 @@ The same NASA/three.js imagery credits apply.
 day-2k.webp is a 2048 × 1024 downsample of day-4k.jpg using Lanczos resampling
 and WebP quality 90. The small globes in Seasons, Scale Walk, and Grand Tour
 use it; the close-up Light Study retains the 4K day map.
+
+## Served derivatives (tools/build-texture-variants.py)
+
+The JPEG and PNG files above are the sources and are kept as the record of
+what was published; the pages load these lossy WebP derivatives instead:
+
+- Laptop tier: normal-2k.webp (q90), specular-2k.webp (q85), clouds-1k.webp
+  (q85, alpha q80), with day-4k.jpg and the lossless lights-2k.webp unchanged.
+- Phone tier (coarse pointer or ≤ 820 px wide): day-2k.webp, normal-1k.webp,
+  specular-1k.webp, lights-1k.webp (q90), clouds-512.webp.
+- home-preview-320/480/720.webp are srcset sizes of home-preview.webp.
+
+Sizes and the on-screen check are in docs/texture-variants.md.

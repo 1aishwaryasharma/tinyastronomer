@@ -60,7 +60,12 @@
 
 <main id="canvas-container" aria-label="3D true-scale walk through the solar system"></main>
 <p id="scene-description" class="sr-only">A journey from the Sun through the eight planets using proportional mean orbital distances. Choose any stop in the list or use Previous and Travel. Each stop has a written distance, light-time, diameter, and basketball-Sun analogy.</p>
-<div class="loader" id="loader" role="status" aria-live="polite"><div class="loader-text">Measuring the void…</div></div>
+<div class="loader" id="loader" role="status" aria-live="polite">
+  <div class="loader-inner">
+    <div class="loader-text">Measuring the void…</div>
+    <div class="loader-bar" role="progressbar" aria-label="Loading the planets" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="loader-bar-fill"></span></div>
+  </div>
+</div>
 <noscript>
   <div class="loader loader-js-required" role="alert">
     <div class="loader-text">JavaScript is required to explore this page.</div>
@@ -103,7 +108,10 @@
   <button type="button" class="walk-btn" id="next">Travel ›</button>
 </div>
 
-<div class="hint"><span class="key">Drag</span> to look around · <span class="key">Scroll</span> to zoom · <span class="key">← →</span> to travel</div>
+<div class="hint">
+  <span class="hint-pointer"><span class="key">Drag</span> to look around · <span class="key">Scroll</span> to zoom · <span class="key">← →</span> to travel</span>
+  <span class="hint-touch" hidden><span class="key">Drag</span> to look around · <span class="key">Pinch</span> to zoom · <span class="key">Tap</span> a stop</span>
+</div>
 
 
 <script type="module">
@@ -286,6 +294,7 @@ STOPS.forEach((s, i) => {
 });
 
 function render(announce = false) {
+  document.title = idx ? `${STOPS[idx].p.name} · ${BASE_TITLE}` : BASE_TITLE;
   const s = STOPS[idx];
   STOPS.forEach(x => {
     const active = x === s;
@@ -326,10 +335,29 @@ function targetDist() {
   const s = STOPS[idx];
   return s.sun ? 11 : clamp(s.p.dispR * 9, 3, 26);
 }
-function goTo(i) {
+// ── The URL names the stop: /scale-walk?stop=mars ──
+// `#mars` is read too. Back and Forward retrace the walk.
+const STOP_KEYS = STOPS.map(s => (s.sun ? 'sun' : s.p.key));
+const BASE_TITLE = document.title;
+function stopFromUrl() {
+  const url = new URL(window.location.href);
+  const hashKey = url.hash.slice(1).toLowerCase();
+  const key = STOP_KEYS.includes(hashKey) ? hashKey : (url.searchParams.get('stop') || '').toLowerCase();
+  return Math.max(0, STOP_KEYS.indexOf(key));
+}
+function syncHistory(mode) {
+  const url = new URL(window.location.href);
+  url.hash = '';
+  if (idx) url.searchParams.set('stop', STOP_KEYS[idx]); else url.searchParams.delete('stop');
+  const next = url.pathname + url.search;
+  if (next === window.location.pathname + window.location.search + window.location.hash) return;
+  window.history[mode === 'replace' ? 'replaceState' : 'pushState']({ stop: STOP_KEYS[idx] }, '', next);
+}
+function goTo(i, options = {}) {
   idx = clamp(i, 0, STOPS.length - 1);
   cam.distanceTarget = targetDist();
   render(true);
+  if (options.history !== 'none') syncHistory(options.history || 'push');
 }
 prevBtn.onclick = () => goTo(idx - 1);
 nextBtn.onclick = () => goTo(idx + 1);
@@ -337,6 +365,8 @@ addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') goTo(idx + 1);
   if (e.key === 'ArrowLeft') goTo(idx - 1);
 });
+window.addEventListener('popstate', () => goTo(stopFromUrl(), { history: 'none' }));
+window.addEventListener('hashchange', () => { if (stopFromUrl() !== idx) goTo(stopFromUrl(), { history: 'replace' }); });
 
 function place(obj, el) {
   SPACE.projectToScreen(obj, el, camera, -26, true);
@@ -359,7 +389,12 @@ function animate(now, rawDt) {
   PLANETS.forEach(p => place(p.holder, p.label));
   setup.render();
 }
+// A deep link starts at its stop instead of flying out from the Sun.
+idx = stopFromUrl();
+cam.target.copy(targetPos());
+cam.distance = cam.distanceTarget = targetDist();
 render();
+syncHistory('replace');
 SPACE.createFrameLoop(animate, { element: renderer.domElement });
 SPACE.buildNav('scale');
 </script>

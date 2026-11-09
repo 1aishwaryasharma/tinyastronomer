@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Page Not Found | tinyastronomer</title>
+<meta name="description" content="That page is not in our sky. Head back to the first stop or pick an observation: Light Study, Seasons, Grand Tour, Scale Walk, Missions or Sky Tonight.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#050810">
+<link rel="icon" href="/favicon.svg?v=20260816-20" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260816-20">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="tinyastronomer">
+<meta property="og:title" content="Page Not Found | tinyastronomer">
+<meta property="og:description" content="That page is not in our sky. Head back to the first stop or pick an observation: Light Study, Seasons, Grand Tour, Scale Walk, Missions or Sky Tonight.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Page Not Found | tinyastronomer">
+<meta name="twitter:description" content="That page is not in our sky. Head back to the first stop or pick an observation: Light Study, Seasons, Grand Tour, Scale Walk, Missions or Sky Tonight.">
+<link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/common.css?v=20261018-1">
+<style>
+  /* A quiet night sky, drawn in CSS so nothing else has to load. */
+  html, body { height: auto; min-height: 100%; overflow: auto; }
+  body {
+    background:
+      radial-gradient(1.5px 1.5px at 18% 22%, rgba(232, 236, 244, 0.8), transparent 60%),
+      radial-gradient(1px 1px at 72% 14%, rgba(232, 236, 244, 0.7), transparent 60%),
+      radial-gradient(1.5px 1.5px at 84% 62%, rgba(232, 236, 244, 0.6), transparent 60%),
+      radial-gradient(1px 1px at 36% 78%, rgba(232, 236, 244, 0.65), transparent 60%),
+      radial-gradient(1px 1px at 58% 44%, rgba(244, 197, 96, 0.7), transparent 60%),
+      radial-gradient(1.5px 1.5px at 8% 66%, rgba(106, 176, 255, 0.6), transparent 60%),
+      var(--bg);
+  }
+  .header { position: static; padding-bottom: 0; }
+  .not-found {
+    max-width: 36rem;
+    margin: 0 auto;
+    padding: clamp(32px, 10vh, 96px) 24px 48px;
+  }
+  .not-found-label {
+    font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
+  }
+  .not-found h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 300; line-height: 1.08; letter-spacing: -0.01em; margin: 0 0 18px; }
+  .not-found p { font-size: 17px; line-height: 1.55; color: var(--ink-dim); font-weight: 300; margin: 0 0 28px; max-width: 30rem; }
+  .not-found-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; }
+  .not-found-actions a {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px;
+    border: 1px solid var(--control-border); border-radius: 2px; color: var(--ink);
+    font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; text-decoration: none; transition: color 0.2s, border-color 0.2s;
+  }
+  .not-found-actions a.primary { background: var(--accent); border-color: var(--accent); color: #1a1408; }
+  .not-found-actions a:hover { border-color: var(--accent); color: var(--accent); }
+  .not-found-actions a.primary:hover { color: #1a1408; background: #ffd47a; }
+  .not-found h2 {
+    font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-faint); font-weight: 400; margin: 0 0 12px;
+  }
+  .not-found ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .not-found ol a {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px;
+    min-height: 44px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 2px; color: var(--ink); text-decoration: none; font-size: 17px;
+    transition: border-color 0.2s;
+  }
+  .not-found ol a:hover { border-color: var(--accent); }
+  .not-found ol .num { font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: var(--ink-faint); }
+  .not-found ol .arrow { color: var(--ink-faint); }
+</style>
+</head>
+<body>
+
+<header class="header" id="not-found-header" aria-label="tinyastronomer">
+  <div>
+    <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
+  </div>
+</header>
+
+<main class="not-found" id="not-found">
+  <div class="not-found-label">— Error 404 —</div>
+  <h1 id="not-found-title">That page is not in our sky.</h1>
+  <p>The address may have a typo, or the page has moved on. Everything here is still a short hop away.</p>
+  <div class="not-found-actions">
+    <a class="primary" href="/" id="not-found-home">Back to the first stop</a>
+    <a href="/#observations" id="not-found-observations">Choose an observation</a>
+  </div>
+
+  <h2>The six observations</h2>
+  <ol>
+    <li><a href="/#light-study"><span class="num">01</span><span>Light Study</span><span class="arrow" aria-hidden="true">→</span></a></li>
+    <li><a href="/seasons"><span class="num">02</span><span>Seasons</span><span class="arrow" aria-hidden="true">→</span></a></li>
+    <li><a href="/solar-system"><span class="num">03</span><span>Grand Tour</span><span class="arrow" aria-hidden="true">→</span></a></li>
+    <li><a href="/scale-walk"><span class="num">04</span><span>Scale Walk</span><span class="arrow" aria-hidden="true">→</span></a></li>
+    <li><a href="/missions"><span class="num">05</span><span>Missions</span><span class="arrow" aria-hidden="true">→</span></a></li>
+    <li><a href="/sky-tonight"><span class="num">06</span><span>Sky Tonight</span><span class="arrow" aria-hidden="true">→</span></a></li>
+  </ol>
+</main>
+
+</body>
+</html>
