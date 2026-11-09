@@ -122,11 +122,14 @@ function initDisplayMenus() {
   });
 }
 
+// Touch screens get touch words. A page can ship its own pair of hints
+// (`.hint-pointer` and `.hint-touch` inside `.hint`); otherwise the generic
+// rotate-and-pinch line replaces the mouse-and-keyboard one.
 function initMobileHints() {
   const hints = document.querySelectorAll('.hint');
   if (!hints.length) return;
-  const isMobile = window.matchMedia('(max-width: 820px)').matches;
-  if (isMobile) {
+  const isTouch = window.matchMedia('(max-width: 820px), (pointer: coarse)').matches;
+  if (isTouch) {
     try {
       if (window.localStorage.getItem(MOBILE_HINT_KEY) === '1') {
         hints.forEach((h) => h.classList.add('is-dismissed'));
@@ -136,6 +139,12 @@ function initMobileHints() {
       // Storage can be unavailable in private or restricted browsing.
     }
     hints.forEach((h) => {
+      const touchHint = h.querySelector('.hint-touch');
+      if (touchHint) {
+        h.querySelectorAll('.hint-pointer').forEach((pointerHint) => { pointerHint.hidden = true; });
+        touchHint.hidden = false;
+        return;
+      }
       h.innerHTML = '<span class="key">Drag</span> to rotate · <span class="key">Pinch</span> to zoom';
     });
     try {
@@ -404,6 +413,9 @@ function initSceneMetrics() {
   addEventListener('orientationchange', sync);
   // Docks wrap to a second row as content changes; the reserved space follows.
   if (dock) new ResizeObserver(sync).observe(dock);
+  // Rails are empty until the scene fills them, then grow to a chip row.
+  const rail = document.querySelector('.side-rail');
+  if (rail) new ResizeObserver(sync).observe(rail);
 }
 
 function initChrome() {

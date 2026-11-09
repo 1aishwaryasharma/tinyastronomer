@@ -43,12 +43,13 @@ function refreshCsp(dir: string) {
   const path = join(dir, '_headers');
   const headers = readFileSync(path, 'utf8');
   const live = inlineScriptHashes(dir);
-  const directive = /script-src 'self'((?: 'sha256-[^']+')*)/;
+  const directive = /script-src 'self'(?: 'wasm-unsafe-eval')?((?: 'sha256-[^']+')*)/;
   const found = headers.match(directive);
   if (!found) throw new Error(`No "script-src 'self'" directive in ${path}`);
   const current = found[1].trim().split(' ').filter(Boolean);
   const next = [...current.filter((hash) => live.includes(hash)), ...live.filter((hash) => !current.includes(hash))];
-  writeFileSync(path, headers.replace(directive, ['script-src', "'self'", ...next].join(' ')));
+  const keep = found[0].includes("'wasm-unsafe-eval'") ? ["'self'", "'wasm-unsafe-eval'"] : ["'self'"];
+  writeFileSync(path, headers.replace(directive, ['script-src', ...keep, ...next].join(' ')));
 }
 
 export function stampVersions(dir: string) {

@@ -61,7 +61,12 @@
 
 <main id="canvas-container" aria-label="3D model of Earth orbiting the Sun through the seasons"></main>
 <p id="scene-description" class="sr-only">Earth orbits the Sun with its axis held at a 23.4 degree tilt. Choose an equinox or solstice, or use the time-of-year slider. The information panel reports the northern and southern seasons and the subsolar latitude.</p>
-<div class="loader" id="loader" role="status" aria-live="polite"><div class="loader-text">Tilting the Earth…</div></div>
+<div class="loader" id="loader" role="status" aria-live="polite">
+  <div class="loader-inner">
+    <div class="loader-text">Tilting the Earth…</div>
+    <div class="loader-bar" role="progressbar" aria-label="Loading the Earth" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="loader-bar-fill"></span></div>
+  </div>
+</div>
 <noscript>
   <div class="loader loader-js-required" role="alert">
     <div class="loader-text">JavaScript is required to explore this page.</div>

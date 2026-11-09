@@ -9,7 +9,8 @@
 //   1. public/_redirects       — explicit permanent redirects
 //   2. html_handling           — from wrangler.jsonc: "drop-trailing-slash"
 //   3. static asset lookup     — public/
-//   4. not_found_handling      — from wrangler.jsonc: "none" (a real 404)
+//   4. not_found_handling      — from wrangler.jsonc: "404-page" (public/404.html
+//                                 with a real 404 status)
 //
 // public/_headers is applied to every response too, so a Content-Security-Policy
 // mistake surfaces locally instead of in production.
@@ -192,6 +193,12 @@ export const handleRequest = (request: Request) => {
     const headers = headersFor(pathname);
     headers.set("Content-Type", contentTypes.html);
     return new Response(Bun.file(`${root}/index.html`), { headers });
+  }
+  if (notFoundHandling === "404-page" && fileAt("/404.html")) {
+    const headers = headersFor(pathname);
+    headers.set("Content-Type", contentTypes.html);
+    headers.set("Cache-Control", "no-store");
+    return new Response(Bun.file(`${root}/404.html`), { status: 404, headers });
   }
   return new Response("Not found\n", { status: 404, headers: headersFor(pathname) });
 };

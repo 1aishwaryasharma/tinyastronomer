@@ -995,21 +995,87 @@ float fbm(vec3 p) {
   }
 
   // ── Hold the loader until assets land; a failed request can never trap
-  // anyone on the loader thanks to the safety timeout. ──
+  // anyone on the loader thanks to the safety timeout. A page that puts a
+  // `.loader-bar` progressbar inside #loader gets it driven by the manager's
+  // item counts. The bar never moves backwards: the manager's total grows as
+  // scenes request more items, which would otherwise read as a reset. ──
   function createLoader(loadingManager, timeoutMs) {
     let hidden = false;
+    const loader = document.getElementById('loader');
+    const bar = loader ? loader.querySelector('.loader-bar') : null;
+    const fill = bar ? bar.querySelector('.loader-bar-fill') : null;
+    let shown = 0;
+    function progress(loaded, total) {
+      if (!bar || !(total > 0)) return;
+      shown = Math.max(shown, clamp(loaded / total, 0, 1));
+      bar.setAttribute('aria-valuenow', String(Math.round(shown * 100)));
+      if (fill) fill.style.transform = 'scaleX(' + shown.toFixed(3) + ')';
+    }
     function hide() {
       if (hidden) return;
       hidden = true;
-      const loader = document.getElementById('loader');
+      progress(1, 1);
       if (loader) {
         loader.classList.add('hidden');
         loader.setAttribute('aria-hidden', 'true');
       }
     }
-    if (loadingManager) loadingManager.onLoad = hide;
+    if (loadingManager) {
+      loadingManager.onLoad = hide;
+      loadingManager.onProgress = (url, loaded, total) => progress(loaded, total);
+    }
     window.setTimeout(hide, timeoutMs != null ? timeoutMs : 5000);
+    hide.progress = progress;
     return hide;
+  }
+
+  // ── On-screen camera buttons: turn and zoom without dragging, plus an
+  // optional recenter action the scene reveals once the view has wandered
+  // from the selected body (WCAG 2.2 dragging movements, SC 2.5.7). ──
+  function createViewPad(cam, opts) {
+    opts = opts || {};
+    const turn = opts.turnStep != null ? opts.turnStep : 0.35;
+    const zoomIn = opts.zoomFactor != null ? opts.zoomFactor : 0.8;
+    const minD = opts.minDistance != null ? opts.minDistance : 1.5;
+    const maxDFn = typeof opts.maxDistance === 'function'
+      ? opts.maxDistance : (() => (opts.maxDistance != null ? opts.maxDistance : 100));
+    const pad = document.createElement('div');
+    pad.className = 'view-pad';
+    pad.setAttribute('role', 'group');
+    pad.setAttribute('aria-label', opts.label || 'View controls');
+    function button(className, glyph, label, action) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'view-pad-btn ' + className;
+      btn.setAttribute('aria-label', label);
+      btn.innerHTML = '<span aria-hidden="true">' + glyph + '</span>';
+      btn.addEventListener('click', action);
+      pad.appendChild(btn);
+      return btn;
+    }
+    button('view-pad-left', '‹', 'Turn left', () => { cam.azimuthTarget += turn; });
+    button('view-pad-right', '›', 'Turn right', () => { cam.azimuthTarget -= turn; });
+    button('view-pad-in', '+', 'Zoom in', () => {
+      cam.distanceTarget = clamp(cam.distanceTarget * zoomIn, minD, maxDFn());
+    });
+    button('view-pad-out', '−', 'Zoom out', () => {
+      cam.distanceTarget = clamp(cam.distanceTarget / zoomIn, minD, maxDFn());
+    });
+    let recenter = null;
+    if (opts.onRecenter) {
+      recenter = button('view-pad-recenter', '⌖', 'Recenter the view', opts.onRecenter);
+      recenter.hidden = true;
+    }
+    (opts.parent || document.body).appendChild(pad);
+    return {
+      element: pad,
+      setRecenter(label, visible) {
+        if (!recenter) return;
+        if (label) recenter.setAttribute('aria-label', label);
+        recenter.hidden = !visible;
+        pad.classList.toggle('has-recenter', !!visible);
+      }
+    };
   }
 
   // Body catalog lives in data.js (SPACE_DATA). Navigation and
@@ -1028,6 +1094,7 @@ float fbm(vec3 p) {
     createScene,
     createStarfield,
     createSun,
+    createViewPad,
     failWebGL,
     GLSL_NOISE,
     glowShell,

@@ -1,7 +1,8 @@
 /* NASA Visualization Technology Applications and Development (VTAD)
    planet models. The GLBs retain their original UV layouts, proportions,
    and mission-derived texture composites; they are only transmission-
-   compressed for this site. */
+   compressed for this site: quantized attributes packed with Meshopt
+   (EXT_meshopt_compression), decoded by the vendored meshoptimizer module. */
 import * as THREE from 'three';
 
 const MODEL_PATHS = Object.freeze({
@@ -56,8 +57,14 @@ export function createPlanetModelLoader(renderer, loadingManager) {
     if (!path) return false;
     // The overview uses small neutral globes; do not fetch or parse the GLTF
     // loader until a detailed planet is actually requested.
-    loaderPromise ||= import('three/addons/loaders/GLTFLoader.js')
-      .then(({ GLTFLoader }) => new GLTFLoader(loadingManager));
+    loaderPromise ||= Promise.all([
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/libs/meshopt_decoder.module.js')
+    ]).then(([{ GLTFLoader }, { MeshoptDecoder }]) => {
+      const loader = new GLTFLoader(loadingManager);
+      loader.setMeshoptDecoder(MeshoptDecoder);
+      return loader;
+    });
     loaderPromise.then(loader => {
       loader.load(path, gltf => onLoad(prepare(gltf.scene)), undefined, onError);
     }).catch(error => {

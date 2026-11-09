@@ -19,7 +19,11 @@ import {
 
 process.chdir(fileURLToPath(new URL("./public", import.meta.url)));
 
-const pages = readdirSync(".").filter((file) => file.endsWith(".html"));
+// 404.html is served for unknown paths with a 404 status. It is a page in the
+// markup sense (metadata, local assets, the wordmark) but not a stop on the
+// journey: no canonical URL, no redirect rules, no guide, and noindex.
+const allPages = readdirSync(".").filter((file) => file.endsWith(".html"));
+const pages = allPages.filter((file) => file !== "404.html");
 const teachingRadius = (radiusKm: number) =>
   Math.max(0.30, Math.min(0.55 * Math.pow(radiusKm / 6371, 0.4), 1.55));
 
@@ -51,9 +55,35 @@ test("asset routing is pinned rather than inherited from platform defaults", () 
     "canonical URLs must not depend on a Cloudflare default",
   ).toBe("drop-trailing-slash");
 
-  // Anything else — notably "single-page-application" — would answer unknown
-  // paths with index.html and a 200, which Google files as a soft 404.
-  expect(wrangler.assets.not_found_handling, "unknown paths must be a real 404").toBe("none");
+  // "single-page-application" would answer unknown paths with index.html and
+  // a 200, which Google files as a soft 404. "404-page" serves public/404.html
+  // with a real 404 status, so the branded page keeps the honest code.
+  expect(wrangler.assets.not_found_handling, "unknown paths must be a real 404").toBe("404-page");
+});
+
+test("unknown paths get the branded page with a 404 status", async () => {
+  const response = handleRequest(new Request("https://tinyastronomer.com/doesnotexist"));
+  expect(response.status).toBe(404);
+  expect(response.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
+  expect(response.headers.get("Content-Security-Policy")).toContain("script-src 'self'");
+  const body = await response.text();
+  expect(body).toContain('<a class="brand" href="/"');
+  expect(body).toContain('id="not-found-home"');
+  expect(body).toMatch(/<a[^>]+href="\/"[^>]*>Back to the first stop<\/a>/);
+  expect(body).toContain('href="/#observations"');
+  for (const route of ["/seasons", "/solar-system", "/scale-walk", "/missions", "/sky-tonight"]) {
+    expect(body).toContain(`href="${route}"`);
+  }
+  // No inline script: the page needs no CSP hash and works before any JS runs.
+  expect(body).not.toMatch(/<script\b/);
+
+  // The page itself must not become an indexable 200 at /404.
+  const page = readFileSync("404.html", "utf8");
+  expect(page).toContain('<meta name="robots" content="noindex">');
+  const direct = handleRequest(new Request("https://tinyastronomer.com/404"));
+  expect(direct.status).toBe(200);
+  expect(direct.headers.get("X-Robots-Tag")).toBe("noindex");
+  expect(readFileSync("sitemap.xml", "utf8")).not.toContain("/404");
 });
 
 test("security headers cover every static response and authorize current inline scripts", () => {
@@ -83,7 +113,7 @@ test("security headers cover every static response and authorize current inline 
   );
 
   const liveHashes = new Set<string>();
-  for (const page of pages) {
+  for (const page of allPages) {
     const html = readFileSync(page, "utf8");
     for (const match of html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)) {
       if (/\bsrc=["']/i.test(match[1] || "")) continue;
@@ -124,7 +154,7 @@ test("dev server answers invalid percent-encoding with 400 and security headers"
   }
 });
 
-describe.each(pages)("%s", (file) => {
+describe.each(allPages)("%s", (file) => {
   const html = readFileSync(file, "utf8");
 
   test("has core document metadata", () => {
@@ -227,7 +257,7 @@ test("the obsolete duplicate page is not shipped", () => {
 
 test('shared assets use a consistent cache-busting version', () => {
   const versions = new Set<string>();
-  for (const page of pages) {
+  for (const page of allPages) {
     const html = readFileSync(page, 'utf8');
     for (const match of html.matchAll(/common\.css\?v=([^"'&]+)/g)) {
       versions.add(match[1]);
@@ -874,7 +904,7 @@ test('mobile drawer opens without relayout or a native tap flash', () => {
 
 test('every page carries the wordmark and links it home', () => {
   const commonCss = readFileSync('common.css', 'utf8');
-  for (const file of pages) {
+  for (const file of allPages) {
     const html = readFileSync(file, 'utf8');
     const brand = html.match(/<a class="brand"[^>]*>[\s\S]*?<\/a>/);
     expect(brand, `${file}: missing the brand wordmark`).not.toBeNull();
@@ -886,6 +916,10 @@ test('every page carries the wordmark and links it home', () => {
     expect(html.indexOf(brand![0])).toBeGreaterThan(html.indexOf('<header class="header"'));
   }
   expect(commonCss).toMatch(/\.brand\s*\{[\s\S]*?pointer-events:\s*auto/);
+  // "tiny" and "astronomer" are separate flex items; a gap between them read
+  // as a space. The mark carries the spacing instead.
+  expect(commonCss).toMatch(/\.brand\s*\{[^}]*gap:\s*0;/);
+  expect(commonCss).toMatch(/\.brand-mark\s*\{[^}]*margin-right:\s*10px/);
 });
 
 test('pages name tinyastronomer in the signals Google uses for brand search', () => {
@@ -1150,7 +1184,7 @@ test('phone landing offers a first action above the fold and no drag hint', () =
   expect(wide).not.toMatch(/\.observatory-footer\s*\{[^}]*position:\s*fixed/);
 });
 
-test('short phones fold display toggles behind one Display button', () => {
+test('phones fold display toggles behind one Display button', () => {
   const chrome = readFileSync('chrome.js', 'utf8');
   const commonCss = readFileSync('common.css', 'utf8');
   expect(chrome).toContain('function initDisplayMenus');
@@ -1162,8 +1196,10 @@ test('short phones fold display toggles behind one Display button', () => {
   // only add a tap.
   expect(readFileSync('seasons.html', 'utf8')).not.toContain('data-display-menu');
   expect(commonCss).toMatch(/\.display-menu-btn\s*\{\s*display:\s*none/);
+  // Every phone, not only short ones: the dock drops a row and the scene
+  // keeps about 60% of a 390×844 screen.
   const short = commonCss.slice(
-    commonCss.indexOf('@media (max-width: 820px) and (max-height: 700px)'),
+    commonCss.indexOf('@media (max-width: 820px), (max-height: 520px) and (orientation: landscape) {\n  .display-menu-btn'),
     commonCss.indexOf('@media (max-height: 520px) and (orientation: landscape) {\n  .header')
   );
   expect(short).toMatch(/\.display-menu-btn\s*\{\s*display:\s*inline-flex/);

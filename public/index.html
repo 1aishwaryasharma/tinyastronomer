@@ -98,12 +98,12 @@
       <h1 id="launch-title">A small observatory for kids exploring the solar system.</h1>
       <p class="observatory-lede">Turn the model. Pause time. Watch day and night, Moon phases, tides, eclipses, and more unfold.</p>
       <div class="observatory-actions">
-        <a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>Start exploring <span aria-hidden="true">↗</span></a>
+        <a class="observatory-cta" href="#light-study" id="launch-start" data-launch-study>Start exploring <span aria-hidden="true">→</span></a>
       </div>
     </section>
 
     <div class="observatory-viewport" id="home-earth-viewport">
-      <img class="earth-preview" src="assets/earth/home-preview.webp" alt="Earth, with sunlit oceans and clouds" width="922" height="912" fetchpriority="high">
+      <img class="earth-preview" src="assets/earth/home-preview.webp" srcset="assets/earth/home-preview-320.webp 320w, assets/earth/home-preview-480.webp 480w, assets/earth/home-preview-720.webp 720w, assets/earth/home-preview.webp 922w" sizes="(min-width: 60rem) 36vw, 40vw" alt="Earth, with sunlit oceans and clouds" width="922" height="912" fetchpriority="high">
     </div>
 
     <div class="study-column">
@@ -114,7 +114,7 @@
           <a href="#light-study" id="launch-light-study" data-launch-study>
             <span class="study-number">01</span>
             <span class="study-name"><strong>Light Study</strong><small>Sun · Earth · Moon</small></span>
-            <span class="study-arrow" aria-hidden="true">↗</span>
+            <span class="study-arrow" aria-hidden="true">→</span>
           </a>
         </li>
         <li>
@@ -189,7 +189,10 @@
 <p id="scene-description" class="sr-only">An Earth-centred model of sunlight, the Moon, eclipses, tides, and auroras. Use the Observation presets for a text explanation of each view; the current explanation and facts appear in the information panel.</p>
 
 <div class="loader" id="loader" role="status" aria-live="polite">
-  <div class="loader-text">Igniting the sun…</div>
+  <div class="loader-inner">
+    <div class="loader-text">Igniting the sun…</div>
+    <div class="loader-bar" role="progressbar" aria-label="Loading the Earth and Moon" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="loader-bar-fill"></span></div>
+  </div>
 </div>
 <noscript>
   <div class="loader noscript-loader" role="alert">
@@ -310,7 +313,8 @@ const [THREE, { SPACE }, { bindSaveViewControl }, { SPACE_DATA }, earthVisuals] 
   import('./data.js'),
   import('./earth-visuals.js?v=20260907-2')
 ]);
-const { createEarthGeometry, createEarthClouds, createEarthAtmosphere, EARTH_SHAPE, loadEarthTextureSet } = earthVisuals;
+const { createEarthGeometry, createEarthClouds, createEarthAtmosphere, EARTH_SHAPE, loadEarthTextureSet,
+  prefersCompactTextures, MOON_TEXTURE_PATHS, COMPACT_MOON_TEXTURE_PATHS } = earthVisuals;
 
 // ─────────────────────────────────────────────────────────
 // 1. SCENE SETUP
@@ -387,15 +391,18 @@ quality.setShadowLight(sunLight);
 // 4. EARTH (photographic Earth and lunar maps)
 // ─────────────────────────────────────────────────────────
 const loadingManager = new THREE.LoadingManager();
-const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day', 'normal', 'specular', 'lights', 'clouds']);
+// Phones take the 1K maps (about 0.9 MB for the whole study instead of 2 MB).
+const compact = prefersCompactTextures();
+const earthTextures = loadEarthTextureSet(renderer, loadingManager, ['day', 'normal', 'specular', 'lights', 'clouds'], { compact });
 const earthTexture = earthTextures.day;
 const earthNormalTexture = earthTextures.normal;
 const earthSpecularTexture = earthTextures.specular;
 const nightTexture = earthTextures.lights;
 const moonLoader = new THREE.TextureLoader(loadingManager);
+const moonPaths = compact ? COMPACT_MOON_TEXTURE_PATHS : MOON_TEXTURE_PATHS;
 const moonTextures = {
-  color: moonLoader.load('assets/moon/color-2k.jpg'),
-  bump: moonLoader.load('assets/moon/height-1k.jpg')
+  color: moonLoader.load(moonPaths.color),
+  bump: moonLoader.load(moonPaths.bump)
 };
 moonTextures.color.colorSpace = THREE.SRGBColorSpace;
 Object.values(moonTextures).forEach(texture => {

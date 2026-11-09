@@ -61,10 +61,18 @@ test('model loader code is deferred until selection and shared between requests'
   const models: string[] = [];
   const source = read('planet-models.js').replace(/^import .*;$/gm, '')
     .replace('export function', 'function').replace(/\bimport\(/g, 'importModule(');
+  const decoders: unknown[] = [];
+  const MeshoptDecoder = { ready: Promise.resolve() };
   const factory = new Function('THREE', 'importModule', source + ';return createPlanetModelLoader;')({},
     async (path: string) => {
       imports.push(path);
-      return { GLTFLoader: class { load(path: string) { models.push(path); } } };
+      return {
+        GLTFLoader: class {
+          load(path: string) { models.push(path); }
+          setMeshoptDecoder(decoder: unknown) { decoders.push(decoder); }
+        },
+        MeshoptDecoder,
+      };
     });
   const loader = factory({ capabilities: { getMaxAnisotropy: () => 8 } });
   expect(imports).toEqual([]);
@@ -73,7 +81,9 @@ test('model loader code is deferred until selection and shared between requests'
   loader.load('mars');
   loader.load('saturn');
   await new Promise(resolve => setTimeout(resolve, 0));
-  expect(imports).toEqual(['three/addons/loaders/GLTFLoader.js']);
+  // The GLBs require EXT_meshopt_compression, so the decoder ships with the loader.
+  expect(imports).toEqual(['three/addons/loaders/GLTFLoader.js', 'three/addons/libs/meshopt_decoder.module.js']);
+  expect(decoders).toEqual([MeshoptDecoder]);
   expect(models).toEqual(['assets/planet-models/mars.glb', 'assets/planet-models/saturn.glb']);
 });
 
