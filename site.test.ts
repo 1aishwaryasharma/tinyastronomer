@@ -317,7 +317,8 @@ test('system reduced-motion preference uses play state as the animation policy',
   }
   expect(index).toContain('if (sim.playing) {\n    sim.time +=');
   expect(index).not.toContain('playing && !SPACE.prefersReducedMotion');
-  expect(index.match(/setPlaying\(!SPACE\.prefersReducedMotion\)/g)?.length).toBe(2);
+  expect(index.match(/setPlaying\(!SPACE\.prefersReducedMotion\)/g)?.length).toBe(4);
+  expect(index).not.toContain('setPlaying(true)');
   expect(solar).toContain('if (sim.playing) {\n    sim.timeDays +=');
   expect(seasons).toContain('if (state.playing){\n    state.theta=');
 });
