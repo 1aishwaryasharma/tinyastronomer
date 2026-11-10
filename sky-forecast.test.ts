@@ -390,4 +390,22 @@ describe('Sky Tonight night in progress', () => {
     const afterSunrise = new Date(night.end.getTime() + 60 * 60 * 1000);
     expect(calendarDay(currentNightDate(sf, afterSunrise))).toEqual([2026, 8, 8]);
   });
+
+  test('a site a calendar day ahead of the device gets its coming night, not one that ended', () => {
+    const tokyo = new Astronomy.Observer(35.7, 139.7, 0);
+    const now = new Date('2026-11-10T02:00:00Z'); // 11:00 in Tokyo, 21:00 the evening before in New York
+    const date = currentNightDate(tokyo, now);
+    const night = nightWindow(tokyo, date);
+    expect(night.end.getTime()).toBeGreaterThan(now.getTime());
+    const previous = new Date(date); previous.setDate(date.getDate() - 1);
+    expect(nightWindow(tokyo, previous).end.getTime()).toBeLessThan(now.getTime());
+    expect(date.getHours()).toBe(12);
+  });
+
+  test('west of the date line on an eastern clock, 3 am is still inside the night shown', () => {
+    const apia = new Astronomy.Observer(-13.8, -171.8, 0);
+    const now = new Date('2026-11-08T14:00:00Z'); // 03:00 on Nov 9 in Apia (UTC+13)
+    const night = nightWindow(apia, currentNightDate(apia, now));
+    expect(now >= night.start && now <= night.end).toBe(true);
+  });
 });
