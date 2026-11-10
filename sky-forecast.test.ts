@@ -6,6 +6,7 @@ import {
   compassDirection,
   conjunctions,
   currentNightDate,
+  darkFrom,
   defaultNightMinutes,
   moonPhaseName,
   moonReport,
@@ -389,5 +390,23 @@ describe('Sky Tonight night in progress', () => {
     const night = nightWindow(sf, new Date(2026, 8, 7, 12));
     const afterSunrise = new Date(night.end.getTime() + 60 * 60 * 1000);
     expect(calendarDay(currentNightDate(sf, afterSunrise))).toEqual([2026, 8, 8]);
+  });
+});
+
+describe('Sky Tonight dark-from line', () => {
+  test('an ordinary night names astronomical dusk', () => {
+    const line = darkFrom(window);
+    expect(line.label).toBe('Dark from');
+    expect(line.time).toBe(window.astroDusk);
+  });
+
+  test('a midsummer night that never gets fully dark still gets a time', () => {
+    const london = new Astronomy.Observer(51.5, -0.1, 0);
+    const night = nightWindow(london, new Date(2026, 5, 21, 12));
+    expect(night.astroDusk).toBeNull();
+    const line = darkFrom(night);
+    expect(line.label).toBe('Darkest from');
+    expect(line.time).toBe(night.civilDusk);
+    expect(line.time).not.toBeNull();
   });
 });
