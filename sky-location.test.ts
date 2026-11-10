@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './public/tz-coords.js';
 import {
   LOCATION_STORAGE_KEY,
@@ -470,4 +472,24 @@ describe('the place list generator', () => {
       'São Paulo|BR|10|-20.1|0',
     ]);
   });
+});
+
+test('the times-in note compares the two clocks on the chosen night', () => {
+  const html = readFileSync(new URL('./public/sky-tonight.html', import.meta.url), 'utf8');
+  const source = html.slice(html.indexOf('function zoneOffset('), html.indexOf('function insideWindow('))
+    + html.slice(html.indexOf('function sourceDescription('), html.indexOf('function locationMeta('));
+  // London and Abidjan share GMT in November, but London is an hour ahead in July.
+  function DateTimeFormat(locales?: string, options?: Intl.DateTimeFormatOptions) {
+    return new Intl.DateTimeFormat(locales, options ?? { timeZone: 'Europe/London' });
+  }
+  const describeNight = (night: string) => runInNewContext(`${source}; sourceDescription()`, {
+    Intl: { DateTimeFormat },
+    location: { source: 'city' },
+    displayTimeZone: 'Africa/Abidjan',
+    timeZoneLabel,
+    offset: 0,
+    dateAt: () => new Date(night),
+  });
+  expect(describeNight('2026-11-09T12:00:00Z')).toBe('Chosen place');
+  expect(describeNight('2027-07-01T12:00:00Z')).toBe(`Chosen place · times in ${timeZoneLabel('Africa/Abidjan')}`);
 });

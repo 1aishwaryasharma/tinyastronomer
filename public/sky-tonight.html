@@ -576,8 +576,8 @@ function sourceDescription() {
   if (location.source === 'geo') return 'Device · rounded to about 10 km';
   if (location.source === 'manual' || location.source === 'city') {
     const kind = location.source === 'city' ? 'Chosen place' : 'Manual coordinates';
-    const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone, now = new Date();
-    return zoneOffset(displayTimeZone, now) === zoneOffset(deviceZone, now)
+    const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone, night = dateAt(offset);
+    return zoneOffset(displayTimeZone, night) === zoneOffset(deviceZone, night)
       ? kind : `${kind} · times in ${timeZoneLabel(displayTimeZone)}`;
   }
   return location.approximate ? 'Use my location to be accurate' : 'From your time zone';
