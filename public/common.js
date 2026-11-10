@@ -660,6 +660,16 @@ float fbm(vec3 p) {
     };
   }
 
+  // ── Scene shortcuts ──
+  // Skipped with a modifier held (browser shortcuts such as Alt+← for Back),
+  // in form fields, and while a dialog such as the page guide is open, so the
+  // keys keep their native meaning there.
+  function ignoresSceneKeys(e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return true;
+    const t = e.target;
+    return !!(t && t.closest && t.closest('input, select, textarea, [contenteditable], dialog[open]'));
+  }
+
   // ── Keyboard camera control (arrows rotate, +/− zoom) ──
   // Works with any cam exposing azimuthTarget / elevationTarget /
   // distanceTarget. Ignored while a form field has focus so native
@@ -673,9 +683,7 @@ float fbm(vec3 p) {
       ? opts.maxDistance : (() => (opts.maxDistance != null ? opts.maxDistance : 100));
     const EL = Math.PI / 2 - 0.05;
     window.addEventListener('keydown', (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const t = e.target;
-      if (t && t.closest && t.closest('input, select, textarea, [contenteditable]')) return;
+      if (ignoresSceneKeys(e)) return;
       let handled = true;
       switch (e.key) {
         case 'ArrowLeft':  cam.azimuthTarget += rotStep; break;
@@ -1098,6 +1106,7 @@ float fbm(vec3 p) {
     failWebGL,
     GLSL_NOISE,
     glowShell,
+    ignoresSceneKeys,
     initMobileHints,
     initMobileInfoPanels,
     prefersReducedMotion,
