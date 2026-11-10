@@ -728,18 +728,18 @@ float fbm(vec3 p) {
 
   // ── WebGL renderer with a visible failure path ──
   // Every "the scene is not there" message goes through the page's #loader.
-  // `loader-failed` marks a notice as up: the first one wins, and neither
-  // createLoader's hide nor scene-load-failure.js replaces it. Returns a
-  // function that takes the notice down again, or null if none was shown.
+  // `loader-failed` marks a notice as up and keeps the loader visible (see
+  // common.css) whether or not loading has finished, so a notice never has
+  // to know about load progress. The first notice wins; scene-load-failure.js
+  // honours the same marker. Returns a function that takes the notice down
+  // again, or null if none was shown.
   function showSceneNotice(message, opts) {
     const loader = document.getElementById('loader');
     if (!loader || loader.classList.contains('loader-failed')) return null;
     const text = loader.querySelector('.loader-text');
     const bar = loader.querySelector('.loader-bar');
-    const wasHidden = loader.classList.contains('hidden');
     const before = text ? text.textContent : '';
     loader.classList.add('loader-failed');
-    loader.classList.remove('hidden');
     loader.removeAttribute('aria-hidden');
     loader.setAttribute('role', 'alert');
     if (text) text.textContent = message;
@@ -759,10 +759,7 @@ float fbm(vec3 p) {
       if (bar) bar.hidden = false;
       loader.setAttribute('role', 'status');
       loader.classList.remove('loader-failed');
-      if (wasHidden) {
-        loader.classList.add('hidden');
-        loader.setAttribute('aria-hidden', 'true');
-      }
+      if (loader.classList.contains('hidden')) loader.setAttribute('aria-hidden', 'true');
     };
   }
 
@@ -1074,9 +1071,10 @@ float fbm(vec3 p) {
       if (hidden) return;
       hidden = true;
       progress(1, 1);
-      if (loader && !loader.classList.contains('loader-failed')) {
+      if (loader) {
         loader.classList.add('hidden');
-        loader.setAttribute('aria-hidden', 'true');
+        // A notice that is up stays readable; it sets this when it is cleared.
+        if (!loader.classList.contains('loader-failed')) loader.setAttribute('aria-hidden', 'true');
       }
     }
     if (loadingManager) {

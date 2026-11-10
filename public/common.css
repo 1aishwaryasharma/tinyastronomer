@@ -537,6 +537,8 @@ canvas { display: block; }
   opacity: 0; pointer-events: none; visibility: hidden;
   transition: opacity 0.8s, visibility 0s 0.8s;
 }
+/* A failure notice outlives the end of loading. */
+.loader.loader-failed { opacity: 1; pointer-events: auto; visibility: visible; }
 .loader-text {
   font-family: 'Fragment Mono', monospace; font-size: 11px;
   letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent);

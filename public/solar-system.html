@@ -1003,7 +1003,7 @@ function startTour() {
   document.body.classList.add('mode-active');
   showTourStep();
 }
-document.addEventListener('visibilitychange', () => { if (tour.active) scheduleTourAdvance(); });
+document.addEventListener('visibilitychange', scheduleTourAdvance);
 
 const QUIZ = [
   { q: "Find the planet with the beautiful <b>rings</b>!", a: 'saturn' },

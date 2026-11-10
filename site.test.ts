@@ -581,16 +581,20 @@ test('attaching a shadow light does not clear or reallocate the live canvas', ()
   expect(calls).toEqual([]);
 });
 
-function sceneNoticePage() {
+function sceneNoticePage(loaded = true) {
   const common = readFileSync('common.js', 'utf8');
   const source = common.slice(
     common.indexOf('function showSceneNotice'),
     common.indexOf('function createRenderer')
   );
-  const classes = new Set<string>(['hidden']);
-  const attrs: Record<string, string> = { role: 'status', 'aria-hidden': 'true' };
+  const loaderSource = common.slice(
+    common.indexOf('function createLoader'),
+    common.indexOf('// ── On-screen camera buttons')
+  );
+  const classes = new Set<string>(loaded ? ['hidden'] : []);
+  const attrs: Record<string, string> = loaded ? { role: 'status', 'aria-hidden': 'true' } : { role: 'status' };
   const text = { textContent: 'Charting the planets…', parentNode: null as unknown };
-  const bar = { hidden: false };
+  const bar = { hidden: false, querySelector: () => null, setAttribute() {} };
   const buttons: { textContent: string; removed: boolean; click: () => void }[] = [];
   text.parentNode = { appendChild() {} };
   const loader = {
@@ -618,9 +622,11 @@ function sceneNoticePage() {
   let pending: (() => void) | null = null;
   let reloads = 0;
   const api = new Function('document', 'location', 'setTimeout', 'clearTimeout', 'console',
-    `${source}; return { showSceneNotice, failWebGL, watchContextLoss };`
+    'window', 'clamp',
+    `${source}; ${loaderSource}; return { showSceneNotice, failWebGL, watchContextLoss, createLoader };`
   )(document, { reload: () => reloads++ },
-    (fn: () => void) => { pending = fn; return 1; }, () => { pending = null; }, { error() {} });
+    (fn: () => void) => { pending = fn; return 1; }, () => { pending = null; }, { error() {} },
+    { setTimeout() {} }, (v: number, a: number, b: number) => Math.max(a, Math.min(b, v)));
   return {
     ...api, classes, attrs, text, bar, buttons,
     runTimer: () => pending!(), hasTimer: () => pending !== null, reloads: () => reloads,
@@ -640,7 +646,7 @@ test('a WebGL context that stays lost shows a reload alert until it comes back',
 
   listeners.webglcontextlost();
   p.runTimer();
-  expect(p.classes.has('hidden')).toBe(false);
+  expect(p.classes.has('loader-failed')).toBe(true);
   expect(p.attrs.role).toBe('alert');
   expect(p.attrs['aria-hidden']).toBeUndefined();
   expect(p.text.textContent).toContain('3D view stopped');
@@ -654,6 +660,23 @@ test('a WebGL context that stays lost shows a reload alert until it comes back',
   expect(p.classes.has('loader-failed')).toBe(false);
   expect(p.attrs.role).toBe('status');
   expect(p.text.textContent).toBe('Charting the planets…');
+});
+
+test('a context lost while loading does not leave the loader up once it returns', () => {
+  const p = sceneNoticePage(false);
+  const listeners: Record<string, () => void> = {};
+  p.watchContextLoss({ addEventListener(type: string, fn: () => void) { listeners[type] = fn; } });
+  const hide = p.createLoader(null);
+  listeners.webglcontextlost();
+  p.runTimer();
+  // Loading finishes underneath the notice, which stays readable.
+  hide();
+  expect(p.classes.has('loader-failed')).toBe(true);
+  expect(p.attrs['aria-hidden']).toBeUndefined();
+  listeners.webglcontextrestored();
+  expect(p.classes.has('hidden')).toBe(true);
+  expect(p.classes.has('loader-failed')).toBe(false);
+  expect(p.attrs['aria-hidden']).toBe('true');
 });
 
 test('the first scene notice stays up when a later failure follows it', () => {
@@ -1554,8 +1577,11 @@ test('sky tonight searches towns on the device and loads the list only on demand
 // place list can be held open while the visitor edits a field.
 function manualSetHandler(loadPlaces: () => Promise<unknown>) {
   const sky = readFileSync('sky-tonight.html', 'utf8');
-  const start = sky.indexOf('locationForm.onsubmit = async');
-  const source = sky.slice(start, sky.indexOf('\n};\n', start) + 3);
+  const slice = (from: string, to: string) => {
+    const start = sky.indexOf(from);
+    return sky.slice(start, sky.indexOf(to, start) + to.length);
+  };
+  const source = slice('async function whileBusy(', '\n}\n') + slice('locationForm.onsubmit = ', '\n};\n');
   const page = {
     latitudeInput: { value: '51.5' }, longitudeInput: { value: '-0.1' },
     setLocationButton: { disabled: false }, locationStatus: { textContent: '' },

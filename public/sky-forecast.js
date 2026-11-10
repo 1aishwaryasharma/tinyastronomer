@@ -225,15 +225,15 @@ export function timeInNight(window, minutesFromStart) {
   return new Date(window.start.getTime() + minutes * 60000);
 }
 
-// The slider moves in 5-minute steps from sunset. "Now" takes the nearest
-// step; otherwise the first step at or after full dark, so the opening view
-// is never a few minutes short of it.
 // When the night's dark stage begins: full dark, or on a night without it,
 // the end of civil twilight.
 function darkStart(window) {
-  return window.astroDusk ?? window.civilDusk ?? null;
+  return window.astroDusk ?? window.civilDusk;
 }
 
+// The slider moves in 5-minute steps from sunset. "Now" takes the nearest
+// step; otherwise the first step at or after full dark, so the opening view
+// is never a few minutes short of it.
 export function defaultNightMinutes(window, now, isToday) {
   if (isToday && now >= window.start && now <= window.end) {
     return Math.round((now - window.start) / 300000) * 5;

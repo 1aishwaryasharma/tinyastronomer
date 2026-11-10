@@ -1,9 +1,9 @@
 // The scene pages cover themselves with a loader until the 3D scene is ready.
 // If a script fails to download or setup throws, nothing would ever hide it.
 // While the loader is still showing, turn any such failure into a message.
-// This file must work when common.bundle.js never arrives, so it cannot call
-// SPACE.showSceneNotice; it shares that function's `loader-failed` marker, and
-// a notice that is already up (such as "cannot run the 3D view") is kept.
+// This file must work when common.bundle.js never arrives, so it cannot use
+// showSceneNotice in common.js; it shares that function's `loader-failed`
+// marker, and a notice that is already up ("cannot run the 3D view") is kept.
 export function watchSceneLoad(win = window, doc = document) {
   function fail() {
     const loader = doc.getElementById('loader');
