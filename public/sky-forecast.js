@@ -236,6 +236,14 @@ export function defaultNightMinutes(window, now, isToday) {
   return Math.ceil((dark - window.start) / 300000) * 5;
 }
 
+// The "Dark from" line. Near midsummer at high latitudes the Sun never gets
+// 18° down, so there is no full dark; say when the sky is at its darkest
+// stage instead of leaving the line blank.
+export function darkFrom(window) {
+  if (window.astroDusk) return { label: 'Dark from', time: window.astroDusk };
+  return { label: 'Darkest from', time: window.civilDusk ?? null };
+}
+
 function samplesBetween(start, end) {
   if (!start || !end || end <= start) return [];
   const samples = [];
