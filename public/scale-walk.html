@@ -376,7 +376,7 @@ function place(obj, el) {
 }
 
 function animate(now, rawDt) {
-  quality.frame(rawDt);
+  quality.frame(rawDt, cam.interacting);
   const motionNow = SPACE.prefersReducedMotion ? 0 : now;
   cam.target.lerp(targetPos(), 0.06);
   cam.update();

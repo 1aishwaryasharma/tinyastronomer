@@ -308,7 +308,7 @@ const _p=new THREE.Vector3(), _sunDir=new THREE.Vector3(), _v=new THREE.Vector3(
 const _perp=new THREE.Vector3(), _off=new THREE.Vector3(), _s=new THREE.Vector3(), _e=new THREE.Vector3(), _start=new THREE.Vector3();
 function animate(now, rawDt){
   const dt=Math.min(rawDt,0.05);
-  quality.frame(rawDt);
+  quality.frame(rawDt, cam.interacting);
   if (state.playing){
     state.theta=(state.theta+dt*22)%360;
     state.motionTime+=dt;
