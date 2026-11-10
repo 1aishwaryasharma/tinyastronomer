@@ -499,9 +499,9 @@ test('the times-in note compares the two clocks on the chosen night', () => {
   function DateTimeFormat(locales?: string, options?: Intl.DateTimeFormatOptions) {
     return new Intl.DateTimeFormat(locales, options ?? { timeZone: 'Europe/London' });
   }
-  const describeNight = (night: string) => runInNewContext(`${source}; sourceDescription()`, {
+  const describeNight = (night: string, from = 'city') => runInNewContext(`${source}; sourceDescription()`, {
     Intl: { DateTimeFormat },
-    location: { source: 'city' },
+    location: { source: from },
     displayTimeZone: 'Africa/Abidjan',
     timeZoneLabel,
     offset: 0,
@@ -509,4 +509,8 @@ test('the times-in note compares the two clocks on the chosen night', () => {
   });
   expect(describeNight('2026-11-09T12:00:00Z')).toBe('Chosen place');
   expect(describeNight('2027-07-01T12:00:00Z')).toBe(`Chosen place · times in ${timeZoneLabel('Africa/Abidjan')}`);
+  // A device fix taken in another zone says so too.
+  expect(describeNight('2026-11-09T12:00:00Z', 'geo')).toBe('Device · rounded to about 10 km');
+  expect(describeNight('2027-07-01T12:00:00Z', 'geo'))
+    .toBe(`Device · rounded to about 10 km · times in ${timeZoneLabel('Africa/Abidjan')}`);
 });

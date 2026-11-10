@@ -532,7 +532,7 @@ canvas { display: block; }
 }
 
 .loader.loader-js-required { z-index: 101; }
-.loader-js-required .loader-text { animation: none; }
+.loader-js-required .loader-text, .loader-failed .loader-text { animation: none; }
 .loader.hidden {
   opacity: 0; pointer-events: none; visibility: hidden;
   transition: opacity 0.8s, visibility 0s 0.8s;

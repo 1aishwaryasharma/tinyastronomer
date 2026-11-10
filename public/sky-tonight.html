@@ -255,9 +255,9 @@
 <script type="module">
 import { SPACE } from './chrome.js?v=20261008-1';
 import { SPACE_DATA } from './data.js';
-import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, currentNightDate, darkFrom, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=b7064327b7';
-import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=c056447bf7';
-import { describeLocation, forgetLocation, loadPlaces, locationTimeZone, placeOptions, requestDeviceLocation, resolveLocation, searchPlaces, setManualLocation, setPlaceLocation, timeZoneLabel } from './sky-location.js?v=0705cc3980';
+import { Astronomy, FORECAST_BODIES, TELESCOPE_BODIES, bodyReport, capitalize, conjunctions, currentNightDate, darkFrom, defaultNightMinutes, meteorShowers, moonReport, nightSpanMinutes, nightWindow, orbitPositions, positionAt, skyHeadline, sortSkyLists, timeInNight, whereToLook, whereToLookShort } from './sky-forecast.js?v=5fcad0a2d8';
+import { starPositions, starOpacity, brightStarsNow } from './sky-stars.js?v=83864bd59b';
+import { describeLocation, forgetLocation, loadPlaces, locationTimeZone, placeOptions, requestDeviceLocation, resolveLocation, searchPlaces, setManualLocation, setPlaceLocation, timeZoneLabel } from './sky-location.js?v=3402cca99e';
 import { layoutSkyLabels } from './sky-labels.js?v=3ce5941093';
 
 const clamp = SPACE.clamp;
@@ -577,14 +577,13 @@ function setDefaultTime(window) {
   applyNightMinutes(window, defaultNightMinutes(window, new Date(), offset === 0));
 }
 function sourceDescription() {
-  if (location.source === 'geo') return 'Device · rounded to about 10 km';
-  if (location.source === 'manual' || location.source === 'city') {
-    const kind = location.source === 'city' ? 'Chosen place' : 'Manual coordinates';
-    const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone, night = dateAt(offset);
-    return zoneOffset(displayTimeZone, night) === zoneOffset(deviceZone, night)
-      ? kind : `${kind} · times in ${timeZoneLabel(displayTimeZone)}`;
-  }
-  return location.approximate ? 'Use my location to be accurate' : 'From your time zone';
+  // A device fix keeps the zone it was taken in, so after travel it can be
+  // off the device clock just as a chosen place can.
+  const kind = { geo: 'Device · rounded to about 10 km', city: 'Chosen place', manual: 'Manual coordinates' }[location.source];
+  if (!kind) return location.approximate ? 'Use my location to be accurate' : 'From your time zone';
+  const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone, night = dateAt(offset);
+  return zoneOffset(displayTimeZone, night) === zoneOffset(deviceZone, night)
+    ? kind : `${kind} · times in ${timeZoneLabel(displayTimeZone)}`;
 }
 function locationMeta() {
   if (location.source === 'geo') return `${describeLocation(location)} (device)`;
@@ -842,6 +841,9 @@ function update() {
   metaDate.textContent = fmtDate(offset); dateValue.textContent = offset === 0 ? 'Today' : offset === 1 ? '+1 day' : `+${offset} days`;
   slider.setAttribute('aria-valuetext', fmtDate(offset)); dateInput.value = isoLocal(dateAt(offset));
   prevBtn.disabled = offset <= 0; nextBtn.disabled = offset >= MAX_OFFSET; updateLocationCopy(); renderForecast();
+  // The horizon view is drawn on demand, and a location can arrive long after
+  // the click that asked for it.
+  drawing.invalidate();
 }
 function announceForecast() { accessibility.announce(`Sky forecast updated for ${location.label}, ${fmtDate(offset)}. ${listAnnouncement()}`); }
 function commitDate() { update(); announceForecast(); }
@@ -857,7 +859,8 @@ function applyDateInput(announce) {
 
 // Offset 0 is the night in progress at the observing site, which before
 // sunrise began yesterday. A new location can move it: "Today" stays on the
-// night in progress, and any other chosen date is kept.
+// night in progress, and any other chosen date is kept. Returns whether the
+// base date moved.
 function syncBaseDate() {
   const next = currentNightDate(new Astronomy.Observer(location.lat, location.lon, 0));
   const shift = Math.round((baseDate - next) / DAY_MS);
@@ -865,6 +868,7 @@ function syncBaseDate() {
   if (offset) offset = clamp(offset + shift, 0, MAX_OFFSET);
   slider.value = offset;
   dateInput.min = isoLocal(dateAt(0)); dateInput.max = isoLocal(dateAt(MAX_OFFSET));
+  return shift !== 0;
 }
 slider.oninput = () => { offset = parseInt(slider.value, 10); update(); }; slider.onchange = commitDate;
 prevBtn.onclick = () => setOffset(offset - 1); nextBtn.onclick = () => setOffset(offset + 1);
@@ -876,16 +880,16 @@ dateInput.onchange = () => applyDateInput(true);
 // Today drops the chosen time, so it lands on now during the night (and on
 // dark otherwise) instead of the same slider minutes on today's night. The
 // base date is read again first: a tab left open overnight has moved on.
-document.getElementById('today-btn').onclick = () => { selectedTime = null; offset = 0; syncBaseDate(); setOffset(0); };
+document.getElementById('today-btn').onclick = () => { selectedTime = null; syncBaseDate(); setOffset(0); };
 // A tab kept open, or restored from the back/forward cache, can outlive its
 // night. When it is shown again, move "Today" to the night now in progress;
 // a visitor who chose another date keeps that calendar date.
 function refreshBaseDate() {
   if (document.hidden) return;
-  const next = currentNightDate(new Astronomy.Observer(location.lat, location.lon, 0));
-  if (next.getTime() === baseDate.getTime()) return;
-  if (offset === 0) selectedTime = null;
-  syncBaseDate(); update();
+  const wasToday = offset === 0;
+  if (!syncBaseDate()) return;
+  if (wasToday) selectedTime = null;
+  update();
 }
 document.addEventListener('visibilitychange', refreshBaseDate);
 addEventListener('pageshow', (event) => { if (event.persisted) refreshBaseDate(); });
@@ -1057,7 +1061,6 @@ placeResults.onclick = (event) => {
   if (option) choosePlace(placeMatches[Number(option.dataset.index)]);
 };
 
-updateViewButtons(); syncBaseDate(); update();
 const startTime = performance.now();
 function loop() {
   const time = SPACE.prefersReducedMotion ? 0 : (performance.now() - startTime) * 0.001;
@@ -1068,6 +1071,7 @@ function loop() {
 // is not repainting the sky 30 times a second.
 const drawing = SPACE.createFrameLoop(loop, { fps: 30, animated: () => viewMode === 'orbit' && !SPACE.prefersReducedMotion, element: canvas });
 document.addEventListener('input', drawing.invalidate); document.addEventListener('change', drawing.invalidate); document.addEventListener('click', drawing.invalidate);
+updateViewButtons(); syncBaseDate(); update();
 
 function targetAt(event) {
   if (viewMode !== 'horizon') return null;

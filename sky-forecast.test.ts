@@ -423,7 +423,7 @@ describe('Sky Tonight dark-from line', () => {
     const night = nightWindow(london, new Date(2026, 5, 21, 12));
     expect(night.astroDusk).toBeNull();
     const line = darkFrom(night);
-    expect(line.label).toBe('Darkest from');
+    expect(line.label).toBe('Stars from');
     expect(line.time).toBe(night.civilDusk);
     expect(line.time).not.toBeNull();
   });

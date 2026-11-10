@@ -73,8 +73,12 @@ export function locateZone(timeZone, tables = TABLES) {
   return shared ? { lat: shared[0], lon: shared[1], approximate: true } : null;
 }
 
+function deviceTimeZone(env) {
+  return env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
+}
+
 function timezoneGuess(env) {
-  const timeZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone ?? '';
+  const timeZone = deviceTimeZone(env) ?? '';
   // Unknown zones fall back to the equator at the clock's longitude.
   const offsetMinutes = new env.Date().getTimezoneOffset();
   const location = {
@@ -145,43 +149,39 @@ const GEOLOCATION_ERRORS = {
   3: 'Location request timed out.',
 };
 
-export function requestDeviceLocation(env = globalThis) {
+// The browser's timeout only starts once permission is given, and some
+// browsers never answer a dismissed or ignored prompt, so the wait is bounded
+// here. A promise settles once: an answer that arrives after the visitor has
+// been told to try again is dropped.
+function devicePosition(env) {
   return new Promise((resolve, reject) => {
-    if (!env.navigator?.geolocation) {
-      reject(new Error('Device location is not available in this browser.'));
-      return;
-    }
-
-    // The browser's timeout only starts once permission is given, and some
-    // browsers never answer a dismissed or ignored prompt. A late answer is
-    // dropped: the visitor has already been told to try again.
-    let settled = false;
-    const finish = (callback) => (value) => {
-      if (settled) return;
-      settled = true;
-      env.clearTimeout(timer);
-      callback(value);
-    };
     const timer = env.setTimeout(
-      finish(() => reject(new Error('Your browser did not answer. Try again, or set a place by hand.'))),
+      () => reject(new Error('Your browser did not answer. Try again, or set a place by hand.')),
       30_000,
     );
     env.navigator.geolocation.getCurrentPosition(
-      finish((position) => {
-        const location = {
-          lat: roundCoordinate(position.coords.latitude),
-          lon: roundCoordinate(position.coords.longitude),
-          source: 'geo',
-        };
-        const timeZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
-        if (timeZone) location.timeZone = timeZone;
-        location.label = describeLocation(location);
-        resolve(storeLocation(location, env));
-      }),
-      finish((error) => reject(new Error(GEOLOCATION_ERRORS[error.code] ?? 'Could not get your location.'))),
+      (position) => { env.clearTimeout(timer); resolve(position); },
+      (error) => {
+        env.clearTimeout(timer);
+        reject(new Error(GEOLOCATION_ERRORS[error.code] ?? 'Could not get your location.'));
+      },
       { enableHighAccuracy: false, maximumAge: 6 * 60 * 60 * 1000, timeout: 10_000 },
     );
   });
+}
+
+export async function requestDeviceLocation(env = globalThis) {
+  if (!env.navigator?.geolocation) throw new Error('Device location is not available in this browser.');
+  const position = await devicePosition(env);
+  const location = {
+    lat: roundCoordinate(position.coords.latitude),
+    lon: roundCoordinate(position.coords.longitude),
+    source: 'geo',
+  };
+  const timeZone = deviceTimeZone(env);
+  if (timeZone) location.timeZone = timeZone;
+  location.label = describeLocation(location);
+  return storeLocation(location, env);
 }
 
 // With the place list, typed coordinates take the nearest town's time zone.
@@ -319,7 +319,7 @@ export function nearestTimeZone(latitude, longitude, env = globalThis) {
 // coordinates use the nearest reference city's zone, which is wrong for about
 // one town in five (Beijing is nearer Pyongyang's reference point than Shanghai's).
 export function locationTimeZone(location, env = globalThis) {
-  const deviceZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
+  const deviceZone = deviceTimeZone(env);
   if (location.source === 'tz') return deviceZone;
   // Older runtimes may not know a newer zone, including its reference-table entry.
   if (location.timeZone && knownTimeZone(location.timeZone, env)) return location.timeZone;

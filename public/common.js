@@ -727,52 +727,65 @@ float fbm(vec3 p) {
   }
 
   // ── WebGL renderer with a visible failure path ──
-  function failWebGL(err) {
+  // Every "the scene is not there" message goes through the page's #loader.
+  // `loader-failed` marks a notice as up: the first one wins, and neither
+  // createLoader's hide nor scene-load-failure.js replaces it. Returns a
+  // function that takes the notice down again, or null if none was shown.
+  function showSceneNotice(message, opts) {
     const loader = document.getElementById('loader');
-    if (loader) {
-      loader.classList.remove('hidden');
-      const text = loader.querySelector('.loader-text');
-      if (text) {
-        text.textContent =
-          'This device cannot run the 3D view. Try another browser, or turn on hardware acceleration.';
-        text.style.animation = 'none';
-      }
-      loader.setAttribute('role', 'alert');
+    if (!loader || loader.classList.contains('loader-failed')) return null;
+    const text = loader.querySelector('.loader-text');
+    const bar = loader.querySelector('.loader-bar');
+    const wasHidden = loader.classList.contains('hidden');
+    const before = text ? text.textContent : '';
+    loader.classList.add('loader-failed');
+    loader.classList.remove('hidden');
+    loader.removeAttribute('aria-hidden');
+    loader.setAttribute('role', 'alert');
+    if (text) text.textContent = message;
+    if (bar) bar.hidden = true;
+    let reload = null;
+    if (opts && opts.reload && text && text.parentNode) {
+      reload = document.createElement('button');
+      reload.type = 'button';
+      reload.className = 'scene-nav-btn';
+      reload.textContent = 'Reload';
+      reload.addEventListener('click', () => location.reload());
+      text.parentNode.appendChild(reload);
     }
+    return () => {
+      if (reload) reload.remove();
+      if (text) text.textContent = before;
+      if (bar) bar.hidden = false;
+      loader.setAttribute('role', 'status');
+      loader.classList.remove('loader-failed');
+      if (wasHidden) {
+        loader.classList.add('hidden');
+        loader.setAttribute('aria-hidden', 'true');
+      }
+    };
+  }
+
+  function failWebGL(err) {
+    showSceneNotice('This device cannot run the 3D view. Try another browser, or turn on hardware acceleration.');
     if (err) console.error(err);
   }
 
   // Phones under memory pressure can drop the context for good. Three.js asks
   // for it back; if it has not returned after a few seconds, say so.
-  function watchContextLoss(canvas, waitMs) {
+  function watchContextLoss(canvas) {
     let timer = null;
-    let notice = null;
+    let clear = null;
     canvas.addEventListener('webglcontextlost', () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        notice = document.createElement('div');
-        notice.className = 'loader';
-        notice.setAttribute('role', 'alert');
-        const inner = document.createElement('div');
-        inner.className = 'loader-inner';
-        const text = document.createElement('div');
-        text.className = 'loader-text';
-        text.style.animation = 'none';
-        text.textContent = 'The 3D view stopped. Reload the page to start it again.';
-        const reload = document.createElement('button');
-        reload.type = 'button';
-        reload.className = 'scene-nav-btn';
-        reload.textContent = 'Reload';
-        reload.addEventListener('click', () => location.reload());
-        inner.append(text, reload);
-        notice.appendChild(inner);
-        document.body.appendChild(notice);
-      }, waitMs != null ? waitMs : 3000);
+        clear = showSceneNotice('The 3D view stopped. Reload the page to start it again.', { reload: true });
+      }, 3000);
     });
     canvas.addEventListener('webglcontextrestored', () => {
       clearTimeout(timer);
-      if (notice) notice.remove();
-      notice = null;
+      if (clear) clear();
+      clear = null;
     });
   }
 
@@ -1061,7 +1074,7 @@ float fbm(vec3 p) {
       if (hidden) return;
       hidden = true;
       progress(1, 1);
-      if (loader) {
+      if (loader && !loader.classList.contains('loader-failed')) {
         loader.classList.add('hidden');
         loader.setAttribute('aria-hidden', 'true');
       }

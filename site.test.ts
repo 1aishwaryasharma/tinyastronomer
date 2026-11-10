@@ -581,59 +581,89 @@ test('attaching a shadow light does not clear or reallocate the live canvas', ()
   expect(calls).toEqual([]);
 });
 
-test('a WebGL context that stays lost shows a reload alert until it comes back', () => {
+function sceneNoticePage() {
   const common = readFileSync('common.js', 'utf8');
-  const watcher = common.slice(
-    common.indexOf('function watchContextLoss'),
+  const source = common.slice(
+    common.indexOf('function showSceneNotice'),
     common.indexOf('function createRenderer')
   );
-  type El = {
-    className: string; textContent: string; type?: string; style: Record<string, string>;
-    attrs: Record<string, string>; children: El[]; listeners: Record<string, () => void>;
-    removed: boolean;
+  const classes = new Set<string>(['hidden']);
+  const attrs: Record<string, string> = { role: 'status', 'aria-hidden': 'true' };
+  const text = { textContent: 'Charting the planets…', parentNode: null as unknown };
+  const bar = { hidden: false };
+  const buttons: { textContent: string; removed: boolean; click: () => void }[] = [];
+  text.parentNode = { appendChild() {} };
+  const loader = {
+    classList: {
+      contains: (name: string) => classes.has(name),
+      add: (name: string) => classes.add(name),
+      remove: (name: string) => classes.delete(name),
+    },
+    setAttribute(name: string, value: string) { attrs[name] = value; },
+    removeAttribute(name: string) { delete attrs[name]; },
+    querySelector: (selector: string) => (selector === '.loader-text' ? text : selector === '.loader-bar' ? bar : null),
   };
-  const makeEl = (): El => ({ className: '', textContent: '', style: {}, attrs: {}, children: [], listeners: {}, removed: false });
-  const element = (el: El) => Object.assign(el, {
-    setAttribute(name: string, value: string) { el.attrs[name] = value; },
-    appendChild(child: El) { el.children.push(child); },
-    append(...kids: El[]) { el.children.push(...kids); },
-    addEventListener(type: string, fn: () => void) { el.listeners[type] = fn; },
-    remove() { el.removed = true; },
-  });
-  const body = element(makeEl());
-  const document = { body, createElement: () => element(makeEl()) };
+  const document = {
+    getElementById: (id: string) => (id === 'loader' ? loader : null),
+    createElement() {
+      const button = {
+        textContent: '', removed: false, click: () => {},
+        addEventListener(_type: string, fn: () => void) { button.click = fn; },
+        remove() { button.removed = true; },
+      };
+      buttons.push(button);
+      return button;
+    },
+  };
   let pending: (() => void) | null = null;
-  const timers = {
-    setTimeout: (fn: () => void) => { pending = fn; return 1; },
-    clearTimeout: () => { pending = null; },
-  };
   let reloads = 0;
-  const watchContextLoss = new Function('document', 'location', 'setTimeout', 'clearTimeout',
-    `${watcher}; return watchContextLoss;`
-  )(document, { reload: () => reloads++ }, timers.setTimeout, timers.clearTimeout);
-  const canvas = element(makeEl());
-  watchContextLoss(canvas);
+  const api = new Function('document', 'location', 'setTimeout', 'clearTimeout', 'console',
+    `${source}; return { showSceneNotice, failWebGL, watchContextLoss };`
+  )(document, { reload: () => reloads++ },
+    (fn: () => void) => { pending = fn; return 1; }, () => { pending = null; }, { error() {} });
+  return {
+    ...api, classes, attrs, text, bar, buttons,
+    runTimer: () => pending!(), hasTimer: () => pending !== null, reloads: () => reloads,
+  };
+}
+
+test('a WebGL context that stays lost shows a reload alert until it comes back', () => {
+  const p = sceneNoticePage();
+  const listeners: Record<string, () => void> = {};
+  p.watchContextLoss({ addEventListener(type: string, fn: () => void) { listeners[type] = fn; } });
 
   // A quick restore never shows anything.
-  canvas.listeners.webglcontextlost();
-  canvas.listeners.webglcontextrestored();
-  expect(pending).toBeNull();
-  expect(body.children).toEqual([]);
+  listeners.webglcontextlost();
+  listeners.webglcontextrestored();
+  expect(p.hasTimer()).toBe(false);
+  expect(p.classes.has('hidden')).toBe(true);
 
-  canvas.listeners.webglcontextlost();
-  pending!();
-  expect(body.children).toHaveLength(1);
-  const notice = body.children[0];
-  expect(notice.attrs.role).toBe('alert');
-  expect(notice.className).toBe('loader');
-  const [text, button] = notice.children[0].children;
-  expect(text.textContent).toContain('3D view stopped');
-  expect(button.textContent).toBe('Reload');
-  button.listeners.click();
-  expect(reloads).toBe(1);
+  listeners.webglcontextlost();
+  p.runTimer();
+  expect(p.classes.has('hidden')).toBe(false);
+  expect(p.attrs.role).toBe('alert');
+  expect(p.attrs['aria-hidden']).toBeUndefined();
+  expect(p.text.textContent).toContain('3D view stopped');
+  expect(p.buttons[0].textContent).toBe('Reload');
+  p.buttons[0].click();
+  expect(p.reloads()).toBe(1);
 
-  canvas.listeners.webglcontextrestored();
-  expect(notice.removed).toBe(true);
+  listeners.webglcontextrestored();
+  expect(p.buttons[0].removed).toBe(true);
+  expect(p.classes.has('hidden')).toBe(true);
+  expect(p.classes.has('loader-failed')).toBe(false);
+  expect(p.attrs.role).toBe('status');
+  expect(p.text.textContent).toBe('Charting the planets…');
+});
+
+test('the first scene notice stays up when a later failure follows it', () => {
+  const p = sceneNoticePage();
+  p.failWebGL();
+  expect(p.text.textContent).toContain('cannot run the 3D view');
+  expect(p.bar.hidden).toBe(true);
+  expect(p.showSceneNotice('The 3D view stopped.', { reload: true })).toBeNull();
+  expect(p.text.textContent).toContain('cannot run the 3D view');
+  expect(p.buttons).toEqual([]);
 });
 
 test('adaptive quality follows the preview container and its expansion into a study', () => {
@@ -1589,7 +1619,7 @@ test('sky tonight offers one horizon canvas with time and orbit controls', () =>
   expect(sky).toContain("if (viewMode === 'horizon') drawHorizon(time); else drawOrbit(time)");
   // Today lands on now during the night, and Now turns on once the night
   // starts on a page left open.
-  expect(sky).toContain("document.getElementById('today-btn').onclick = () => { selectedTime = null; offset = 0; syncBaseDate(); setOffset(0); };");
+  expect(sky).toContain("document.getElementById('today-btn').onclick = () => { selectedTime = null; syncBaseDate(); setOffset(0); };");
   expect(sky).toMatch(/setInterval\(\(\) => \{[^\n]*updateNowButton\(\); \}, 60000\)/);
 });
 

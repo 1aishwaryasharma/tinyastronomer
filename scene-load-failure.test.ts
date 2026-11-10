@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { watchSceneLoad } from './public/scene-load-failure.js';
 
-function page(hidden = false) {
-  const classes = new Set<string>(hidden ? ['hidden'] : []);
+function page(hidden = false, failed = false) {
+  const classes = new Set<string>([...(hidden ? ['hidden'] : []), ...(failed ? ['loader-failed'] : [])]);
   const text = { textContent: 'Charting the planets…' };
   const bar = { hidden: false };
   const attributes = new Map<string, string>([['role', 'status']]);
@@ -53,4 +53,11 @@ test('errors after the scene is showing leave the page alone', () => {
   const p = page(true);
   p.fire('error');
   expect(p.attributes.get('role')).toBe('status');
+});
+
+test('a notice that is already up is not replaced by the connection message', () => {
+  const p = page(false, true);
+  p.text.textContent = 'This device cannot run the 3D view.';
+  p.fire('error');
+  expect(p.text.textContent).toBe('This device cannot run the 3D view.');
 });

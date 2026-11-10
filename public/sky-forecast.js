@@ -228,20 +228,26 @@ export function timeInNight(window, minutesFromStart) {
 // The slider moves in 5-minute steps from sunset. "Now" takes the nearest
 // step; otherwise the first step at or after full dark, so the opening view
 // is never a few minutes short of it.
+// When the night's dark stage begins: full dark, or on a night without it,
+// the end of civil twilight.
+function darkStart(window) {
+  return window.astroDusk ?? window.civilDusk ?? null;
+}
+
 export function defaultNightMinutes(window, now, isToday) {
   if (isToday && now >= window.start && now <= window.end) {
     return Math.round((now - window.start) / 300000) * 5;
   }
-  const dark = window.astroDusk ?? window.civilDusk ?? window.start;
+  const dark = darkStart(window) ?? window.start;
   return Math.ceil((dark - window.start) / 300000) * 5;
 }
 
 // The "Dark from" line. Near midsummer at high latitudes the Sun never gets
-// 18° down, so there is no full dark; say when the sky is at its darkest
-// stage instead of leaving the line blank.
+// 18° down, so there is no full dark. The sky goes on darkening for hours
+// after civil twilight ends, so that moment is named for what it does bring:
+// the first stars.
 export function darkFrom(window) {
-  if (window.astroDusk) return { label: 'Dark from', time: window.astroDusk };
-  return { label: 'Darkest from', time: window.civilDusk ?? null };
+  return { label: window.astroDusk ? 'Dark from' : 'Stars from', time: darkStart(window) };
 }
 
 function samplesBetween(start, end) {
@@ -330,7 +336,7 @@ function settings(body, observer, window) {
 }
 
 export function bodyReport(body, observer, window, sampleTime) {
-  const at = asDate(sampleTime ?? window.astroDusk ?? window.civilDusk ?? window.start);
+  const at = asDate(sampleTime ?? darkStart(window) ?? window.start);
   const allSamples = skySamples(body, observer, window);
   const samples = allSamples.filter((sample) => darkEnoughFor(body, sample.sunAltitude));
   const candidates = samples.filter((sample) => isVisibleAt(body, sample.position.altitude, sample.sunAltitude));
