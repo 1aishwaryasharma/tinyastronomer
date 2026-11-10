@@ -813,8 +813,9 @@ window.addEventListener('popstate', () => {
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 function pickAt(clientX, clientY) {
-  ndc.x = (clientX / window.innerWidth) * 2 - 1;
-  ndc.y = -(clientY / window.innerHeight) * 2 + 1;
+  const rect = renderer.domElement.getBoundingClientRect();
+  ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(ndc, camera);
   const hits = raycaster.intersectObjects(selectableMeshes, false);
   return hits.length && hits[0].object.userData.key ? hits[0].object.userData.key : null;

@@ -692,6 +692,9 @@ float fbm(vec3 p) {
 
   // ── Project a 3D object to a screen-space label element ──
   let _v;
+  // The size createScene last gave its renderer, which can lag the window
+  // while resize() rides out an address bar.
+  let sceneSize = null;
   function projectToScreen(obj, el, camera, offsetY, visible) {
     if (!_v) _v = new THREE.Vector3();
     obj.getWorldPosition(_v);
@@ -710,8 +713,8 @@ float fbm(vec3 p) {
     // stay at their CSS defaults (0) so no layout work is triggered.
     el.style.transform =
       'translate(-50%, -50%) translate(' +
-      ((_v.x * 0.5 + 0.5) * window.innerWidth) + 'px, ' +
-      ((_v.y * -0.5 + 0.5) * window.innerHeight + offsetY) + 'px)';
+      ((_v.x * 0.5 + 0.5) * (sceneSize ? sceneSize.width : window.innerWidth)) + 'px, ' +
+      ((_v.y * -0.5 + 0.5) * (sceneSize ? sceneSize.height : window.innerHeight) + offsetY) + 'px)';
     el.style.opacity = 1;
   }
 
@@ -827,8 +830,10 @@ float fbm(vec3 p) {
       }
     }
 
+    const applied = { width: initialSize.width, height: initialSize.height };
+    sceneSize = applied;
     const quality = createQualityGovernor({
-      getSize,
+      getSize: () => applied,
       bloomPass,
       composer,
       fxaaPass,
@@ -836,15 +841,13 @@ float fbm(vec3 p) {
       shadowLight: opts.shadowLight || null
     });
 
-    let lastW = initialSize.width;
-    let lastH = initialSize.height;
     function resize() {
       const { width: w, height: h } = getSize();
       // iOS shows/hides the URL bar with a height-only change; resizing the
       // WebGL surface for that makes every overlay appear to drift.
-      if (w === lastW && (opts.sizeToContainer ? h === lastH : Math.abs(h - lastH) < 120)) return;
-      lastW = w;
-      lastH = h;
+      if (w === applied.width && (opts.sizeToContainer ? h === applied.height : Math.abs(h - applied.height) < 120)) return;
+      applied.width = w;
+      applied.height = h;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
