@@ -729,8 +729,9 @@ float fbm(vec3 p) {
   // ── WebGL renderer with a visible failure path ──
   // Every "the scene is not there" message goes through the page's #loader.
   // `loader-failed` marks a notice as up and keeps the loader visible (see
-  // common.css) whether or not loading has finished, so a notice never has
-  // to know about load progress. The first notice wins; scene-load-failure.js
+  // common.css) whether or not loading has finished; `aria-hidden` is the
+  // one thing a notice and createLoader's hide settle between them. The
+  // first notice wins; scene-load-failure.js
   // honours the same marker. Returns a function that takes the notice down
   // again, or null if none was shown.
   function showSceneNotice(message, opts) {

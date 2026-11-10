@@ -1373,10 +1373,14 @@ renderer.domElement.focus({ preventScroll: true });
   } catch (error) {
     console.error('Light Study could not start.', error);
     const loader = document.getElementById('loader');
-    loader.classList.remove('hidden');
-    loader.setAttribute('role', 'alert');
     // A notice already up (such as "cannot run the 3D view") says more.
-    if (!loader.classList.contains('loader-failed')) loader.querySelector('.loader-text').textContent = 'The study could not load. Reload the page to try again.';
+    // `loader-failed` keeps this one visible; see showSceneNotice in common.js.
+    if (!loader.classList.contains('loader-failed')) {
+      loader.classList.add('loader-failed');
+      loader.removeAttribute('aria-hidden');
+      loader.setAttribute('role', 'alert');
+      loader.querySelector('.loader-text').textContent = 'The study could not load. Reload the page to try again.';
+    }
   }
 }
 window.addEventListener('light-study-open', startLightStudy, { once: true });
