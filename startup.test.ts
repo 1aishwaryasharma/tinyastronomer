@@ -89,18 +89,20 @@ test('model loader code is deferred until selection and shared between requests'
 
 test('Grand Tour defers Earth detail maps until selection and updates the existing material once', () => {
   const batches: string[][] = [];
+  const options: object[] = [];
   const THREE = {
     LoadingManager: class {}, TextureLoader: class {},
     Vector3: class {}, Vector2: class {}, Color: class {},
     MeshPhongMaterial: class { constructor(options: object) { Object.assign(this, options); } },
   };
   const source = read('tour-textures.js').replace(/^import .*;$/gm, '').replace('export function', 'function');
-  const factory = new Function('THREE', 'SPACE', 'loadEarthTextureSet', 'window',
+  const factory = new Function('THREE', 'SPACE', 'loadEarthTextureSet', 'prefersCompactTextures', 'window',
     source + ';return createTourTextures;')(
-    THREE, {}, (_renderer: unknown, _manager: unknown, keys: string[]) => {
+    THREE, {}, (_renderer: unknown, _manager: unknown, keys: string[], option: object) => {
       batches.push(keys);
+      options.push(option);
       return Object.fromEntries(keys.map(key => [key, { key }]));
-    }, {}
+    }, () => true, {}
   );
   const textures = factory({}, { earthDetails: false });
   const material = textures.planetMaterial({ type: 'earth' });
@@ -108,6 +110,7 @@ test('Grand Tour defers Earth detail maps until selection and updates the existi
   expect(material.onBeforeCompile).toBeUndefined();
   textures.loadEarthDetails();
   expect(batches).toEqual([['day'], ['normal', 'specular', 'lights']]);
+  expect(options[1]).toEqual({ compact: true });
   expect(material.normalMap.key).toBe('normal');
   expect(material.specularMap.key).toBe('specular');
   expect(material.needsUpdate).toBe(true);
