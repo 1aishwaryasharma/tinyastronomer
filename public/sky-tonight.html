@@ -1050,7 +1050,10 @@ function loop() {
   const time = SPACE.prefersReducedMotion ? 0 : (performance.now() - startTime) * 0.001;
   if (viewMode === 'horizon') drawHorizon(time); else drawOrbit(time);
 }
-const drawing = SPACE.createFrameLoop(loop, { fps: 30, animated: !SPACE.prefersReducedMotion, element: canvas });
+// Only the orbit view moves (its stars twinkle). The horizon view is a still
+// picture, redrawn when something invalidates it, so a phone held up outside
+// is not repainting the sky 30 times a second.
+const drawing = SPACE.createFrameLoop(loop, { fps: 30, animated: () => viewMode === 'orbit' && !SPACE.prefersReducedMotion, element: canvas });
 document.addEventListener('input', drawing.invalidate); document.addEventListener('change', drawing.invalidate); document.addEventListener('click', drawing.invalidate);
 
 function targetAt(event) {

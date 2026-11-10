@@ -1,5 +1,6 @@
 // One scheduler for canvas work: bounded frame rate, no hidden-tab work,
 // and explicit invalidation for static (reduced-motion) drawings.
+// `animated` may be a function, for a canvas that moves in one mode only.
 export function createFrameLoop(draw, {
   fps = 60,
   animated = true,
@@ -26,7 +27,8 @@ export function createFrameLoop(draw, {
       dirty = false;
       draw(now, dt);
     }
-    if (animated && !globalThis.taVisualBaselines) schedule();
+    const moving = typeof animated === 'function' ? animated() : animated;
+    if (moving && !globalThis.taVisualBaselines) schedule();
   }
   function invalidate() {
     dirty = true;
