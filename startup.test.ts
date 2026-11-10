@@ -87,6 +87,34 @@ test('model loader code is deferred until selection and shared between requests'
   expect(models).toEqual(['assets/planet-models/mars.glb', 'assets/planet-models/saturn.glb']);
 });
 
+test('a failed model loader import is retried by the next planet', async () => {
+  const models: string[] = [];
+  const errors: unknown[] = [];
+  let failNext = true;
+  const source = read('planet-models.js').replace(/^import .*;$/gm, '')
+    .replace('export function', 'function').replace(/\bimport\(/g, 'importModule(');
+  const factory = new Function('THREE', 'importModule', source + ';return createPlanetModelLoader;')({},
+    async () => {
+      if (failNext) throw new Error('network');
+      return {
+        GLTFLoader: class {
+          load(path: string) { models.push(path); }
+          setMeshoptDecoder() {}
+        },
+        MeshoptDecoder: {},
+      };
+    });
+  const loader = factory({ capabilities: { getMaxAnisotropy: () => 8 } });
+  loader.load('mars', () => {}, (error: unknown) => errors.push(error));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(errors).toHaveLength(1);
+  failNext = false;
+  loader.load('saturn', () => {}, (error: unknown) => errors.push(error));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(errors).toHaveLength(1);
+  expect(models).toEqual(['assets/planet-models/saturn.glb']);
+});
+
 test('Grand Tour defers Earth detail maps until selection and updates the existing material once', () => {
   const batches: string[][] = [];
   const THREE = {
