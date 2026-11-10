@@ -112,3 +112,60 @@ test('touch screens get touch words, placed under the chips instead of over the 
   expect(phone).toMatch(/\.hint \{\s*top: calc\(var\(--scene-top, 118px\) \+ 10px\);/);
   expect(phone).toMatch(/\.rail-btn \{[^}]*min-width: 44px;[^}]*min-height: 44px;/);
 });
+
+// Run the tour script against a fake document and clock.
+function tourHarness() {
+  const html = read('solar-system.html');
+  const start = html.indexOf('const TOUR = [');
+  const end = html.indexOf('const QUIZ = [', start);
+  const source = html.slice(start, end);
+  const el = () => ({ innerHTML: '', textContent: '', style: {}, classList: { add() {}, remove() {} }, setAttribute() {} });
+  const listeners: Record<string, () => void> = {};
+  const document = {
+    hidden: false,
+    body: el(),
+    addEventListener: (type: string, fn: () => void) => { listeners[type] = fn; },
+  };
+  let now = 0;
+  let timers: { id: number; at: number; fn: () => void }[] = [];
+  let nextId = 1;
+  const setTimeout = (fn: () => void, ms: number) => { const id = nextId++; timers.push({ id, at: now + ms, fn }); return id; };
+  const clearTimeout = (id: number) => { timers = timers.filter(t => t.id !== id); };
+  const advance = (ms: number) => {
+    const until = now + ms;
+    for (;;) {
+      const due = timers.filter(t => t.at <= until).sort((a, b) => a.at - b.at)[0];
+      if (!due) break;
+      timers = timers.filter(t => t !== due);
+      now = due.at; due.fn();
+    }
+    now = until;
+  };
+  const selected: (string | null)[] = [];
+  const api = new Function('document', 'setTimeout', 'clearTimeout', 'SPACE', 'selectBody',
+    'stageEl', 'stageText', 'stageNext', 'btnTour', 'btnQuiz', 'quiz', 'renderSelectionPanel',
+    source + ';return { startTour, tour };')(
+    document, setTimeout, clearTimeout, { prefersReducedMotion: false }, (key: string | null) => selected.push(key),
+    el(), el(), el(), el(), el(), { active: false, timer: null }, () => {});
+  const setHidden = (hidden: boolean) => { document.hidden = hidden; listeners.visibilitychange?.(); };
+  return { ...api, advance, setHidden, selected };
+}
+
+test('the Grand Tour holds its stop while the tab is hidden and carries on when shown', () => {
+  const h = tourHarness();
+  h.startTour();
+  h.advance(8000);
+  expect(h.selected.at(-1)).toBe('mercury');
+
+  h.advance(5000);
+  h.setHidden(true);
+  h.advance(60000);
+  expect(h.selected.at(-1)).toBe('mercury');
+  expect(h.tour.active).toBe(true);
+
+  h.setHidden(false);
+  h.advance(7999);
+  expect(h.selected.at(-1)).toBe('mercury');
+  h.advance(1);
+  expect(h.selected.at(-1)).toBe('venus');
+});
