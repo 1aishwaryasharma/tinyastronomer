@@ -142,8 +142,22 @@ export function requestDeviceLocation(env = globalThis) {
       return;
     }
 
+    // The browser's timeout only starts once permission is given, and some
+    // browsers never answer a dismissed or ignored prompt. A late answer is
+    // dropped: the visitor has already been told to try again.
+    let settled = false;
+    const finish = (callback) => (value) => {
+      if (settled) return;
+      settled = true;
+      env.clearTimeout(timer);
+      callback(value);
+    };
+    const timer = env.setTimeout(
+      finish(() => reject(new Error('Your browser did not answer. Try again, or set a place by hand.'))),
+      30_000,
+    );
     env.navigator.geolocation.getCurrentPosition(
-      (position) => {
+      finish((position) => {
         const location = {
           lat: roundCoordinate(position.coords.latitude),
           lon: roundCoordinate(position.coords.longitude),
@@ -153,8 +167,8 @@ export function requestDeviceLocation(env = globalThis) {
         if (timeZone) location.timeZone = timeZone;
         location.label = describeLocation(location);
         resolve(storeLocation(location, env));
-      },
-      (error) => reject(new Error(GEOLOCATION_ERRORS[error.code] ?? 'Could not get your location.')),
+      }),
+      finish((error) => reject(new Error(GEOLOCATION_ERRORS[error.code] ?? 'Could not get your location.'))),
       { enableHighAccuracy: false, maximumAge: 6 * 60 * 60 * 1000, timeout: 10_000 },
     );
   });

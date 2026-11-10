@@ -34,6 +34,8 @@ function fakeEnvironment(timeZone = 'America/Chicago') {
       setItem: (key: string, value: string) => values.set(key, value),
     },
     navigator: {},
+    setTimeout: (callback: () => void, delay: number) => setTimeout(callback, delay),
+    clearTimeout: (timer: ReturnType<typeof setTimeout>) => clearTimeout(timer),
     values,
   };
 }
@@ -211,6 +213,25 @@ test('device location errors use short, useful copy', async () => {
     getCurrentPosition(_success: Function, failure: Function) { failure({ code: 1 }); },
   };
   await expect(requestDeviceLocation(env)).rejects.toThrow('Location permission was denied.');
+});
+
+test('device location stops waiting when the browser never answers the permission prompt', async () => {
+  const env = fakeEnvironment();
+  let answer: Function = () => {};
+  let wait: Function = () => {};
+  env.setTimeout = (callback: () => void, delay: number) => {
+    expect(delay).toBe(30_000);
+    wait = callback;
+    return 1;
+  };
+  env.navigator.geolocation = {
+    getCurrentPosition(success: Function) { answer = success; },
+  };
+  const request = requestDeviceLocation(env);
+  wait();
+  await expect(request).rejects.toThrow('Your browser did not answer. Try again, or set a place by hand.');
+  answer({ coords: { latitude: 37.7749, longitude: -122.4194 } });
+  expect(env.values.size).toBe(0);
 });
 
 test('manual locations validate, round, describe, and store', () => {
