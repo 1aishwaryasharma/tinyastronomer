@@ -1476,7 +1476,7 @@ test('sky tonight offers one horizon canvas with time and orbit controls', () =>
   expect(sky).toContain("if (viewMode === 'horizon') drawHorizon(time); else drawOrbit(time)");
   // Today lands on now during the night, and Now turns on once the night
   // starts on a page left open.
-  expect(sky).toContain("document.getElementById('today-btn').onclick = () => { selectedTime = null; setOffset(0); };");
+  expect(sky).toContain("document.getElementById('today-btn').onclick = () => { selectedTime = null; offset = 0; syncBaseDate(); setOffset(0); };");
   expect(sky).toMatch(/setInterval\(\(\) => \{[^\n]*updateNowButton\(\); \}, 60000\)/);
 });
 

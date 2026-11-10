@@ -198,15 +198,20 @@ export function nightWindow(observer, localDate) {
   };
 }
 
-// The calendar date (at local noon) of the night in progress. Before sunrise
-// the night began at yesterday's sunset, so someone out at 2 am gets the sky
-// above them, not the evening still to come.
+// The calendar date (at local noon) of the first night that has not ended at
+// the observing site. Before sunrise that night began at yesterday's sunset,
+// so someone out at 2 am gets the sky above them. The site can also be a
+// calendar day ahead of or behind the device, so the search runs from two
+// days back to tomorrow rather than assuming the device's own date.
 export function currentNightDate(observer, now = new Date()) {
   const today = new Date(now);
   today.setHours(12, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  return now <= nightWindow(observer, yesterday).end ? yesterday : today;
+  for (let shift = -2; shift <= 1; shift += 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + shift);
+    if (now <= nightWindow(observer, date).end) return date;
+  }
+  return today;
 }
 
 export function nightSpanMinutes(window) {
