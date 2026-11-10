@@ -88,3 +88,22 @@ test('static canvases draw once and redraw on edits and resize without an idle l
   h.window.dispatchEvent(new Event('resize'));
   expect(h.pending.size).toBe(0);
 });
+
+test('a canvas that animates in one mode idles in the other and resumes on invalidate', () => {
+  let moving = false;
+  const h = harness({ fps: 30, animated: () => moving });
+  h.tick(0);
+  expect(h.frames.length).toBe(1);
+  expect(h.pending.size).toBe(0);
+  moving = true;
+  h.loop.invalidate();
+  h.tick(40);
+  expect(h.frames.length).toBe(2);
+  expect(h.pending.size).toBe(1);
+  h.tick(80);
+  expect(h.frames.length).toBe(3);
+  moving = false;
+  h.tick(120);
+  expect(h.pending.size).toBe(0);
+  h.loop.dispose();
+});

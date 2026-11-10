@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './public/tz-coords.js';
 import {
   LOCATION_STORAGE_KEY,
   describeLocation,
+  forgetLocation,
   loadPlaces,
   locationTimeZone,
   nearestPlace,
@@ -32,8 +35,11 @@ function fakeEnvironment(timeZone = 'America/Chicago') {
     localStorage: {
       getItem: (key: string) => values.get(key) ?? null,
       setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
     },
     navigator: {},
+    setTimeout: (callback: () => void, delay: number) => setTimeout(callback, delay),
+    clearTimeout: (timer: ReturnType<typeof setTimeout>) => clearTimeout(timer),
     values,
   };
 }
@@ -150,6 +156,21 @@ describe('location resolution', () => {
     expect(resolveLocation(env)).toMatchObject({ lat: -33.9, lon: 151.2, source: 'manual' });
   });
 
+  test('forgetting a saved location returns to the first-visit guess', () => {
+    const env = fakeEnvironment();
+    setManualLocation(-33.9, 151.2, env);
+    const forgotten = forgetLocation(env);
+    expect(env.values.has(LOCATION_STORAGE_KEY)).toBe(false);
+    expect(forgotten).toEqual(resolveLocation(fakeEnvironment()));
+    expect(resolveLocation(env)).toMatchObject({ source: 'tz', label: 'Chicago area' });
+  });
+
+  test('forgetting still works when storage is unavailable', () => {
+    const env = fakeEnvironment();
+    env.localStorage.removeItem = () => { throw new Error('blocked'); };
+    expect(forgetLocation(env)).toMatchObject({ source: 'tz', label: 'Chicago area' });
+  });
+
   test('legacy browser zone names are located, not sent to the equator', () => {
     const location = resolveLocation(fakeEnvironment('Asia/Calcutta'));
     expect(location).toMatchObject({ lat: 22.53, lon: 88.37, source: 'tz', approximate: false, label: 'Kolkata area' });
@@ -190,12 +211,46 @@ test('device location rounds to one decimal and persists only after a request', 
   });
 });
 
+test('a stored device location keeps the clock it was taken on after travel', async () => {
+  const tokyo = placeEnvironment('Asia/Tokyo');
+  tokyo.navigator.geolocation = {
+    getCurrentPosition(success: Function) { success({ coords: { latitude: 35.68, longitude: 139.77 } }); },
+  };
+  await requestDeviceLocation(tokyo);
+  const london = placeEnvironment('Europe/London');
+  london.values.set(LOCATION_STORAGE_KEY, tokyo.values.get(LOCATION_STORAGE_KEY)!);
+  expect(locationTimeZone(resolveLocation(london), london)).toBe('Asia/Tokyo');
+
+  london.values.set(LOCATION_STORAGE_KEY, JSON.stringify({ lat: 35.7, lon: 139.8, source: 'geo' }));
+  expect(resolveLocation(london)).toMatchObject({ source: 'geo', label: '35.7°N 139.8°E' });
+  expect(locationTimeZone(resolveLocation(london), london)).toBe('Europe/London');
+});
+
 test('device location errors use short, useful copy', async () => {
   const env = fakeEnvironment();
   env.navigator.geolocation = {
     getCurrentPosition(_success: Function, failure: Function) { failure({ code: 1 }); },
   };
   await expect(requestDeviceLocation(env)).rejects.toThrow('Location permission was denied.');
+});
+
+test('device location stops waiting when the browser never answers the permission prompt', async () => {
+  const env = fakeEnvironment();
+  let answer: Function = () => {};
+  let wait: Function = () => {};
+  env.setTimeout = (callback: () => void, delay: number) => {
+    expect(delay).toBe(30_000);
+    wait = callback;
+    return 1;
+  };
+  env.navigator.geolocation = {
+    getCurrentPosition(success: Function) { answer = success; },
+  };
+  const request = requestDeviceLocation(env);
+  wait();
+  await expect(request).rejects.toThrow('Your browser did not answer. Try again, or set a place by hand.');
+  answer({ coords: { latitude: 37.7749, longitude: -122.4194 } });
+  expect(env.values.size).toBe(0);
 });
 
 test('manual locations validate, round, describe, and store', () => {
@@ -434,4 +489,28 @@ describe('the place list generator', () => {
       'São Paulo|BR|10|-20.1|0',
     ]);
   });
+});
+
+test('the times-in note compares the two clocks on the chosen night', () => {
+  const html = readFileSync(new URL('./public/sky-tonight.html', import.meta.url), 'utf8');
+  const source = html.slice(html.indexOf('function zoneOffset('), html.indexOf('function insideWindow('))
+    + html.slice(html.indexOf('function sourceDescription('), html.indexOf('function locationMeta('));
+  // London and Abidjan share GMT in November, but London is an hour ahead in July.
+  function DateTimeFormat(locales?: string, options?: Intl.DateTimeFormatOptions) {
+    return new Intl.DateTimeFormat(locales, options ?? { timeZone: 'Europe/London' });
+  }
+  const describeNight = (night: string, from = 'city') => runInNewContext(`${source}; sourceDescription()`, {
+    Intl: { DateTimeFormat },
+    location: { source: from },
+    displayTimeZone: 'Africa/Abidjan',
+    timeZoneLabel,
+    offset: 0,
+    dateAt: () => new Date(night),
+  });
+  expect(describeNight('2026-11-09T12:00:00Z')).toBe('Chosen place');
+  expect(describeNight('2027-07-01T12:00:00Z')).toBe(`Chosen place · times in ${timeZoneLabel('Africa/Abidjan')}`);
+  // A device fix taken in another zone says so too.
+  expect(describeNight('2026-11-09T12:00:00Z', 'geo')).toBe('Device · rounded to about 10 km');
+  expect(describeNight('2027-07-01T12:00:00Z', 'geo'))
+    .toBe(`Device · rounded to about 10 km · times in ${timeZoneLabel('Africa/Abidjan')}`);
 });

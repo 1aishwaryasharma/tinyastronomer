@@ -1032,7 +1032,7 @@ const presetData = {
     body: 'Notice how half of Earth faces the Sun while the other half is in <strong>night</strong> — watch the city lights appear as each continent rotates into darkness. Earth completes one <strong>mean solar day</strong> in about 24 hours; relative to the stars, it rotates in about 23 hours 56 minutes. Its <strong>23.4° axial tilt</strong> changes day length through the seasons.',
     fact: 'Because Earth rotates eastward, sunrise and daytime sweep westward across a map from one longitude to the next.',
     apply: () => {
-      setPlaying(true);
+      setPlaying(!SPACE.prefersReducedMotion);
       sim.speed = 1;
       speedSlider.value = '0';
       speedValue.textContent = '1.0×';
@@ -1051,7 +1051,7 @@ const presetData = {
     body: 'The Moon doesn\'t make its own light — it reflects sunlight. Half is always lit, but we see different fractions as it moves. The Moon orbits relative to the stars in <strong>27.3 days</strong>; because Earth also travels around the Sun, the phase cycle takes <strong>29.5 days</strong>.',
     fact: 'The Moon rotates once per orbit, keeping nearly the same face toward Earth. Small real wobbles called libration are omitted here.',
     apply: () => {
-      setPlaying(true);
+      setPlaying(!SPACE.prefersReducedMotion);
       sim.moonNodeLongitude = THREE.MathUtils.degToRad(32);
       sim.speed = 1.5;
       speedSlider.value = Math.log2(1.5).toFixed(2);
@@ -1373,9 +1373,14 @@ renderer.domElement.focus({ preventScroll: true });
   } catch (error) {
     console.error('Light Study could not start.', error);
     const loader = document.getElementById('loader');
-    loader.classList.remove('hidden');
-    loader.setAttribute('role', 'alert');
-    loader.querySelector('.loader-text').textContent = 'The study could not load. Reload the page to try again.';
+    // A notice already up (such as "cannot run the 3D view") says more.
+    // `loader-failed` keeps this one visible; see showSceneNotice in common.js.
+    if (!loader.classList.contains('loader-failed')) {
+      loader.classList.add('loader-failed');
+      loader.removeAttribute('aria-hidden');
+      loader.setAttribute('role', 'alert');
+      loader.querySelector('.loader-text').textContent = 'The study could not load. Reload the page to try again.';
+    }
   }
 }
 window.addEventListener('light-study-open', startLightStudy, { once: true });

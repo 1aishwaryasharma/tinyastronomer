@@ -13,6 +13,7 @@
   }
 }
 </script>
+<script type="module" src="scene-load-failure.js"></script>
 <script type="module" async src="chrome.js?v=20261008-1"></script>
 <meta name="theme-color" content="#050810">
 <link rel="canonical" href="https://tinyastronomer.com/solar-system">
@@ -539,8 +540,7 @@ function recenterView() {
   setup.accessibility.announce(`View recentred on ${sim.selected ? nameOf(sim.selected) : 'the whole solar system'}.`);
 }
 window.addEventListener('keydown', (e) => {
-  if (e.altKey || e.ctrlKey || e.metaKey) return;
-  if (e.target && e.target.closest && e.target.closest('input, select, textarea, [contenteditable]')) return;
+  if (SPACE.ignoresSceneKeys(e)) return;
   if (e.key === 'Home' || e.key === '0') { recenterView(); e.preventDefault(); }
 });
 let recenterShown = false;
@@ -813,8 +813,9 @@ window.addEventListener('popstate', () => {
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 function pickAt(clientX, clientY) {
-  ndc.x = (clientX / window.innerWidth) * 2 - 1;
-  ndc.y = -(clientY / window.innerHeight) * 2 + 1;
+  const rect = renderer.domElement.getBoundingClientRect();
+  ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(ndc, camera);
   const hits = raycaster.intersectObjects(selectableMeshes, false);
   return hits.length && hits[0].object.userData.key ? hits[0].object.userData.key : null;
@@ -854,7 +855,7 @@ function selectedObject() {
 function animate(now, frameDt) {
   const rawDt = frameDt;
   const dt = Math.min(rawDt, 0.05);
-  quality.frame(rawDt);
+  quality.frame(rawDt, cam.interacting);
   if (sim.playing) {
     sim.timeDays += dt * DAYS_PER_SEC * sim.speed;
     sim.visualTime += dt;
@@ -978,8 +979,12 @@ function showTourStep() {
   stageText.innerHTML = step.text;
   selectBody(step.key, { history: 'replace' });
   stageNext.textContent = (tour.i === TOUR.length - 1) ? 'Finish' : 'Next ›';
-  if (tour.timer) clearTimeout(tour.timer);
-  if (!SPACE.prefersReducedMotion && tour.i < TOUR.length - 1) {
+  scheduleTourAdvance();
+}
+// A hidden tab holds the current stop; showing it again restarts the 8 s.
+function scheduleTourAdvance() {
+  if (tour.timer) { clearTimeout(tour.timer); tour.timer = null; }
+  if (tour.active && !document.hidden && !SPACE.prefersReducedMotion && tour.i < TOUR.length - 1) {
     tour.timer = setTimeout(nextTourStep, 8000);
   }
 }
@@ -998,6 +1003,7 @@ function startTour() {
   document.body.classList.add('mode-active');
   showTourStep();
 }
+document.addEventListener('visibilitychange', scheduleTourAdvance);
 
 const QUIZ = [
   { q: "Find the planet with the beautiful <b>rings</b>!", a: 'saturn' },

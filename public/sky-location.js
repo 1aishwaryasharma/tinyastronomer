@@ -37,6 +37,16 @@ function storeLocation(location, env) {
   return location;
 }
 
+// On a shared device the next visitor should not see this one's home, so
+// forgetting goes back to the time-zone guess a first visit gets.
+export function forgetLocation(env = globalThis) {
+  try {
+    env.localStorage?.removeItem(LOCATION_STORAGE_KEY);
+  } catch {
+    // As in storeLocation, storage may be unavailable.
+  }
+  return timezoneGuess(env);
+}
 
 function timezoneLabel(zone) {
   const city = zone.includes('/') ? zone.split('/').at(-1) : zone;
@@ -63,8 +73,12 @@ export function locateZone(timeZone, tables = TABLES) {
   return shared ? { lat: shared[0], lon: shared[1], approximate: true } : null;
 }
 
+function deviceTimeZone(env) {
+  return env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
+}
+
 function timezoneGuess(env) {
-  const timeZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone ?? '';
+  const timeZone = deviceTimeZone(env) ?? '';
   // Unknown zones fall back to the equator at the clock's longitude.
   const offsetMinutes = new env.Date().getTimezoneOffset();
   const location = {
@@ -135,27 +149,39 @@ const GEOLOCATION_ERRORS = {
   3: 'Location request timed out.',
 };
 
-export function requestDeviceLocation(env = globalThis) {
+// The browser's timeout only starts once permission is given, and some
+// browsers never answer a dismissed or ignored prompt, so the wait is bounded
+// here. A promise settles once: an answer that arrives after the visitor has
+// been told to try again is dropped.
+function devicePosition(env) {
   return new Promise((resolve, reject) => {
-    if (!env.navigator?.geolocation) {
-      reject(new Error('Device location is not available in this browser.'));
-      return;
-    }
-
+    const timer = env.setTimeout(
+      () => reject(new Error('Your browser did not answer. Try again, or set a place by hand.')),
+      30_000,
+    );
     env.navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          lat: roundCoordinate(position.coords.latitude),
-          lon: roundCoordinate(position.coords.longitude),
-          source: 'geo',
-        };
-        location.label = describeLocation(location);
-        resolve(storeLocation(location, env));
+      (position) => { env.clearTimeout(timer); resolve(position); },
+      (error) => {
+        env.clearTimeout(timer);
+        reject(new Error(GEOLOCATION_ERRORS[error.code] ?? 'Could not get your location.'));
       },
-      (error) => reject(new Error(GEOLOCATION_ERRORS[error.code] ?? 'Could not get your location.')),
       { enableHighAccuracy: false, maximumAge: 6 * 60 * 60 * 1000, timeout: 10_000 },
     );
   });
+}
+
+export async function requestDeviceLocation(env = globalThis) {
+  if (!env.navigator?.geolocation) throw new Error('Device location is not available in this browser.');
+  const position = await devicePosition(env);
+  const location = {
+    lat: roundCoordinate(position.coords.latitude),
+    lon: roundCoordinate(position.coords.longitude),
+    source: 'geo',
+  };
+  const timeZone = deviceTimeZone(env);
+  if (timeZone) location.timeZone = timeZone;
+  location.label = describeLocation(location);
+  return storeLocation(location, env);
 }
 
 // With the place list, typed coordinates take the nearest town's time zone.
@@ -286,16 +312,18 @@ export function nearestTimeZone(latitude, longitude, env = globalThis) {
   return best;
 }
 
-// Time-zone and device locations are where the device is, so its clock fits.
-// A chosen place, and typed coordinates set with the place list, carry their
-// own zone. Otherwise typed coordinates use the nearest reference city's zone,
-// which is wrong for about one town in five (Beijing is nearer Pyongyang's
-// reference point than Shanghai's).
+// A time-zone guess is where the device is, so its clock fits. A device fix
+// keeps the clock it was taken on, so it stays right after travel; one stored
+// before fixes kept a zone uses the device clock. A chosen place, and typed
+// coordinates set with the place list, carry their own zone. Otherwise typed
+// coordinates use the nearest reference city's zone, which is wrong for about
+// one town in five (Beijing is nearer Pyongyang's reference point than Shanghai's).
 export function locationTimeZone(location, env = globalThis) {
-  const deviceZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
-  if (location.source !== 'manual' && location.source !== 'city') return deviceZone;
+  const deviceZone = deviceTimeZone(env);
+  if (location.source === 'tz') return deviceZone;
   // Older runtimes may not know a newer zone, including its reference-table entry.
   if (location.timeZone && knownTimeZone(location.timeZone, env)) return location.timeZone;
+  if (location.source === 'geo') return deviceZone;
   return nearestTimeZone(location.lat, location.lon, env) ?? deviceZone;
 }
 

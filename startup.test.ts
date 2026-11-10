@@ -87,20 +87,50 @@ test('model loader code is deferred until selection and shared between requests'
   expect(models).toEqual(['assets/planet-models/mars.glb', 'assets/planet-models/saturn.glb']);
 });
 
+test('a failed model loader import is retried by the next planet', async () => {
+  const models: string[] = [];
+  const errors: unknown[] = [];
+  let failNext = true;
+  const source = read('planet-models.js').replace(/^import .*;$/gm, '')
+    .replace('export function', 'function').replace(/\bimport\(/g, 'importModule(');
+  const factory = new Function('THREE', 'importModule', source + ';return createPlanetModelLoader;')({},
+    async () => {
+      if (failNext) throw new Error('network');
+      return {
+        GLTFLoader: class {
+          load(path: string) { models.push(path); }
+          setMeshoptDecoder() {}
+        },
+        MeshoptDecoder: {},
+      };
+    });
+  const loader = factory({ capabilities: { getMaxAnisotropy: () => 8 } });
+  loader.load('mars', () => {}, (error: unknown) => errors.push(error));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(errors).toHaveLength(1);
+  failNext = false;
+  loader.load('saturn', () => {}, (error: unknown) => errors.push(error));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(errors).toHaveLength(1);
+  expect(models).toEqual(['assets/planet-models/saturn.glb']);
+});
+
 test('Grand Tour defers Earth detail maps until selection and updates the existing material once', () => {
   const batches: string[][] = [];
+  const options: object[] = [];
   const THREE = {
     LoadingManager: class {}, TextureLoader: class {},
     Vector3: class {}, Vector2: class {}, Color: class {},
     MeshPhongMaterial: class { constructor(options: object) { Object.assign(this, options); } },
   };
   const source = read('tour-textures.js').replace(/^import .*;$/gm, '').replace('export function', 'function');
-  const factory = new Function('THREE', 'SPACE', 'loadEarthTextureSet', 'window',
+  const factory = new Function('THREE', 'SPACE', 'loadEarthTextureSet', 'prefersCompactTextures', 'window',
     source + ';return createTourTextures;')(
-    THREE, {}, (_renderer: unknown, _manager: unknown, keys: string[]) => {
+    THREE, {}, (_renderer: unknown, _manager: unknown, keys: string[], option: object) => {
       batches.push(keys);
+      options.push(option);
       return Object.fromEntries(keys.map(key => [key, { key }]));
-    }, {}
+    }, () => true, {}
   );
   const textures = factory({}, { earthDetails: false });
   const material = textures.planetMaterial({ type: 'earth' });
@@ -108,6 +138,7 @@ test('Grand Tour defers Earth detail maps until selection and updates the existi
   expect(material.onBeforeCompile).toBeUndefined();
   textures.loadEarthDetails();
   expect(batches).toEqual([['day'], ['normal', 'specular', 'lights']]);
+  expect(options[1]).toEqual({ compact: true });
   expect(material.normalMap.key).toBe('normal');
   expect(material.specularMap.key).toBe('specular');
   expect(material.needsUpdate).toBe(true);

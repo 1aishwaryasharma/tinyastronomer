@@ -64,6 +64,10 @@ export function createPlanetModelLoader(renderer, loadingManager) {
       const loader = new GLTFLoader(loadingManager);
       loader.setMeshoptDecoder(MeshoptDecoder);
       return loader;
+    }).catch(error => {
+      // Let the next planet retry after a dropped connection.
+      loaderPromise = undefined;
+      throw error;
     });
     loaderPromise.then(loader => {
       loader.load(path, gltf => onLoad(prepare(gltf.scene)), undefined, onError);

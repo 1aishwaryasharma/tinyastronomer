@@ -198,15 +198,20 @@ export function nightWindow(observer, localDate) {
   };
 }
 
-// The calendar date (at local noon) of the night in progress. Before sunrise
-// the night began at yesterday's sunset, so someone out at 2 am gets the sky
-// above them, not the evening still to come.
+// The calendar date (at local noon) of the first night that has not ended at
+// the observing site. Before sunrise that night began at yesterday's sunset,
+// so someone out at 2 am gets the sky above them. The site can also be a
+// calendar day ahead of or behind the device, so the search runs from two
+// days back to tomorrow rather than assuming the device's own date.
 export function currentNightDate(observer, now = new Date()) {
   const today = new Date(now);
   today.setHours(12, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  return now <= nightWindow(observer, yesterday).end ? yesterday : today;
+  for (let shift = -2; shift <= 1; shift += 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + shift);
+    if (now <= nightWindow(observer, date).end) return date;
+  }
+  return today;
 }
 
 export function nightSpanMinutes(window) {
@@ -220,6 +225,12 @@ export function timeInNight(window, minutesFromStart) {
   return new Date(window.start.getTime() + minutes * 60000);
 }
 
+// When the night's dark stage begins: full dark, or on a night without it,
+// the end of civil twilight.
+function darkStart(window) {
+  return window.astroDusk ?? window.civilDusk;
+}
+
 // The slider moves in 5-minute steps from sunset. "Now" takes the nearest
 // step; otherwise the first step at or after full dark, so the opening view
 // is never a few minutes short of it.
@@ -227,8 +238,16 @@ export function defaultNightMinutes(window, now, isToday) {
   if (isToday && now >= window.start && now <= window.end) {
     return Math.round((now - window.start) / 300000) * 5;
   }
-  const dark = window.astroDusk ?? window.civilDusk ?? window.start;
+  const dark = darkStart(window) ?? window.start;
   return Math.ceil((dark - window.start) / 300000) * 5;
+}
+
+// The "Dark from" line. Near midsummer at high latitudes the Sun never gets
+// 18° down, so there is no full dark. The sky goes on darkening for hours
+// after civil twilight ends, so that moment is named for what it does bring:
+// the first stars.
+export function darkFrom(window) {
+  return { label: window.astroDusk ? 'Dark from' : 'Stars from', time: darkStart(window) };
 }
 
 function samplesBetween(start, end) {
@@ -317,7 +336,7 @@ function settings(body, observer, window) {
 }
 
 export function bodyReport(body, observer, window, sampleTime) {
-  const at = asDate(sampleTime ?? window.astroDusk ?? window.civilDusk ?? window.start);
+  const at = asDate(sampleTime ?? darkStart(window) ?? window.start);
   const allSamples = skySamples(body, observer, window);
   const samples = allSamples.filter((sample) => darkEnoughFor(body, sample.sunAltitude));
   const candidates = samples.filter((sample) => isVisibleAt(body, sample.position.altitude, sample.sunAltitude));

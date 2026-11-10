@@ -13,6 +13,7 @@
   }
 }
 </script>
+<script type="module" src="scene-load-failure.js"></script>
 <script type="module" async src="chrome.js?v=20261008-1"></script>
 <link rel="modulepreload" href="vendor/three/three.module.min.js">
 <link rel="modulepreload" href="vendor/three/three.core.min.js">
@@ -122,7 +123,7 @@ import { createTourTextures } from './tour-textures.js?v=20260908-1';
 const clamp = SPACE.clamp;
 
 const setup = SPACE.createScene({
-  canvasLabel: 'True-scale solar system distance walk. Focus it and use the arrow keys to rotate, plus and minus to zoom.',
+  canvasLabel: 'True-scale solar system distance walk. Use the left and right arrow keys to travel between stops; drag to look around.',
   canvasDescriptionId: 'scene-description',
   far: 6000,
   fov: 50,
@@ -362,6 +363,7 @@ function goTo(i, options = {}) {
 prevBtn.onclick = () => goTo(idx - 1);
 nextBtn.onclick = () => goTo(idx + 1);
 addEventListener('keydown', e => {
+  if (SPACE.ignoresSceneKeys(e)) return;
   if (e.key === 'ArrowRight') goTo(idx + 1);
   if (e.key === 'ArrowLeft') goTo(idx - 1);
 });
@@ -374,7 +376,7 @@ function place(obj, el) {
 }
 
 function animate(now, rawDt) {
-  quality.frame(rawDt);
+  quality.frame(rawDt, cam.interacting);
   const motionNow = SPACE.prefersReducedMotion ? 0 : now;
   cam.target.lerp(targetPos(), 0.06);
   cam.update();

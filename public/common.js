@@ -660,6 +660,16 @@ float fbm(vec3 p) {
     };
   }
 
+  // ── Scene shortcuts ──
+  // Skipped with a modifier held (browser shortcuts such as Alt+← for Back),
+  // in form fields, and while a dialog such as the page guide is open, so the
+  // keys keep their native meaning there.
+  function ignoresSceneKeys(e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return true;
+    const t = e.target;
+    return !!(t && t.closest && t.closest('input, select, textarea, [contenteditable], dialog[open]'));
+  }
+
   // ── Keyboard camera control (arrows rotate, +/− zoom) ──
   // Works with any cam exposing azimuthTarget / elevationTarget /
   // distanceTarget. Ignored while a form field has focus so native
@@ -673,9 +683,7 @@ float fbm(vec3 p) {
       ? opts.maxDistance : (() => (opts.maxDistance != null ? opts.maxDistance : 100));
     const EL = Math.PI / 2 - 0.05;
     window.addEventListener('keydown', (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const t = e.target;
-      if (t && t.closest && t.closest('input, select, textarea, [contenteditable]')) return;
+      if (ignoresSceneKeys(e)) return;
       let handled = true;
       switch (e.key) {
         case 'ArrowLeft':  cam.azimuthTarget += rotStep; break;
@@ -692,6 +700,9 @@ float fbm(vec3 p) {
 
   // ── Project a 3D object to a screen-space label element ──
   let _v;
+  // The size createScene last gave its renderer, which can lag the window
+  // while resize() rides out an address bar.
+  let sceneSize = null;
   function projectToScreen(obj, el, camera, offsetY, visible) {
     if (!_v) _v = new THREE.Vector3();
     obj.getWorldPosition(_v);
@@ -710,25 +721,70 @@ float fbm(vec3 p) {
     // stay at their CSS defaults (0) so no layout work is triggered.
     el.style.transform =
       'translate(-50%, -50%) translate(' +
-      ((_v.x * 0.5 + 0.5) * window.innerWidth) + 'px, ' +
-      ((_v.y * -0.5 + 0.5) * window.innerHeight + offsetY) + 'px)';
+      ((_v.x * 0.5 + 0.5) * (sceneSize ? sceneSize.width : window.innerWidth)) + 'px, ' +
+      ((_v.y * -0.5 + 0.5) * (sceneSize ? sceneSize.height : window.innerHeight) + offsetY) + 'px)';
     el.style.opacity = 1;
   }
 
   // ── WebGL renderer with a visible failure path ──
-  function failWebGL(err) {
+  // Every "the scene is not there" message goes through the page's #loader.
+  // `loader-failed` marks a notice as up and keeps the loader visible (see
+  // common.css) whether or not loading has finished; `aria-hidden` is the
+  // one thing a notice and createLoader's hide settle between them. The
+  // first notice wins; scene-load-failure.js
+  // honours the same marker. Returns a function that takes the notice down
+  // again, or null if none was shown.
+  function showSceneNotice(message, opts) {
     const loader = document.getElementById('loader');
-    if (loader) {
-      loader.classList.remove('hidden');
-      const text = loader.querySelector('.loader-text');
-      if (text) {
-        text.textContent =
-          'This device cannot run the 3D view. Try another browser, or turn on hardware acceleration.';
-        text.style.animation = 'none';
-      }
-      loader.setAttribute('role', 'alert');
+    if (!loader || loader.classList.contains('loader-failed')) return null;
+    const text = loader.querySelector('.loader-text');
+    const bar = loader.querySelector('.loader-bar');
+    const before = text ? text.textContent : '';
+    loader.classList.add('loader-failed');
+    loader.removeAttribute('aria-hidden');
+    loader.setAttribute('role', 'alert');
+    if (text) text.textContent = message;
+    if (bar) bar.hidden = true;
+    let reload = null;
+    if (opts && opts.reload && text && text.parentNode) {
+      reload = document.createElement('button');
+      reload.type = 'button';
+      reload.className = 'scene-nav-btn';
+      reload.textContent = 'Reload';
+      reload.addEventListener('click', () => location.reload());
+      text.parentNode.appendChild(reload);
     }
+    return () => {
+      if (reload) reload.remove();
+      if (text) text.textContent = before;
+      if (bar) bar.hidden = false;
+      loader.setAttribute('role', 'status');
+      loader.classList.remove('loader-failed');
+      if (loader.classList.contains('hidden')) loader.setAttribute('aria-hidden', 'true');
+    };
+  }
+
+  function failWebGL(err) {
+    showSceneNotice('This device cannot run the 3D view. Try another browser, or turn on hardware acceleration.');
     if (err) console.error(err);
+  }
+
+  // Phones under memory pressure can drop the context for good. Three.js asks
+  // for it back; if it has not returned after a few seconds, say so.
+  function watchContextLoss(canvas) {
+    let timer = null;
+    let clear = null;
+    canvas.addEventListener('webglcontextlost', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        clear = showSceneNotice('The 3D view stopped. Reload the page to start it again.', { reload: true });
+      }, 3000);
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      clearTimeout(timer);
+      if (clear) clear();
+      clear = null;
+    });
   }
 
   function createRenderer(opts) {
@@ -748,6 +804,7 @@ float fbm(vec3 p) {
       failWebGL(new Error('WebGL context unavailable'));
       return null;
     }
+    watchContextLoss(renderer.domElement);
     return renderer;
   }
 
@@ -827,8 +884,10 @@ float fbm(vec3 p) {
       }
     }
 
+    const applied = { width: initialSize.width, height: initialSize.height };
+    sceneSize = applied;
     const quality = createQualityGovernor({
-      getSize,
+      getSize: () => applied,
       bloomPass,
       composer,
       fxaaPass,
@@ -836,15 +895,13 @@ float fbm(vec3 p) {
       shadowLight: opts.shadowLight || null
     });
 
-    let lastW = initialSize.width;
-    let lastH = initialSize.height;
     function resize() {
       const { width: w, height: h } = getSize();
       // iOS shows/hides the URL bar with a height-only change; resizing the
       // WebGL surface for that makes every overlay appear to drift.
-      if (w === lastW && (opts.sizeToContainer ? h === lastH : Math.abs(h - lastH) < 120)) return;
-      lastW = w;
-      lastH = h;
+      if (w === applied.width && (opts.sizeToContainer ? h === applied.height : Math.abs(h - applied.height) < 120)) return;
+      applied.width = w;
+      applied.height = h;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -1017,7 +1074,8 @@ float fbm(vec3 p) {
       progress(1, 1);
       if (loader) {
         loader.classList.add('hidden');
-        loader.setAttribute('aria-hidden', 'true');
+        // A notice that is up stays readable; it sets this when it is cleared.
+        if (!loader.classList.contains('loader-failed')) loader.setAttribute('aria-hidden', 'true');
       }
     }
     if (loadingManager) {
@@ -1098,6 +1156,7 @@ float fbm(vec3 p) {
     failWebGL,
     GLSL_NOISE,
     glowShell,
+    ignoresSceneKeys,
     initMobileHints,
     initMobileInfoPanels,
     prefersReducedMotion,

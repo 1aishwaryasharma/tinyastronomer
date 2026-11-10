@@ -5,7 +5,7 @@
    ───────────────────────────────────────────────────────── */
 import * as THREE from 'three';
 import { SPACE } from './common.bundle.js?v=20260909-2';
-import { loadEarthTextureSet } from './earth-visuals.js?v=20260907-2';
+import { loadEarthTextureSet, prefersCompactTextures } from './earth-visuals.js?v=20260907-2';
 
 export function createTourTextures(renderer, { earthDetails = true } = {}) {
   const clamp = SPACE.clamp;
@@ -80,7 +80,7 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
     if (detailsLoaded) return;
     detailsLoaded = true;
     Object.assign(earthTextures, loadEarthTextureSet(renderer, loadingManager,
-      ['normal', 'specular', 'lights']));
+      ['normal', 'specular', 'lights'], { compact: prefersCompactTextures() }));
     earthNightUniforms.nightMap.value = earthTextures.lights;
     earthMaterials.forEach(applyEarthDetails);
   }

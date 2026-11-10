@@ -317,7 +317,8 @@ test('system reduced-motion preference uses play state as the animation policy',
   }
   expect(index).toContain('if (sim.playing) {\n    sim.time +=');
   expect(index).not.toContain('playing && !SPACE.prefersReducedMotion');
-  expect(index.match(/setPlaying\(!SPACE\.prefersReducedMotion\)/g)?.length).toBe(2);
+  expect(index.match(/setPlaying\(!SPACE\.prefersReducedMotion\)/g)?.length).toBe(4);
+  expect(index).not.toContain('setPlaying(true)');
   expect(solar).toContain('if (sim.playing) {\n    sim.timeDays +=');
   expect(seasons).toContain('if (state.playing){\n    state.theta=');
 });
@@ -556,6 +557,14 @@ test('Polar Lights cannot resize the framebuffer during an orbit drag', () => {
   expect(resizeCalls.length).toBeGreaterThan(0);
 });
 
+test('every orbit-control scene keeps camera drags out of the quality governor', () => {
+  for (const page of ['index.html', 'solar-system.html', 'seasons.html', 'scale-walk.html']) {
+    const html = readFileSync(page, 'utf8');
+    expect(html).toContain('SPACE.createOrbitControls(');
+    expect(html.match(/quality\.frame\([^)]*\)/g)).toEqual(['quality.frame(rawDt, cam.interacting)']);
+  }
+});
+
 test('attaching a shadow light does not clear or reallocate the live canvas', () => {
   const common = readFileSync('common.js', 'utf8');
   const governor = common.slice(common.indexOf('function createQualityGovernor'), common.indexOf('// ── Keyboard camera control'));
@@ -570,6 +579,114 @@ test('attaching a shadow light does not clear or reallocate the live canvas', ()
   const quality = createGovernor({ renderer: surface, composer: surface });
   quality.setShadowLight({ shadow: { mapSize: { x: 2048 } } });
   expect(calls).toEqual([]);
+});
+
+function sceneNoticePage(loaded = true) {
+  const common = readFileSync('common.js', 'utf8');
+  const source = common.slice(
+    common.indexOf('function showSceneNotice'),
+    common.indexOf('function createRenderer')
+  );
+  const loaderSource = common.slice(
+    common.indexOf('function createLoader'),
+    common.indexOf('// ── On-screen camera buttons')
+  );
+  const classes = new Set<string>(loaded ? ['hidden'] : []);
+  const attrs: Record<string, string> = loaded ? { role: 'status', 'aria-hidden': 'true' } : { role: 'status' };
+  const text = { textContent: 'Charting the planets…', parentNode: null as unknown };
+  const bar = { hidden: false, querySelector: () => null, setAttribute() {} };
+  const buttons: { textContent: string; removed: boolean; click: () => void }[] = [];
+  text.parentNode = { appendChild() {} };
+  const loader = {
+    classList: {
+      contains: (name: string) => classes.has(name),
+      add: (name: string) => classes.add(name),
+      remove: (name: string) => classes.delete(name),
+    },
+    setAttribute(name: string, value: string) { attrs[name] = value; },
+    removeAttribute(name: string) { delete attrs[name]; },
+    querySelector: (selector: string) => (selector === '.loader-text' ? text : selector === '.loader-bar' ? bar : null),
+  };
+  const document = {
+    getElementById: (id: string) => (id === 'loader' ? loader : null),
+    createElement() {
+      const button = {
+        textContent: '', removed: false, click: () => {},
+        addEventListener(_type: string, fn: () => void) { button.click = fn; },
+        remove() { button.removed = true; },
+      };
+      buttons.push(button);
+      return button;
+    },
+  };
+  let pending: (() => void) | null = null;
+  let reloads = 0;
+  const api = new Function('document', 'location', 'setTimeout', 'clearTimeout', 'console',
+    'window', 'clamp',
+    `${source}; ${loaderSource}; return { showSceneNotice, failWebGL, watchContextLoss, createLoader };`
+  )(document, { reload: () => reloads++ },
+    (fn: () => void) => { pending = fn; return 1; }, () => { pending = null; }, { error() {} },
+    { setTimeout() {} }, (v: number, a: number, b: number) => Math.max(a, Math.min(b, v)));
+  return {
+    ...api, classes, attrs, text, bar, buttons,
+    runTimer: () => pending!(), hasTimer: () => pending !== null, reloads: () => reloads,
+  };
+}
+
+test('a WebGL context that stays lost shows a reload alert until it comes back', () => {
+  const p = sceneNoticePage();
+  const listeners: Record<string, () => void> = {};
+  p.watchContextLoss({ addEventListener(type: string, fn: () => void) { listeners[type] = fn; } });
+
+  // A quick restore never shows anything.
+  listeners.webglcontextlost();
+  listeners.webglcontextrestored();
+  expect(p.hasTimer()).toBe(false);
+  expect(p.classes.has('hidden')).toBe(true);
+
+  listeners.webglcontextlost();
+  p.runTimer();
+  expect(p.classes.has('loader-failed')).toBe(true);
+  expect(p.attrs.role).toBe('alert');
+  expect(p.attrs['aria-hidden']).toBeUndefined();
+  expect(p.text.textContent).toContain('3D view stopped');
+  expect(p.buttons[0].textContent).toBe('Reload');
+  p.buttons[0].click();
+  expect(p.reloads()).toBe(1);
+
+  listeners.webglcontextrestored();
+  expect(p.buttons[0].removed).toBe(true);
+  expect(p.classes.has('hidden')).toBe(true);
+  expect(p.classes.has('loader-failed')).toBe(false);
+  expect(p.attrs.role).toBe('status');
+  expect(p.text.textContent).toBe('Charting the planets…');
+});
+
+test('a context lost while loading does not leave the loader up once it returns', () => {
+  const p = sceneNoticePage(false);
+  const listeners: Record<string, () => void> = {};
+  p.watchContextLoss({ addEventListener(type: string, fn: () => void) { listeners[type] = fn; } });
+  const hide = p.createLoader(null);
+  listeners.webglcontextlost();
+  p.runTimer();
+  // Loading finishes underneath the notice, which stays readable.
+  hide();
+  expect(p.classes.has('loader-failed')).toBe(true);
+  expect(p.attrs['aria-hidden']).toBeUndefined();
+  listeners.webglcontextrestored();
+  expect(p.classes.has('hidden')).toBe(true);
+  expect(p.classes.has('loader-failed')).toBe(false);
+  expect(p.attrs['aria-hidden']).toBe('true');
+});
+
+test('the first scene notice stays up when a later failure follows it', () => {
+  const p = sceneNoticePage();
+  p.failWebGL();
+  expect(p.text.textContent).toContain('cannot run the 3D view');
+  expect(p.bar.hidden).toBe(true);
+  expect(p.showSceneNotice('The 3D view stopped.', { reload: true })).toBeNull();
+  expect(p.text.textContent).toContain('cannot run the 3D view');
+  expect(p.buttons).toEqual([]);
 });
 
 test('adaptive quality follows the preview container and its expansion into a study', () => {
@@ -1456,6 +1573,58 @@ test('sky tonight searches towns on the device and loads the list only on demand
   expect(readFileSync('sky-places.js', 'utf8')).toContain('CC BY 4.0');
 });
 
+// Lift the Set handler out of the page and run it against stubs, so a slow
+// place list can be held open while the visitor edits a field.
+function manualSetHandler(loadPlaces: () => Promise<unknown>) {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  const slice = (from: string, to: string) => {
+    const start = sky.indexOf(from);
+    return sky.slice(start, sky.indexOf(to, start) + to.length);
+  };
+  const source = slice('async function whileBusy(', '\n}\n') + slice('locationForm.onsubmit = ', '\n};\n');
+  const page = {
+    latitudeInput: { value: '51.5' }, longitudeInput: { value: '-0.1' },
+    setLocationButton: { disabled: false }, locationStatus: { textContent: '' },
+    locationForm: {} as { onsubmit?: (event: unknown) => Promise<void> },
+    applied: [] as unknown[],
+  };
+  new Function('page', 'loadPlaces', 'setManualLocation', 'applyLocation',
+    `const { latitudeInput, longitudeInput, setLocationButton, locationStatus, locationForm } = page; ${source}`)(
+    page, loadPlaces,
+    (latitude: string, longitude: string, _global: unknown, nearby: unknown) => {
+      if (latitude === 'bad') throw new Error('Latitude must be between -90 and 90.');
+      return { latitude, longitude, nearby };
+    },
+    (next: unknown) => page.applied.push(next));
+  return { ...page, submit: () => page.locationForm.onsubmit!({ preventDefault() {} }) };
+}
+
+test('manual Set shows it is working and applies the coordinates pressed, not later edits', async () => {
+  let finish!: (list: unknown) => void;
+  const page = manualSetHandler(() => new Promise((resolve) => { finish = resolve; }));
+  const done = page.submit();
+  expect(page.setLocationButton.disabled).toBe(true);
+  expect(page.locationStatus.textContent).not.toBe('');
+  page.latitudeInput.value = '10'; page.longitudeInput.value = '20';
+  finish(['places']);
+  await done;
+  expect(page.applied).toEqual([{ latitude: '51.5', longitude: '-0.1', nearby: ['places'] }]);
+  expect(page.setLocationButton.disabled).toBe(false);
+});
+
+test('manual Set comes back when the place list fails or the coordinates are refused', async () => {
+  const offline = manualSetHandler(() => Promise.reject(new Error('offline')));
+  await offline.submit();
+  expect(offline.applied).toEqual([{ latitude: '51.5', longitude: '-0.1', nearby: null }]);
+  expect(offline.setLocationButton.disabled).toBe(false);
+  const refused = manualSetHandler(() => Promise.resolve([]));
+  refused.latitudeInput.value = 'bad';
+  await refused.submit();
+  expect(refused.applied).toEqual([]);
+  expect(refused.locationStatus.textContent).toBe('Latitude must be between -90 and 90.');
+  expect(refused.setLocationButton.disabled).toBe(false);
+});
+
 test('sky tonight accepts coordinates pasted from a map', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   // A 0.1 step makes the browser refuse 40.7128 before the form submits;
@@ -1476,7 +1645,7 @@ test('sky tonight offers one horizon canvas with time and orbit controls', () =>
   expect(sky).toContain("if (viewMode === 'horizon') drawHorizon(time); else drawOrbit(time)");
   // Today lands on now during the night, and Now turns on once the night
   // starts on a page left open.
-  expect(sky).toContain("document.getElementById('today-btn').onclick = () => { selectedTime = null; setOffset(0); };");
+  expect(sky).toContain("document.getElementById('today-btn').onclick = () => { selectedTime = null; syncBaseDate(); setOffset(0); };");
   expect(sky).toMatch(/setInterval\(\(\) => \{[^\n]*updateNowButton\(\); \}, 60000\)/);
 });
 
@@ -2013,4 +2182,39 @@ test('the lossless night-lights asset is served as WebP', async () => {
   expect(response.status).toBe(200);
   expect(response.headers.get('content-type')).toBe('image/webp');
   expect((await response.arrayBuffer()).byteLength).toBeLessThan(410160);
+});
+
+describe("scene keyboard shortcuts", () => {
+  const common = readFileSync("common.js", "utf8");
+  const source = common.match(/function ignoresSceneKeys\(e\) \{[\s\S]*?\n  \}/);
+  if (!source) throw new Error("ignoresSceneKeys not found in common.js");
+  const ignores = new Function(`${source[0]}; return ignoresSceneKeys;`)() as (e: object) => boolean;
+  const within = (...selectors: string[]) => ({
+    closest: (list: string) => (selectors.some((s) => list.split(", ").includes(s)) ? {} : null),
+  });
+
+  test("plain keys on the scene are handled", () => {
+    expect(ignores({ target: within() })).toBe(false);
+    expect(ignores({ target: null })).toBe(false);
+  });
+
+  test("modifier chords are left to the browser", () => {
+    for (const key of ["altKey", "ctrlKey", "metaKey"]) expect(ignores({ [key]: true, target: within() })).toBe(true);
+  });
+
+  test("form fields and the open guide keep their own keys", () => {
+    expect(ignores({ target: within("input") })).toBe(true);
+    expect(ignores({ target: within("dialog[open]") })).toBe(true);
+  });
+
+  test("every scene shortcut handler uses the shared guard", () => {
+    expect(common.match(/bindCameraKeys[\s\S]*?switch \(e\.key\)/)![0]).toContain("ignoresSceneKeys(e)");
+    for (const file of ["solar-system.html", "scale-walk.html"]) {
+      const html = readFileSync(file, "utf8");
+      for (const handler of html.matchAll(/addEventListener\('keydown', \(?e\)? => \{[\s\S]*?\n\}\);/g)) {
+        expect(handler[0], file).toContain("SPACE.ignoresSceneKeys(e)");
+      }
+    }
+    expect(readFileSync("scale-walk.html", "utf8")).not.toContain("plus and minus to zoom");
+  });
 });
