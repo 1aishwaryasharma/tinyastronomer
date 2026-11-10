@@ -3,6 +3,7 @@ import { TZ_ALIASES, TZ_CITY_COORDS, TZ_COORDS, TZ_SHARED_CLOCKS } from './publi
 import {
   LOCATION_STORAGE_KEY,
   describeLocation,
+  forgetLocation,
   loadPlaces,
   locationTimeZone,
   nearestPlace,
@@ -32,6 +33,7 @@ function fakeEnvironment(timeZone = 'America/Chicago') {
     localStorage: {
       getItem: (key: string) => values.get(key) ?? null,
       setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
     },
     navigator: {},
     values,
@@ -148,6 +150,21 @@ describe('location resolution', () => {
     const env = fakeEnvironment();
     env.values.set(LOCATION_STORAGE_KEY, JSON.stringify({ lat: -33.9, lon: 151.2, source: 'manual' }));
     expect(resolveLocation(env)).toMatchObject({ lat: -33.9, lon: 151.2, source: 'manual' });
+  });
+
+  test('forgetting a saved location returns to the first-visit guess', () => {
+    const env = fakeEnvironment();
+    setManualLocation(-33.9, 151.2, env);
+    const forgotten = forgetLocation(env);
+    expect(env.values.has(LOCATION_STORAGE_KEY)).toBe(false);
+    expect(forgotten).toEqual(resolveLocation(fakeEnvironment()));
+    expect(resolveLocation(env)).toMatchObject({ source: 'tz', label: 'Chicago area' });
+  });
+
+  test('forgetting still works when storage is unavailable', () => {
+    const env = fakeEnvironment();
+    env.localStorage.removeItem = () => { throw new Error('blocked'); };
+    expect(forgetLocation(env)).toMatchObject({ source: 'tz', label: 'Chicago area' });
   });
 
   test('legacy browser zone names are located, not sent to the equator', () => {

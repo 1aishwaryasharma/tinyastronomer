@@ -37,6 +37,16 @@ function storeLocation(location, env) {
   return location;
 }
 
+// On a shared device the next visitor should not see this one's home, so
+// forgetting goes back to the time-zone guess a first visit gets.
+export function forgetLocation(env = globalThis) {
+  try {
+    env.localStorage?.removeItem(LOCATION_STORAGE_KEY);
+  } catch {
+    // As in storeLocation, storage may be unavailable.
+  }
+  return timezoneGuess(env);
+}
 
 function timezoneLabel(zone) {
   const city = zone.includes('/') ? zone.split('/').at(-1) : zone;
