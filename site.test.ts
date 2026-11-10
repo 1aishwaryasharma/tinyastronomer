@@ -1456,6 +1456,55 @@ test('sky tonight searches towns on the device and loads the list only on demand
   expect(readFileSync('sky-places.js', 'utf8')).toContain('CC BY 4.0');
 });
 
+// Lift the Set handler out of the page and run it against stubs, so a slow
+// place list can be held open while the visitor edits a field.
+function manualSetHandler(loadPlaces: () => Promise<unknown>) {
+  const sky = readFileSync('sky-tonight.html', 'utf8');
+  const start = sky.indexOf('locationForm.onsubmit = async');
+  const source = sky.slice(start, sky.indexOf('\n};\n', start) + 3);
+  const page = {
+    latitudeInput: { value: '51.5' }, longitudeInput: { value: '-0.1' },
+    setLocationButton: { disabled: false }, locationStatus: { textContent: '' },
+    locationForm: {} as { onsubmit?: (event: unknown) => Promise<void> },
+    applied: [] as unknown[],
+  };
+  new Function('page', 'loadPlaces', 'setManualLocation', 'applyLocation',
+    `const { latitudeInput, longitudeInput, setLocationButton, locationStatus, locationForm } = page; ${source}`)(
+    page, loadPlaces,
+    (latitude: string, longitude: string, _global: unknown, nearby: unknown) => {
+      if (latitude === 'bad') throw new Error('Latitude must be between -90 and 90.');
+      return { latitude, longitude, nearby };
+    },
+    (next: unknown) => page.applied.push(next));
+  return { ...page, submit: () => page.locationForm.onsubmit!({ preventDefault() {} }) };
+}
+
+test('manual Set shows it is working and applies the coordinates pressed, not later edits', async () => {
+  let finish!: (list: unknown) => void;
+  const page = manualSetHandler(() => new Promise((resolve) => { finish = resolve; }));
+  const done = page.submit();
+  expect(page.setLocationButton.disabled).toBe(true);
+  expect(page.locationStatus.textContent).not.toBe('');
+  page.latitudeInput.value = '10'; page.longitudeInput.value = '20';
+  finish(['places']);
+  await done;
+  expect(page.applied).toEqual([{ latitude: '51.5', longitude: '-0.1', nearby: ['places'] }]);
+  expect(page.setLocationButton.disabled).toBe(false);
+});
+
+test('manual Set comes back when the place list fails or the coordinates are refused', async () => {
+  const offline = manualSetHandler(() => Promise.reject(new Error('offline')));
+  await offline.submit();
+  expect(offline.applied).toEqual([{ latitude: '51.5', longitude: '-0.1', nearby: null }]);
+  expect(offline.setLocationButton.disabled).toBe(false);
+  const refused = manualSetHandler(() => Promise.resolve([]));
+  refused.latitudeInput.value = 'bad';
+  await refused.submit();
+  expect(refused.applied).toEqual([]);
+  expect(refused.locationStatus.textContent).toBe('Latitude must be between -90 and 90.');
+  expect(refused.setLocationButton.disabled).toBe(false);
+});
+
 test('sky tonight accepts coordinates pasted from a map', () => {
   const sky = readFileSync('sky-tonight.html', 'utf8');
   // A 0.1 step makes the browser refuse 40.7128 before the form submits;
