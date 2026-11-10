@@ -15,6 +15,7 @@ function loadSpace() {
     style: {} as Record<string, unknown>,
     setAttribute() {},
     appendChild() {},
+    addEventListener() {},
   });
   const container = element();
   const document = { getElementById: (id: string) => id === 'canvas-container' ? container : null };
