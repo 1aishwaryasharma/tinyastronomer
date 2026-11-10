@@ -190,6 +190,21 @@ test('device location rounds to one decimal and persists only after a request', 
   });
 });
 
+test('a stored device location keeps the clock it was taken on after travel', async () => {
+  const tokyo = placeEnvironment('Asia/Tokyo');
+  tokyo.navigator.geolocation = {
+    getCurrentPosition(success: Function) { success({ coords: { latitude: 35.68, longitude: 139.77 } }); },
+  };
+  await requestDeviceLocation(tokyo);
+  const london = placeEnvironment('Europe/London');
+  london.values.set(LOCATION_STORAGE_KEY, tokyo.values.get(LOCATION_STORAGE_KEY)!);
+  expect(locationTimeZone(resolveLocation(london), london)).toBe('Asia/Tokyo');
+
+  london.values.set(LOCATION_STORAGE_KEY, JSON.stringify({ lat: 35.7, lon: 139.8, source: 'geo' }));
+  expect(resolveLocation(london)).toMatchObject({ source: 'geo', label: '35.7°N 139.8°E' });
+  expect(locationTimeZone(resolveLocation(london), london)).toBe('Europe/London');
+});
+
 test('device location errors use short, useful copy', async () => {
   const env = fakeEnvironment();
   env.navigator.geolocation = {
