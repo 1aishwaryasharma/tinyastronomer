@@ -149,6 +149,8 @@ export function requestDeviceLocation(env = globalThis) {
           lon: roundCoordinate(position.coords.longitude),
           source: 'geo',
         };
+        const timeZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
+        if (timeZone) location.timeZone = timeZone;
         location.label = describeLocation(location);
         resolve(storeLocation(location, env));
       },
@@ -286,16 +288,18 @@ export function nearestTimeZone(latitude, longitude, env = globalThis) {
   return best;
 }
 
-// Time-zone and device locations are where the device is, so its clock fits.
-// A chosen place, and typed coordinates set with the place list, carry their
-// own zone. Otherwise typed coordinates use the nearest reference city's zone,
-// which is wrong for about one town in five (Beijing is nearer Pyongyang's
-// reference point than Shanghai's).
+// A time-zone guess is where the device is, so its clock fits. A device fix
+// keeps the clock it was taken on, so it stays right after travel; one stored
+// before fixes kept a zone uses the device clock. A chosen place, and typed
+// coordinates set with the place list, carry their own zone. Otherwise typed
+// coordinates use the nearest reference city's zone, which is wrong for about
+// one town in five (Beijing is nearer Pyongyang's reference point than Shanghai's).
 export function locationTimeZone(location, env = globalThis) {
   const deviceZone = env.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone;
-  if (location.source !== 'manual' && location.source !== 'city') return deviceZone;
+  if (location.source === 'tz') return deviceZone;
   // Older runtimes may not know a newer zone, including its reference-table entry.
   if (location.timeZone && knownTimeZone(location.timeZone, env)) return location.timeZone;
+  if (location.source === 'geo') return deviceZone;
   return nearestTimeZone(location.lat, location.lon, env) ?? deviceZone;
 }
 
