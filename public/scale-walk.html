@@ -123,7 +123,7 @@ import { createTourTextures } from './tour-textures.js?v=20260908-1';
 const clamp = SPACE.clamp;
 
 const setup = SPACE.createScene({
-  canvasLabel: 'True-scale solar system distance walk. Focus it and use the arrow keys to rotate, plus and minus to zoom.',
+  canvasLabel: 'True-scale solar system distance walk. Use the left and right arrow keys to travel between stops; drag to look around.',
   canvasDescriptionId: 'scene-description',
   far: 6000,
   fov: 50,
@@ -363,6 +363,7 @@ function goTo(i, options = {}) {
 prevBtn.onclick = () => goTo(idx - 1);
 nextBtn.onclick = () => goTo(idx + 1);
 addEventListener('keydown', e => {
+  if (SPACE.ignoresSceneKeys(e)) return;
   if (e.key === 'ArrowRight') goTo(idx + 1);
   if (e.key === 'ArrowLeft') goTo(idx - 1);
 });

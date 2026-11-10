@@ -2014,3 +2014,38 @@ test('the lossless night-lights asset is served as WebP', async () => {
   expect(response.headers.get('content-type')).toBe('image/webp');
   expect((await response.arrayBuffer()).byteLength).toBeLessThan(410160);
 });
+
+describe("scene keyboard shortcuts", () => {
+  const common = readFileSync("common.js", "utf8");
+  const source = common.match(/function ignoresSceneKeys\(e\) \{[\s\S]*?\n  \}/);
+  if (!source) throw new Error("ignoresSceneKeys not found in common.js");
+  const ignores = new Function(`${source[0]}; return ignoresSceneKeys;`)() as (e: object) => boolean;
+  const within = (...selectors: string[]) => ({
+    closest: (list: string) => (selectors.some((s) => list.split(", ").includes(s)) ? {} : null),
+  });
+
+  test("plain keys on the scene are handled", () => {
+    expect(ignores({ target: within() })).toBe(false);
+    expect(ignores({ target: null })).toBe(false);
+  });
+
+  test("modifier chords are left to the browser", () => {
+    for (const key of ["altKey", "ctrlKey", "metaKey"]) expect(ignores({ [key]: true, target: within() })).toBe(true);
+  });
+
+  test("form fields and the open guide keep their own keys", () => {
+    expect(ignores({ target: within("input") })).toBe(true);
+    expect(ignores({ target: within("dialog[open]") })).toBe(true);
+  });
+
+  test("every scene shortcut handler uses the shared guard", () => {
+    expect(common.match(/bindCameraKeys[\s\S]*?switch \(e\.key\)/)![0]).toContain("ignoresSceneKeys(e)");
+    for (const file of ["solar-system.html", "scale-walk.html"]) {
+      const html = readFileSync(file, "utf8");
+      for (const handler of html.matchAll(/addEventListener\('keydown', \(?e\)? => \{[\s\S]*?\n\}\);/g)) {
+        expect(handler[0], file).toContain("SPACE.ignoresSceneKeys(e)");
+      }
+    }
+    expect(readFileSync("scale-walk.html", "utf8")).not.toContain("plus and minus to zoom");
+  });
+});

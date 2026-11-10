@@ -540,8 +540,7 @@ function recenterView() {
   setup.accessibility.announce(`View recentred on ${sim.selected ? nameOf(sim.selected) : 'the whole solar system'}.`);
 }
 window.addEventListener('keydown', (e) => {
-  if (e.altKey || e.ctrlKey || e.metaKey) return;
-  if (e.target && e.target.closest && e.target.closest('input, select, textarea, [contenteditable]')) return;
+  if (SPACE.ignoresSceneKeys(e)) return;
   if (e.key === 'Home' || e.key === '0') { recenterView(); e.preventDefault(); }
 });
 let recenterShown = false;
