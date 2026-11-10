@@ -482,6 +482,7 @@ const locationSource = document.getElementById('location-source');
 const locationStatus = document.getElementById('location-status');
 const useLocationButton = document.getElementById('use-location');
 const locationForm = document.getElementById('location-form');
+const setLocationButton = document.getElementById('set-location');
 const latitudeInput = document.getElementById('latitude');
 const longitudeInput = document.getElementById('longitude');
 const locationChange = document.getElementById('location-change');
@@ -974,10 +975,15 @@ function applyLocation(next, status) {
 }
 locationForm.onsubmit = async (event) => {
   event.preventDefault();
+  const latitude = latitudeInput.value, longitude = longitudeInput.value;
+  setLocationButton.disabled = true; locationStatus.textContent = 'Finding the time zone for these coordinates…';
   // The place list gives typed coordinates the nearest town's time zone.
-  const nearby = await loadPlaces().catch(() => null);
-  try { applyLocation(setManualLocation(latitudeInput.value, longitudeInput.value, globalThis, nearby), 'Using your manual location.'); }
+  try {
+    const nearby = await loadPlaces().catch(() => null);
+    applyLocation(setManualLocation(latitude, longitude, globalThis, nearby), 'Using your manual location.');
+  }
   catch (error) { locationStatus.textContent = error.message; }
+  finally { setLocationButton.disabled = false; }
 };
 
 // Place search: a combobox over the bundled list. Typing never leaves the device.
