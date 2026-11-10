@@ -556,6 +556,14 @@ test('Polar Lights cannot resize the framebuffer during an orbit drag', () => {
   expect(resizeCalls.length).toBeGreaterThan(0);
 });
 
+test('every orbit-control scene keeps camera drags out of the quality governor', () => {
+  for (const page of ['index.html', 'solar-system.html', 'seasons.html', 'scale-walk.html']) {
+    const html = readFileSync(page, 'utf8');
+    expect(html).toContain('SPACE.createOrbitControls(');
+    expect(html.match(/quality\.frame\([^)]*\)/g)).toEqual(['quality.frame(rawDt, cam.interacting)']);
+  }
+});
+
 test('attaching a shadow light does not clear or reallocate the live canvas', () => {
   const common = readFileSync('common.js', 'utf8');
   const governor = common.slice(common.indexOf('function createQualityGovernor'), common.indexOf('// ── Keyboard camera control'));
