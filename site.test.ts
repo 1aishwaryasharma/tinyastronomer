@@ -572,6 +572,61 @@ test('attaching a shadow light does not clear or reallocate the live canvas', ()
   expect(calls).toEqual([]);
 });
 
+test('a WebGL context that stays lost shows a reload alert until it comes back', () => {
+  const common = readFileSync('common.js', 'utf8');
+  const watcher = common.slice(
+    common.indexOf('function watchContextLoss'),
+    common.indexOf('function createRenderer')
+  );
+  type El = {
+    className: string; textContent: string; type?: string; style: Record<string, string>;
+    attrs: Record<string, string>; children: El[]; listeners: Record<string, () => void>;
+    removed: boolean;
+  };
+  const makeEl = (): El => ({ className: '', textContent: '', style: {}, attrs: {}, children: [], listeners: {}, removed: false });
+  const element = (el: El) => Object.assign(el, {
+    setAttribute(name: string, value: string) { el.attrs[name] = value; },
+    appendChild(child: El) { el.children.push(child); },
+    append(...kids: El[]) { el.children.push(...kids); },
+    addEventListener(type: string, fn: () => void) { el.listeners[type] = fn; },
+    remove() { el.removed = true; },
+  });
+  const body = element(makeEl());
+  const document = { body, createElement: () => element(makeEl()) };
+  let pending: (() => void) | null = null;
+  const timers = {
+    setTimeout: (fn: () => void) => { pending = fn; return 1; },
+    clearTimeout: () => { pending = null; },
+  };
+  let reloads = 0;
+  const watchContextLoss = new Function('document', 'location', 'setTimeout', 'clearTimeout',
+    `${watcher}; return watchContextLoss;`
+  )(document, { reload: () => reloads++ }, timers.setTimeout, timers.clearTimeout);
+  const canvas = element(makeEl());
+  watchContextLoss(canvas);
+
+  // A quick restore never shows anything.
+  canvas.listeners.webglcontextlost();
+  canvas.listeners.webglcontextrestored();
+  expect(pending).toBeNull();
+  expect(body.children).toEqual([]);
+
+  canvas.listeners.webglcontextlost();
+  pending!();
+  expect(body.children).toHaveLength(1);
+  const notice = body.children[0];
+  expect(notice.attrs.role).toBe('alert');
+  expect(notice.className).toBe('loader');
+  const [text, button] = notice.children[0].children;
+  expect(text.textContent).toContain('3D view stopped');
+  expect(button.textContent).toBe('Reload');
+  button.listeners.click();
+  expect(reloads).toBe(1);
+
+  canvas.listeners.webglcontextrestored();
+  expect(notice.removed).toBe(true);
+});
+
 test('adaptive quality follows the preview container and its expansion into a study', () => {
   const common = readFileSync('common.js', 'utf8');
   const governor = common.slice(

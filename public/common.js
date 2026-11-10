@@ -731,6 +731,40 @@ float fbm(vec3 p) {
     if (err) console.error(err);
   }
 
+  // Phones under memory pressure can drop the context for good. Three.js asks
+  // for it back; if it has not returned after a few seconds, say so.
+  function watchContextLoss(canvas, waitMs) {
+    let timer = null;
+    let notice = null;
+    canvas.addEventListener('webglcontextlost', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        notice = document.createElement('div');
+        notice.className = 'loader';
+        notice.setAttribute('role', 'alert');
+        const inner = document.createElement('div');
+        inner.className = 'loader-inner';
+        const text = document.createElement('div');
+        text.className = 'loader-text';
+        text.style.animation = 'none';
+        text.textContent = 'The 3D view stopped. Reload the page to start it again.';
+        const reload = document.createElement('button');
+        reload.type = 'button';
+        reload.className = 'scene-nav-btn';
+        reload.textContent = 'Reload';
+        reload.addEventListener('click', () => location.reload());
+        inner.append(text, reload);
+        notice.appendChild(inner);
+        document.body.appendChild(notice);
+      }, waitMs != null ? waitMs : 3000);
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      clearTimeout(timer);
+      if (notice) notice.remove();
+      notice = null;
+    });
+  }
+
   function createRenderer(opts) {
     let renderer = null;
     try {
@@ -748,6 +782,7 @@ float fbm(vec3 p) {
       failWebGL(new Error('WebGL context unavailable'));
       return null;
     }
+    watchContextLoss(renderer.domElement);
     return renderer;
   }
 
