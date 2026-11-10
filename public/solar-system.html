@@ -978,8 +978,12 @@ function showTourStep() {
   stageText.innerHTML = step.text;
   selectBody(step.key, { history: 'replace' });
   stageNext.textContent = (tour.i === TOUR.length - 1) ? 'Finish' : 'Next ›';
-  if (tour.timer) clearTimeout(tour.timer);
-  if (!SPACE.prefersReducedMotion && tour.i < TOUR.length - 1) {
+  scheduleTourAdvance();
+}
+// A hidden tab holds the current stop; showing it again restarts the 8 s.
+function scheduleTourAdvance() {
+  if (tour.timer) { clearTimeout(tour.timer); tour.timer = null; }
+  if (tour.active && !document.hidden && !SPACE.prefersReducedMotion && tour.i < TOUR.length - 1) {
     tour.timer = setTimeout(nextTourStep, 8000);
   }
 }
@@ -998,6 +1002,7 @@ function startTour() {
   document.body.classList.add('mode-active');
   showTourStep();
 }
+document.addEventListener('visibilitychange', () => { if (tour.active) scheduleTourAdvance(); });
 
 const QUIZ = [
   { q: "Find the planet with the beautiful <b>rings</b>!", a: 'saturn' },
