@@ -139,7 +139,7 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, start
       clipGain.connect(ctx.destination);
       ctx.onstatechange = () => {
         if (ctx.state === 'running') { refused = false; disarm(); }
-        show();
+        report();
       };
     }
     if (ctx.state === 'suspended' && !env.document?.hidden) unheard(ctx.resume());
@@ -291,9 +291,9 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, start
   if (button) {
     button.addEventListener('click', () => {
       const ask = isWaiting() && !refused;
-      refused = ask;
       disarm();
       audio.setSound(ask || !audio.on);
+      refused = isWaiting();
     });
   }
   if (start) start.addEventListener('click', () => { disarm(); audio.setSound(true); });
@@ -359,6 +359,9 @@ export function mountMissionSound({ beds, recordings, assets, env = globalThis }
   }
   let captioned = null;
   audio.listen(() => {
+    // Only the play the story started is the story's to stop: the reader
+    // pressing the same recording later makes it theirs.
+    if (audio.playing !== cued) cued = null;
     const recording = byKey.get(audio.playing);
     if (recording && recording !== captioned) doc.getElementById(recording.chapter + '-heard').innerHTML = recording.text;
     if (recording) captioned = recording;
