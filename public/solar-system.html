@@ -115,7 +115,7 @@
   </div>
   <details class="science-note">
     <summary><span class="science-kind">Teaching model</span><span>Accuracy &amp; sources</span></summary>
-    <p>Planet facts use published reference values. The animation uses simplified circular mean orbits; starting positions are illustrative, spin is not time-scaled, and moon sizes and distances are visual aids. The default view compresses sizes and distances. In Distance View, planet sizes are proportional to one another and mean orbital spacing is proportional, but size and distance still use different scales. Haumea is drawn with its measured stretched shape. Haumea, Makemake and Eris are plain-colour globes, because no spacecraft has mapped their surfaces.</p>
+    <p>Planet facts use published reference values. The animation uses simplified circular mean orbits; starting positions are illustrative, spin is not time-scaled, and moon sizes and distances are visual aids. The default view compresses sizes and distances. In Distance View, planet sizes are proportional to one another and mean orbital spacing is proportional, but size and distance still use different scales. Haumea is drawn with its measured stretched shape and the 61° tilt of its ring plane; which way it turns is not known. Haumea, Makemake and Eris are plain-colour globes, because no spacecraft has mapped their surfaces.</p>
     <p class="science-sources"><span>Sources</span>
       <a href="https://science.nasa.gov/solar-system/">NASA Solar System</a>
       <a href="https://science.nasa.gov/solar-system/moons/facts/">NASA Moon counts</a>
@@ -123,7 +123,7 @@
       <a href="https://ssd.jpl.nasa.gov/planets/phys_par.html">JPL Physical values</a>
       <a href="https://science.nasa.gov/dwarf-planets/">NASA Dwarf planets</a>
       <a href="https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html">JPL Small-Body Database</a>
-      <span>Reviewed Aug 16, 2026</span>
+      <span>Reviewed Aug 16, 2026 · Haumea and Makemake added Nov 21, 2026</span>
     </p>
   </details>
   <button type="button" class="guide-open" data-guide-open><span class="science-kind">Guide</span><span>For kids, parents &amp; teachers</span></button>
@@ -185,7 +185,7 @@ const [THREE, { SPACE }, { SPACE_DATA }, { createEarthGeometry },
   import('./common.bundle.js?v=20260909-2'),
   import('./data.js'),
   import('./earth-visuals.js?v=20260907-2'),
-  import('./tour-textures.js?v=20260909-2'),
+  import('./tour-textures.js?v=20261121-1'),
   import('./planet-models.js?v=20261121-1'),
   import('./tour-camera.js?v=20260815-1'),
 ]);
@@ -299,13 +299,8 @@ WORLDS.forEach((w, i) => {
     : planetMaterial(w);
   const globeGeometry = w.type === 'earth' ? createEarthGeometry(1, 96, 64) : unitSphere;
   const fallbackMesh = new THREE.Mesh(globeGeometry, mat);
-  // A measured triaxial shape (Haumea) is drawn as that ellipsoid, at the
-  // volume of its mean-radius sphere. Y is the spin axis, so it gets the
-  // polar semi-axis and the two equatorial ones sweep round as it turns.
-  if (w.axesKm) {
-    const [longKm, shortKm, polarKm] = w.axesKm;
-    fallbackMesh.scale.set(longKm / w.radiusKm, polarKm / w.radiusKm, shortKm / w.radiusKm);
-  }
+  // Haumea's measured ellipsoid; every other world stays a sphere.
+  fallbackMesh.scale.set(...SPACE_DATA.globeScale(w));
   fallbackMesh.castShadow = true;
   fallbackMesh.receiveShadow = true;
   w.mesh = new THREE.Group();
@@ -1145,7 +1140,7 @@ WORLDS.find(w => w.key === 'saturn').loadDetail();
     <p>The four inner planets (Mercury, Venus, Earth and Mars) are small and rocky. The four outer planets are giants. Jupiter and Saturn are <strong>gas giants</strong>, made mostly of hydrogen and helium. Uranus and Neptune are <strong>ice giants</strong>, with lots of water, methane and ammonia beneath their clouds. Between Mars and Jupiter lies the <strong>asteroid belt</strong>, and far beyond Neptune is the icy <strong>Kuiper Belt</strong>.</p>
 
     <h3>Why isn’t Pluto a planet any more?</h3>
-    <p>In 2006, astronomers agreed on what counts as a planet. A planet goes around the Sun, is big enough to be pulled into a round shape, and has cleared its path of other objects. Pluto is round and goes around the Sun, but it shares its region, the Kuiper Belt, with many other icy worlds. So it is called a <strong>dwarf planet</strong>. The tour also visits <a href="#ceres">Ceres</a>, the biggest object in the asteroid belt, and three more icy worlds beyond Neptune: egg-shaped <a href="#haumea">Haumea</a>, reddish <a href="#makemake">Makemake</a> and faraway <a href="#eris">Eris</a>. These five are the dwarf planets astronomers have officially recognised so far.</p>
+    <p>In 2006, astronomers agreed on what counts as a planet. A planet goes around the Sun, is big enough to be pulled into a round shape, and has cleared its path of other objects. Pluto is round and goes around the Sun, but it shares its region, the Kuiper Belt, with many other icy worlds. So it is called a <strong>dwarf planet</strong>. The tour also visits <a href="#ceres">Ceres</a>, the biggest object in the asteroid belt, and three more icy worlds beyond Neptune: stretched-out <a href="#haumea">Haumea</a>, reddish <a href="#makemake">Makemake</a> and faraway <a href="#eris">Eris</a>. These five are the dwarf planets astronomers have officially recognised so far.</p>
 
     <h3>What is a comet?</h3>
     <p>A comet is a chunk of ice and dust. When its orbit brings it near the Sun, some of the ice turns to gas and glows as a fuzzy cloud with long tails that point away from the Sun. Visit the <a href="#comet">Halley-like comet</a> in the tour.</p>
@@ -1190,7 +1185,7 @@ WORLDS.find(w => w.key === 'saturn').loadDetail();
       <a href="https://science.nasa.gov/dwarf-planets/pluto/facts/">NASA Pluto</a>
       <a href="https://science.nasa.gov/dwarf-planets/haumea/">NASA Haumea</a>
       <a href="https://science.nasa.gov/dwarf-planets/makemake/">NASA Makemake</a>
-      <span>Reviewed Sep 27, 2026</span>
+      <span>Reviewed Sep 27, 2026 · Haumea and Makemake added Nov 21, 2026</span>
     </p>
   </article>
 </dialog>

@@ -30,3 +30,4 @@ No speculative Eris, Haumea or Makemake surface map is included. No spacecraft
 has resolved their surfaces well enough for a truthful global map, so the
 application renders each as a deliberately detail-free, mean-color globe.
 Haumea's globe is stretched to its occultation-measured ellipsoid.
+None of the three has a texture file; their color is the catalog's `dot`.
