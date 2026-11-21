@@ -67,11 +67,44 @@ export const SPACE_DATA = (function () {
       radiusKm: 1163,
       retro: false,
       rotationHours: 25.9,
+      surfaceMap: false,
       // Eris's spin-axis tilt has not been established; keep the teaching
       // globe upright instead of confusing orbital inclination with axial tilt.
       tiltDeg: 0,
       type: 'rock',
       wow: 'Eris is so far away that from its surface, the Sun would look like just a very bright star.'
+    },
+    haumea: {
+      au: 43.1,
+      // Semi-axes from the 2017 stellar occultation (Ortiz et al., Nature 550):
+      // long equatorial, short equatorial, polar.
+      axesKm: [1161, 852, 513],
+      blurb: 'An icy dwarf planet in the Kuiper Belt, shaped like a long, flattened pebble. It is one of the fastest-spinning large objects in the solar system, and that spin is what stretches it.',
+      dot: '#dcdfe0',
+      dwarf: true,
+      facts: F('About <strong>2,300 km</strong> long, but only about <strong>1,000 km</strong> from pole to pole.', 'One spin takes just under <strong>4 hours</strong>.',
+        'One trip around the Sun takes about <strong>283 Earth years</strong>.', '<strong>2 known moons</strong>, Hiʻiaka and Namaka.',
+        'Roughly <strong>4% of Earth\'s</strong> on average; it changes from place to place on the stretched shape.'),
+      g: 0.043,
+      key: 'haumea',
+      moons: 2,
+      name: 'Haumea',
+      num: '◦',
+      periodDays: 103290,
+      // The sphere with the same volume as axesKm.
+      radiusKm: 798,
+      retro: true,
+      rotationHours: 3.92,
+      surfaceMap: false,
+      // The ring found in 2017 lies in Haumea's equatorial plane, which matches
+      // the orbit of its moon Hiʻiaka (Ragozzine & Brown 2009). That plane is
+      // tipped 61° against Haumea's own orbit: 119° between the poles. Which
+      // way the body turns in that plane has not been measured. It is drawn
+      // turning the way Hiʻiaka orbits, the usual assumption, which makes the
+      // tilt 119° and the spin retrograde, as for Pluto.
+      tiltDeg: 119,
+      type: 'rock',
+      wow: 'In 2017, astronomers watched Haumea pass in front of a star and discovered that it has a ring — the first ever found around a world in the Kuiper Belt.'
     },
     jupiter: {
       L0: 34.40438,
@@ -102,6 +135,29 @@ export const SPACE_DATA = (function () {
       tiltDeg: 3.13,
       type: 'gas',
       wow: 'The Great Red Spot is a storm bigger than the entire Earth that has been swirling for hundreds of years.'
+    },
+    makemake: {
+      au: 45.5,
+      blurb: 'A reddish-brown, icy dwarf planet in the Kuiper Belt, smaller than Pluto. Its discovery in 2005, along with Eris, prompted astronomers to rethink what counts as a planet.',
+      dot: '#c9a58c',
+      dwarf: true,
+      facts: F('About <strong>1,430 km</strong> wide — roughly 1/9 as wide as Earth.', 'One spin takes about <strong>23 hours</strong>.',
+        'One trip around the Sun takes about <strong>307 Earth years</strong>.', '<strong>1 known moon</strong>, nicknamed MK2.', 'Surface gravity is roughly <strong>4% of Earth\'s</strong>.'),
+      g: 0.036,
+      key: 'makemake',
+      moons: 1,
+      name: 'Makemake',
+      num: '◦',
+      periodDays: 112020,
+      radiusKm: 715,
+      retro: false,
+      rotationHours: 22.83,
+      surfaceMap: false,
+      // Makemake's spin-axis tilt has not been established; keep the teaching
+      // globe upright, as for Eris.
+      tiltDeg: 0,
+      type: 'rock',
+      wow: 'Makemake is so cold that pellets of frozen methane, up to about 1 cm across, may lie scattered on its surface.'
     },
     mars: {
       L0: 355.45332,
@@ -277,7 +333,7 @@ export const SPACE_DATA = (function () {
   };
 
   const PLANET_ORDER = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'];
-  const DWARF_ORDER = ['ceres', 'pluto', 'eris'];
+  const DWARF_ORDER = ['ceres', 'pluto', 'haumea', 'makemake', 'eris'];
 
   const OTHER = {
     comet: {
@@ -311,15 +367,25 @@ export const SPACE_DATA = (function () {
     });
   }
 
+  // Scale for a unit sphere whose Y axis is the spin axis: a measured
+  // triaxial body keeps the volume of its radiusKm sphere, with the polar
+  // semi-axis on Y and the long equatorial one on X.
+  function globeScale(body) {
+    if (!body.axesKm) return [1, 1, 1];
+    const [longKm, shortKm, polarKm] = body.axesKm;
+    return [longKm / body.radiusKm, polarKm / body.radiusKm, shortKm / body.radiusKm];
+  }
+
   return {
     BODIES,
     DWARF_ORDER,
     OTHER,
     PLANET_ORDER,
     dwarfs: () => copies(DWARF_ORDER),
+    globeScale,
     list: copies,
     planets: () => copies(PLANET_ORDER)
   };
 })();
 
-window.SPACE_DATA = SPACE_DATA;
+if (typeof window !== 'undefined') window.SPACE_DATA = SPACE_DATA;

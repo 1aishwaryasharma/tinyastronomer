@@ -372,7 +372,11 @@ test('Grand Tour uses traceable scientific surface assets', () => {
   expect(textures).toContain('loadEarthTextureSet');
   expect(earthVisuals).toContain('assets/earth/day-4k.jpg');
   expect(earthVisuals).toContain('assets/earth/lights-2k.webp');
-  expect(textures).toContain("p.key === 'eris'");
+  // No spacecraft has mapped these: a plain colour, never an invented surface.
+  for (const key of ['eris', 'haumea', 'makemake']) {
+    expect(models).not.toContain(`${key}.glb`);
+    expect(existsSync(`assets/teaching-textures/${key}.webp`)).toBe(false);
+  }
   for (const key of ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'ceres', 'pluto']) {
     expect(models).toContain(`assets/planet-models/${key}.glb`);
     expect(existsSync(`assets/planet-models/${key}.glb`)).toBe(true);
@@ -2281,4 +2285,43 @@ describe("scene keyboard shortcuts", () => {
     }
     expect(readFileSync("scale-walk.html", "utf8")).not.toContain("plus and minus to zoom");
   });
+});
+
+test('Haumea and Makemake join the dwarf planets with sourced values', async () => {
+  const { SPACE_DATA } = await import('./public/data.js');
+  expect(SPACE_DATA.DWARF_ORDER).toEqual(['ceres', 'pluto', 'haumea', 'makemake', 'eris']);
+  const distances = SPACE_DATA.dwarfs().map((body: { au: number }) => body.au);
+  expect(distances).toEqual([...distances].sort((a, b) => a - b));
+
+  const { eris, haumea, makemake, pluto } = SPACE_DATA.BODIES;
+  for (const body of [haumea, makemake]) {
+    // Kepler's third law ties the JPL period to the JPL mean distance.
+    expect(Math.abs(body.periodDays / 365.25 - body.au ** 1.5)).toBeLessThan(1.5);
+    expect(body.dwarf).toBe(true);
+  }
+  for (const body of [eris, haumea, makemake]) expect(body.surfaceMap).toBe(false);
+  expect(pluto.surfaceMap).toBeUndefined();
+
+  // Makemake's spin axis is not established. Haumea's equator is its ring
+  // plane, and its tilt is the angle between Hiʻiaka's orbit pole
+  // (Ragozzine & Brown 2009) and Haumea's own (JPL), both J2000 ecliptic.
+  // A tilt past 90° is drawn with retrograde spin, as for Pluto.
+  expect(makemake.tiltDeg).toBe(0);
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const poles = Math.acos(
+    Math.cos(rad(28.2)) * Math.cos(rad(126.356)) +
+    Math.sin(rad(28.2)) * Math.sin(rad(126.356)) * Math.cos(rad(122.0 - 206.766))
+  );
+  expect(Math.abs(poles / rad(1) - haumea.tiltDeg)).toBeLessThan(0.5);
+  expect(haumea.retro).toBe(true);
+  expect(pluto.retro).toBe(true);
+
+  // Haumea is drawn as its measured ellipsoid at the volume of radiusKm,
+  // shortest along the spin axis (Y) and longest along X.
+  const [x, y, z] = SPACE_DATA.globeScale(haumea);
+  expect(Math.abs(Math.cbrt(x * y * z) - 1)).toBeLessThan(0.002);
+  expect(y).toBeLessThan(z);
+  expect(z).toBeLessThan(x);
+  expect(x / y).toBeCloseTo(1161 / 513, 6);
+  expect(SPACE_DATA.globeScale(makemake)).toEqual([1, 1, 1]);
 });
