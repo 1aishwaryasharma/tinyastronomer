@@ -27,17 +27,19 @@ export function bedLevel(bed, state) {
   return (bed.level ?? 1) * (bed.fades ? 1 - clamp01(state.progress) : 1) * (1 - clamp01(state.dim ?? 0));
 }
 
-// `beds` are { root, bright, air, level, fades } by chapter id: the pitch of
-// the hum in hertz, how open its filter is in hertz, and how much hiss of
-// "wind" rides on it, 0 to 1. `clips` are { url } by key. `button` is the
+// `beds` are { root, bright, air, level, fades, swell } by chapter id: the
+// pitch of the hum in hertz, how open its filter is in hertz, and how much
+// hiss of "wind" rides on it, 0 to 1. `swell(progress)`, 0 to 1, is how hard
+// the chapter's event is pressing at that point of the scroll: it opens the
+// filter, adds wind and lifts the level, so the sound moves with the reader. `clips` are { url } by key. `button` is the
 // sound switch. `env` is the browser, or a stand-in for the tests.
 export function createMissionAudio({ beds = {}, clips = {}, button = null, env = globalThis } = {}) {
   const Context = env.AudioContext || env.webkitAudioContext;
   const audio = { supported: Boolean(Context), on: false, playing: null, onClip: null };
-  if (!Context) return Object.assign(audio, { setSound() {}, follow() {}, play: async () => 'failed', cue() {}, stop() {} });
+  if (!Context) return Object.assign(audio, { setSound() {}, follow() {}, play: async () => 'failed', cue: () => null, stop() {} });
 
   let ctx = null, bed = null, clipGain = null;
-  let bedId = null, level = 0, current = null;
+  let bedId = null, level = 0, current = null, swell = 0;
   const buffers = new Map(), cued = new Set();
   const stored = () => { try { return env.localStorage.getItem(SOUND_KEY) === 'on'; } catch { return false; } };
   const store = (on) => { try { env.localStorage.setItem(SOUND_KEY, on ? 'on' : 'off'); } catch { /* private mode */ } };
@@ -107,8 +109,11 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, env =
   }
   function tune(spec, seconds = 2.4) {
     for (const { osc, ratio } of bed.voices) glide(osc.frequency, spec.root * ratio, seconds);
-    glide(bed.filter.frequency, spec.bright, seconds);
-    glide(bed.air.gain, spec.air ?? 0, seconds);
+    press(spec, seconds);
+  }
+  function press(spec, seconds) {
+    glide(bed.filter.frequency, spec.bright * (1 + 3 * swell), seconds);
+    glide(bed.air.gain, (spec.air ?? 0) + 0.2 * swell, seconds);
   }
 
   function show() {
@@ -139,11 +144,16 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, env =
   // Call with the story's state whenever it changes; cheap when it has not.
   audio.follow = (state) => {
     const spec = beds[state.id] ?? beds.default ?? null;
-    const next = bedLevel(spec, state);
+    const pressing = clamp01(spec?.swell?.(state.progress) ?? 0);
+    const next = bedLevel(spec, state) * (1 + 0.8 * pressing);
     if (state.id !== bedId && spec) {
       bedId = state.id;
       current = spec;
+      swell = pressing;
       if (ctx) tune(spec);
+    } else if (Math.abs(pressing - swell) > 0.03) {
+      swell = pressing;
+      if (ctx) press(spec, 0.4);
     }
     if (Math.abs(next - level) > 0.02 || (next === 0) !== (level === 0)) {
       level = next;
@@ -208,11 +218,12 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, env =
   };
 
   // Play a clip once per visit, on the story's cue rather than a press: only
-  // with the sound switch on, and never over a clip the reader chose.
+  // with the sound switch on, and never over a clip the reader chose. Returns
+  // play()'s promise, or null when the cue is not taken.
   audio.cue = (key) => {
-    if (!audio.on || !ctx || ctx.state !== 'running' || audio.playing || cued.has(key)) return;
+    if (!audio.on || !ctx || ctx.state !== 'running' || audio.playing || cued.has(key)) return null;
     cued.add(key);
-    audio.play(key);
+    return audio.play(key);
   };
 
   env.document?.addEventListener('visibilitychange', () => {

@@ -118,27 +118,39 @@ test("a recording plays on its button whatever the switch says, one at a time", 
 test("the story cues a recording once, and only with sound on", async () => {
   const { env, button, played } = browser();
   const audio = createMissionAudio({ beds: BEDS, clips, button, env });
-  audio.cue("hello");
+  expect(audio.cue("hello")).toBe(null);
   expect(audio.playing).toBe(null);
   button.click();
-  audio.cue("hello");
+  const cued = audio.cue("hello");
   expect(audio.playing).toBe("hello");
+  // A cue never talks over a clip that is playing.
+  expect(audio.cue("other")).toBe(null);
   await settle();
   played()[0].onended();
-  audio.cue("hello");
+  expect(await cued).toBe("ended");
+  expect(audio.cue("hello")).toBe(null);
   expect(audio.playing).toBe(null);
 });
 
 test("the hum follows the story and is gone below it", () => {
   const at = (id: keyof typeof BEDS, more = {}) => bedLevel(BEDS[id], { progress: 0.5, dim: 0, past: false, ...more });
-  expect(at("jupiter")).toBe(1);
+  expect(at("jupiter")).toBe(0.6);
   expect(at("record")).toBeLessThan(0.5);
   expect(at("jupiter", { dim: 1 })).toBe(0);
   expect(at("jupiter", { past: true })).toBe(0);
   // The last chapter goes quiet as Voyager does.
-  expect(at("future", { progress: 0 })).toBeCloseTo(0.8, 9);
+  expect(at("future", { progress: 0 })).toBeCloseTo(0.7, 9);
   expect(at("future", { progress: 1 })).toBe(0);
   expect(bedLevel(undefined, { progress: 0, past: false })).toBe(0);
+  // Inside a chapter the sound moves with the scroll: a flyby swells to its
+  // closest approach, the launch roars first, the wind rises at the bubble's edge.
+  expect(BEDS.jupiter.swell(0)).toBe(0);
+  expect(BEDS.jupiter.swell(0.5)).toBe(1);
+  expect(BEDS.saturn.swell(1)).toBe(0);
+  expect(BEDS.launch.swell(0)).toBe(1);
+  expect(BEDS.launch.swell(0.5)).toBe(0);
+  expect(BEDS.edge.swell(0.5)).toBe(0);
+  expect(BEDS.edge.swell(0.9)).toBe(1);
   const chapters = [...page.matchAll(/<section class="chapter[^"]*" id="([^"]+)"/g)].map((m) => m[1]);
   expect(Object.keys(BEDS)).toEqual(chapters);
   for (const bed of Object.values(BEDS)) {

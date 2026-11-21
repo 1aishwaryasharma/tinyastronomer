@@ -8,9 +8,9 @@
 import { SPACE } from '/common.bundle.js?v=20261121-1';
 import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-1';
 import { createMissionKit } from '/mission-scene.js?v=20261121-2';
-import { createClipButtons, createMissionAudio } from '/mission-audio.js?v=20261121-1';
+import { createClipButtons, createMissionAudio } from '/mission-audio.js?v=20261121-2';
 import { createChart, createPartPicker, createStory } from '/mission-story.js?v=20261121-2';
-import { BEDS, GREETINGS, PARTS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-2';
+import { BEDS, GREETINGS, PARTS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-3';
 
 const ASSETS = '/assets/missions/voyager-1/';
 const $ = (id) => document.getElementById(id);
@@ -59,9 +59,24 @@ const sound = createMissionAudio({
 });
 $('greetings-box').hidden = $('plasma-box').hidden = !sound.supported;
 createClipButtons($('plasma'), [{ key: 'plasma', label: 'Hear interstellar space' }], sound);
-createClipButtons($('greetings'), GREETINGS, sound, (greeting) => {
+const showGreeting = (greeting) => {
   $('greeting-out').innerHTML = '“' + greeting.said + '” <strong>' + greeting.label + '</strong>';
-});
+};
+createClipButtons($('greetings'), GREETINGS, sound, showGreeting);
+// With sound on, the record plays itself once when the reader reaches it:
+// one greeting after another, until they pick one or scroll on.
+async function playRecord() {
+  for (const greeting of GREETINGS) {
+    const played = sound.cue(greeting.key);
+    if (!played) return;
+    showGreeting(greeting);
+    if (await played !== 'ended') return;
+  }
+}
+const hear = (state) => {
+  sound.follow(state);
+  if (state.id === 'record' && state.progress > 0.12) playRecord();
+};
 
 const drawJupiterChart = createChart($('chart-jupiter'), data.speed.jupiter, { events: [{ day: DAYS.jupiter, label: 'closest approach' }] });
 drawJupiterChart(data.speed.jupiter[0][0]);
@@ -72,9 +87,9 @@ if (kit) {
   startScene(kit);
 } else {
   const story = createStory($('story'), { onChapter: sound.stop });
-  const hear = () => sound.follow(story.read());
-  addEventListener('scroll', hear, { passive: true });
-  hear();
+  const listen = () => hear(story.read());
+  addEventListener('scroll', listen, { passive: true });
+  listen();
 }
 
 function buildCraft(kit) {
@@ -479,7 +494,7 @@ function startScene(kit) {
       if (chapter.id === 'jupiter' || chapter.id === 'cruise' || chapter.id === 'saturn') saturn.load();
     },
     frame(state) {
-      sound.follow(state);
+      hear(state);
       // Light scattered inside the camera when it looked back at the Sun.
       $('sunbeams').style.opacity = state.id === 'portrait' ? (smooth(0.62, 0.9, state.progress) * 0.9).toFixed(3) : 0;
       if (kit.stage === 'system') system.dress(state, lookBack(state));
