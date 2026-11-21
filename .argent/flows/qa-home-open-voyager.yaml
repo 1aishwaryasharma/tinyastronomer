@@ -1,0 +1,36 @@
+steps:
+  - run: ../fragments/boot-electron.yaml
+  - echo: On launch deck. Open the mission deep dives, then Voyager 1.
+  - tap:
+      id: launch-deep-dives
+  - await:
+      timeout: 20000
+      visible:
+        id: dive-voyager
+  - tap:
+      id: dive-voyager
+  - await:
+      timeout: 20000
+      visible:
+        id: mission-header
+  - await:
+      idle: true
+  - echo: Mission script is running. Expect the live distance from Earth in km.
+  - assert:
+      text:
+        in:
+          id: hero-earth-km
+        matches: '^\d{2},\d{3},\d{3},\d{3}$'
+  - echo: The markup ships hours and minutes; only the script adds the seconds.
+  - assert:
+      text:
+        in:
+          id: hero-light
+        matches: '^\d{2} h \d{2} min \d{2} s$'
+  - assert:
+      visible:
+        id: scene-nav-btn
+  - await:
+      hidden:
+        id: launch-title
+      timeout: 10000

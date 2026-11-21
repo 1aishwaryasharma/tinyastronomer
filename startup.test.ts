@@ -84,7 +84,7 @@ test('model loader code is deferred until selection and shared between requests'
   // The GLBs require EXT_meshopt_compression, so the decoder ships with the loader.
   expect(imports).toEqual(['three/addons/loaders/GLTFLoader.js', 'three/addons/libs/meshopt_decoder.module.js']);
   expect(decoders).toEqual([MeshoptDecoder]);
-  expect(models).toEqual(['assets/planet-models/mars.glb', 'assets/planet-models/saturn.glb']);
+  expect(models).toEqual(['/assets/planet-models/mars.glb', '/assets/planet-models/saturn.glb']);
 });
 
 test('a failed model loader import is retried by the next planet', async () => {
@@ -112,7 +112,7 @@ test('a failed model loader import is retried by the next planet', async () => {
   loader.load('saturn', () => {}, (error: unknown) => errors.push(error));
   await new Promise(resolve => setTimeout(resolve, 0));
   expect(errors).toHaveLength(1);
-  expect(models).toEqual(['assets/planet-models/saturn.glb']);
+  expect(models).toEqual(['/assets/planet-models/saturn.glb']);
 });
 
 test('Grand Tour defers Earth detail maps until selection and updates the existing material once', () => {

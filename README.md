@@ -8,6 +8,7 @@ An accessible, responsive collection of interactive solar-system experiences:
 - **Scale Walk** — proportional planetary distances and size analogies
 - **Sky Tonight** — a private local forecast for stars, the Moon, planets, and where to look
 - **Missions** — notable spacecraft and their discoveries
+  - **Voyager 1** (`/missions/voyager-1`), **Cassini** (`/missions/cassini`) and **James Webb** (`/missions/webb`) — scroll-driven 3D stories along each mission's real path
 
 ## Run locally
 
@@ -76,6 +77,39 @@ bunx html-validate public/index.html public/solar-system.html \
   public/seasons.html public/scale-walk.html public/sky-tonight.html \
   public/missions.html
 ```
+
+## Mission deep dives
+
+A mission page is a scrolling story over one fixed 3D canvas, kept in
+`public/missions/`. Scroll position is the timeline: `mission-story.js` turns
+it into the active chapter and its progress, and the page's own script
+(`missions/voyager-1.js`, `cassini.js`, `webb.js`) turns that into a mission
+date and a camera pose. `mission-scene.js` is the 3D kit they share: glow
+markers, wide lines, labels, model loading, part markers and the frame loop.
+`mission-orbits.js` holds the orbital arithmetic and has no DOM, so
+`missions.test.ts` checks it against JPL Horizons directly; each mission has
+its own `missions-<name>.test.ts` beside it. `mission-page.css`
+is the shared layout.
+
+These pages sit in a folder, so they reference everything by absolute path
+(`/common.css`, `/chrome.js`); a relative `./chrome.js` would resolve inside
+`/missions/`. They are chapters of the Missions stop, not journey stops, so
+the Explore menu does not list them.
+
+Each mission's data and model are rebuilt with its own tools:
+
+```sh
+bun tools/build-voyager-trajectory.ts   # JPL Horizons -> trajectory.json
+bun tools/build-cassini-trajectory.ts
+bun tools/build-webb-trajectory.ts
+# spacecraft models and stills: see public/assets/missions/<name>/README.md
+```
+
+The story text is in the HTML and readable without WebGL or JavaScript; the
+canvas is decoration over it. Adding a mission means a new page and script in
+`public/missions/`, its assets under `public/assets/missions/<name>/`, and
+entries in `sitemap.xml`, `_redirects`, and the canonical table in
+`site.test.ts`.
 
 ## URLs
 

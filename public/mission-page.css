@@ -1,0 +1,207 @@
+/* Mission deep-dive pages: a scrolling story over one fixed 3D canvas.
+   Loaded after common.css; the scene script is mission-specific. */
+
+/* The page scrolls on the root. The body must not become a scroll container
+   of its own, or the sticky cards would pin to it and never stick. */
+html { height: auto; overflow-x: clip; overflow-y: auto; overscroll-behavior: auto; }
+body { height: auto; overflow: visible; overscroll-behavior: auto; }
+html { scroll-padding-top: 0; }
+
+/* Until the 3D scene draws (and for readers without WebGL or JavaScript) the
+   canvas band shows the rendered still of the spacecraft. */
+#canvas-container {
+  background: var(--bg) var(--mission-poster, none) center / cover no-repeat;
+  transition: opacity 0.12s linear;
+}
+#canvas-container canvas { touch-action: pan-y; }
+
+.header { background: linear-gradient(to bottom, rgba(5, 8, 16, 0.86), rgba(5, 8, 16, 0)); }
+.crumb {
+  display: inline-block; margin-top: 8px; pointer-events: auto;
+  font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-dim); text-decoration: none;
+}
+.crumb:hover { color: var(--accent); }
+
+/* The loader is a chip, not a curtain: the story is readable while the
+   scene downloads, and a failure notice must not hide it either. */
+.loader.mission-loader {
+  inset: auto auto calc(18px + env(safe-area-inset-bottom, 0px)) 50%;
+  transform: translateX(-50%);
+  padding: 10px 16px; border: 1px solid var(--line); border-radius: 2px;
+  background: var(--panel); max-width: calc(100vw - 32px);
+}
+.mission-loader .loader-text { letter-spacing: 0.2em; text-align: center; line-height: 1.6; }
+.mission-loader .loader-inner { gap: 10px; }
+.mission-loader.loader-failed .loader-text { letter-spacing: 0.08em; text-transform: none; font-size: 12px; }
+
+/* ──── Story column ──── */
+.story { position: relative; z-index: 2; pointer-events: none; }
+.chapter {
+  position: relative; min-height: 240vh;
+  padding: 0 calc(40px + env(safe-area-inset-right, 0px)) 0 calc(40px + env(safe-area-inset-left, 0px));
+}
+.chapter.short { min-height: 150vh; }
+.chapter.long { min-height: 340vh; }
+.card {
+  position: sticky; top: calc(132px + env(safe-area-inset-top, 0px));
+  width: min(400px, 100%); pointer-events: auto;
+  padding: 22px 24px 20px;
+  background: rgba(8, 12, 22, 0.82);
+  backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--line); border-radius: 3px;
+}
+.chapter.right .card { margin-left: auto; }
+.card-kicker {
+  font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--accent);
+}
+.card h2 {
+  margin: 8px 0 12px; font-size: 32px; font-weight: 400; font-style: italic;
+  letter-spacing: -0.01em; line-height: 1.08; text-wrap: balance;
+}
+.card p { font-size: 15.5px; line-height: 1.58; color: var(--ink-dim); font-weight: 300; }
+.card p + p { margin-top: 10px; }
+.card p strong, .card li strong { color: var(--ink); font-weight: 500; }
+.card .fact-callout { font-size: 13.5px; }
+.card .science-note { font-size: 12.5px; }
+
+/* The opening card is a title, not a panel. */
+.chapter.hero .card {
+  top: auto; position: relative; padding: 0; margin-top: 0;
+  background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+  width: min(560px, 100%); padding-top: calc(34vh);
+}
+.hero h2 { font-size: clamp(44px, 7vw, 84px); line-height: 0.98; margin: 10px 0 18px; }
+.hero .lede { font-size: 18px; line-height: 1.5; color: var(--ink); max-width: 30em; }
+.hero-scroll {
+  margin-top: 26px; font-family: 'Fragment Mono', monospace; font-size: 10px;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-dim);
+}
+.hero-scroll::after { content: ' ↓'; color: var(--accent); }
+
+/* Live readouts and stat rows */
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.stats.one { grid-template-columns: 1fr; }
+.stat-label {
+  display: block; font-family: 'Fragment Mono', monospace; font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 3px;
+}
+.stat-value { font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stat-value small { font-size: 12px; color: var(--ink-dim); }
+.stat-value.live { color: var(--accent); }
+.stat-note { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); font-weight: 300; }
+
+/* Part picker (spacecraft anatomy) */
+.parts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.part-btn {
+  min-height: 34px; padding: 6px 10px; cursor: pointer;
+  font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-dim); background: none; border: 1px solid var(--control-border); border-radius: 2px;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.part-btn:hover { color: var(--ink); border-color: var(--ink-dim); }
+.part-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--control-active); }
+.part-detail { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); min-height: 7.4em; }
+.part-detail h3 { font-size: 19px; font-weight: 400; margin-bottom: 4px; }
+.part-detail p { font-size: 14px; }
+
+.chart { display: block; width: 100%; height: 132px; margin-top: 14px; }
+.chart-caption { margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--ink-dim); font-weight: 300; }
+
+/* ──── Fixed overlays ──── */
+.mission-clock {
+  position: fixed; z-index: 3; pointer-events: none;
+  left: 50%; transform: translateX(-50%); bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  text-align: center; white-space: nowrap; font-family: 'Fragment Mono', monospace; font-size: 11px;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); line-height: 1.7;
+  opacity: 0; transition: opacity 0.4s;
+}
+.mission-clock.is-on { opacity: 1; }
+.mission-clock .clock-date { font-family: 'Newsreader', Georgia, serif; font-size: 30px; font-style: italic; letter-spacing: 0; text-transform: none; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.mission-clock b { font-weight: 400; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.scene-labels { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.scene-label {
+  position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform;
+  font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-dim); text-shadow: 0 0 6px var(--bg), 0 0 2px var(--bg);
+}
+.scene-label.is-craft { color: var(--accent); }
+.scene-label.is-event { color: var(--accent-cool); }
+.scene-label.is-home { color: #9fd0ff; }
+.scene-label.is-dim { color: var(--ink-faint); opacity: 0.75; }
+.hotspot {
+  position: absolute; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px;
+  border-radius: 50%; border: 1px solid rgba(244, 197, 96, 0.7); background: rgba(8, 12, 22, 0.55);
+  pointer-events: auto; cursor: pointer; padding: 0; will-change: transform;
+}
+.hotspot::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: var(--accent); }
+.hotspot.is-active { border-color: #fff; box-shadow: 0 0 0 4px rgba(244, 197, 96, 0.25); }
+.hotspot.is-active::after { background: #fff; }
+
+.chapter-rail {
+  position: fixed; z-index: 3; left: calc(14px + env(safe-area-inset-left, 0px)); top: 50%;
+  transform: translateY(-50%); display: flex; flex-direction: column; gap: 2px;
+}
+.chapter-rail a {
+  display: flex; align-items: center; gap: 8px; height: 22px; text-decoration: none;
+  font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: transparent; transition: color 0.2s;
+}
+.chapter-rail a::before {
+  content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%;
+  border: 1px solid var(--ink-faint); transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+.chapter-rail a[aria-current]::before { background: var(--accent); border-color: var(--accent); transform: scale(1.3); }
+.chapter-rail a:hover, .chapter-rail a:focus-visible { color: var(--ink); }
+.chapter-rail a span { padding: 3px 6px; background: rgba(5, 8, 16, 0.8); border-radius: 2px; }
+.chapter-rail a:not(:hover):not(:focus-visible) span { background: none; }
+
+/* ──── Reading matter under the story ──── */
+.after-story {
+  position: relative; z-index: 2; background: var(--bg);
+  padding: 72px calc(28px + env(safe-area-inset-right, 0px)) calc(80px + env(safe-area-inset-bottom, 0px)) calc(28px + env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--line);
+}
+.after-story > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+.after-story .guide { padding-left: 0; padding-right: 0; }
+.timeline { list-style: none; margin-top: 22px; padding: 0; border-left: 1px solid rgba(244, 197, 96, 0.3); }
+.timeline li { position: relative; padding: 0 0 18px 22px; font-size: 16px; line-height: 1.5; color: var(--ink-dim); font-weight: 300; }
+.timeline li::before { content: ''; position: absolute; left: -4px; top: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.timeline time { display: block; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+.foot { text-align: center; margin-top: 44px; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); line-height: 2.2; }
+.foot-next { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; padding-bottom: 2px; }
+.foot-next:hover { color: #ffd47a; border-color: rgba(244, 197, 96, 0.4); }
+
+@media (max-width: 860px) {
+  .chapter { padding: 0 calc(12px + env(safe-area-inset-right, 0px)) 0 calc(12px + env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; justify-content: flex-end; }
+  /* The card rides the bottom edge so the scene keeps the upper half. */
+  .card {
+    top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: 100%;
+    padding: 16px 16px 14px; max-height: 50svh; overflow-y: auto;
+  }
+  .chapter.right .card { margin-left: 0; }
+  .card h2 { font-size: 24px; margin: 6px 0 8px; }
+  .card p { font-size: 14.5px; line-height: 1.5; }
+  .chapter.hero { justify-content: flex-start; }
+  .chapter.hero .card { padding-top: 56svh; max-height: none; overflow: visible; }
+  .chart-caption { display: none; }
+  .hero h2 { font-size: 46px; }
+  .hero .lede { font-size: 16px; }
+  .stat-value { font-size: 17px; }
+  .chapter-rail { display: none; }
+  .mission-clock {
+    left: calc(16px + env(safe-area-inset-left, 0px)); transform: none; bottom: auto;
+    top: calc(116px + env(safe-area-inset-top, 0px)); text-align: left; font-size: 10px;
+  }
+  .mission-clock .clock-date { font-size: 22px; }
+  .part-btn { min-height: 40px; }
+  .part-detail { min-height: 0; }
+  .chart { height: 104px; }
+  .after-story { padding-top: 48px; padding-left: calc(16px + env(safe-area-inset-left, 0px)); padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #canvas-container, .mission-clock { transition: none; }
+}

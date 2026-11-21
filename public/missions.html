@@ -76,6 +76,23 @@
   }
   .card .source:hover { color: var(--accent); }
   .lede .science-note { max-width: 560px; margin: 22px auto 0; text-align: left; }
+  /* Mission deep dives: the three missions with a 3D story of their own. */
+  .dives { margin: 0 0 44px; scroll-margin-top: 120px; }
+  .dives .info-label { color: var(--accent); text-align: center; }
+  .dives h2 { font-size: 28px; font-weight: 400; font-style: italic; text-align: center; margin: 8px 0 20px; }
+  .dive-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .dive {
+    position: relative; display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 3px;
+    background: var(--panel); color: var(--ink); text-decoration: none;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .dive:hover { transform: translateY(-4px); border-color: rgba(244, 197, 96, 0.5); }
+  .dive img { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: cover; }
+  .dive-text { display: block; padding: 14px 18px 16px; }
+  .dive-name { display: block; font-size: 22px; font-style: italic; }
+  .dive-tag { display: block; margin-top: 4px; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-warm); }
+  .dive-tag::after { content: ' →'; color: var(--accent); }
+  #dive-voyager-km { font-variant-numeric: tabular-nums; }
   /* Phones fold each card to its hook behind Read more (added by the script,
      so a no-JS read still sees every card in full). */
   .more-btn { display: none; }
@@ -143,6 +160,24 @@
       <p class="science-sources"><span>Source index</span><a href="https://science.nasa.gov/missions/">NASA Missions</a><span>Reviewed Aug 16, 2026</span></p>
     </details>
   </div>
+  <section class="dives" id="deep-dives" aria-labelledby="dives-title">
+    <div class="info-label">— New · Fly along in 3D —</div>
+    <h2 id="dives-title">Mission deep dives</h2>
+    <div class="dive-row">
+      <a class="dive" id="dive-voyager" href="/missions/voyager-1">
+        <img src="assets/missions/voyager-1/poster-800.webp" alt="" width="800" height="500">
+        <span class="dive-text"><span class="dive-name">Voyager 1</span><span class="dive-tag"><span id="dive-voyager-km">25,320,225,956</span> km out</span></span>
+      </a>
+      <a class="dive" id="dive-cassini" href="/missions/cassini">
+        <img src="assets/missions/cassini/poster-800.webp" alt="" width="800" height="500">
+        <span class="dive-text"><span class="dive-name">Cassini</span><span class="dive-tag">Thirteen years at Saturn</span></span>
+      </a>
+      <a class="dive" id="dive-webb" href="/missions/webb">
+        <img src="assets/missions/webb/poster-800.webp" alt="" width="800" height="500">
+        <span class="dive-text"><span class="dive-name">James Webb</span><span class="dive-tag">The unfolding telescope</span></span>
+      </a>
+    </div>
+  </section>
   <div class="grid">
     <article class="card" style="--mission-accent: #6ab0ff">
       <span class="icon" aria-hidden="true">🛰️</span><span class="yr">Launched 1977</span>
@@ -153,6 +188,7 @@
         <div class="wow"><span class="lbl">✦ Wow</span>Voyager 1 is so far away that its faint radio whisper takes <b>nearly 24 hours</b> to reach Earth.</div>
         <div class="live"><span class="lbl">⟡ Live estimate</span>Voyager 1 is about <b><span id="voyager-dist">25,320,225,956</span> km</b> from the Sun. This linear estimate starts from a January 2026 reference and adds about 16.9 km each second.</div>
         <a class="source" href="https://science.nasa.gov/mission/voyager/where-are-voyager-1-and-voyager-2-now/">NASA mission source ↗</a>
+        <a class="go" href="/missions/voyager-1">Fly Voyager 1's whole journey in 3D →</a>
         <a class="go" href="/solar-system#neptune">Visit Neptune, its last flyby →</a>
       </div>
     </article>
@@ -175,6 +211,7 @@
       <div class="more" id="more-webb">
         <div class="wow"><span class="lbl">✦ Wow</span>Webb can catch light that left its stars <b>over 13 billion years ago</b>.</div>
         <a class="source" href="https://science.nasa.gov/mission/webb/">NASA mission source ↗</a>
+        <a class="go" href="/missions/webb">Watch Webb unfold in 3D →</a>
         <a class="go" href="/solar-system">Tour the neighbourhood Webb looks beyond →</a>
       </div>
     </article>
@@ -186,6 +223,7 @@
       <div class="more" id="more-cassini">
         <div class="wow"><span class="lbl">✦ Wow</span>Cassini found plumes of <b>water vapour and ice grains</b> spraying from fractures near Enceladus's south pole.</div>
         <a class="source" href="https://science.nasa.gov/mission/cassini/">NASA mission source ↗</a>
+        <a class="go" href="/missions/cassini">Fly Cassini's whole mission in 3D →</a>
         <a class="go" href="/solar-system#saturn">Visit Saturn and its rings →</a>
       </div>
     </article>
@@ -300,6 +338,7 @@ import { SPACE } from './chrome.js?v=20261008-1';
 // Live Voyager 1 distance: a linear estimate from a recent epoch. The probe
 // recedes at ~16.9 km/s, so the last digits visibly climb every second.
 const voyagerDist = document.getElementById('voyager-dist');
+const diveDist = document.getElementById('dive-voyager-km');
 const EPOCH = Date.UTC(2026, 0, 1);
 // JPL Horizons heliocentric vector for Voyager 1 on 2026-01-01, rounded radial
 // speed. This remains an explicitly labelled estimate. The markup ships the
@@ -308,7 +347,7 @@ const KM_AT_EPOCH = 25320225956;
 const KM_PER_SEC = 16.8825;
 const tick = () => {
   const km = KM_AT_EPOCH + ((Date.now() - EPOCH) / 1000) * KM_PER_SEC;
-  voyagerDist.textContent = Math.round(km).toLocaleString('en-US');
+  voyagerDist.textContent = diveDist.textContent = Math.round(km).toLocaleString('en-US');
 };
 tick();
 setInterval(tick, 1000);
