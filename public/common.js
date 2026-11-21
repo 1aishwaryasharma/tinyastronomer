@@ -731,11 +731,14 @@ float fbm(vec3 p) {
   // `loader-failed` marks a notice as up and keeps the loader visible (see
   // common.css) whether or not loading has finished; `aria-hidden` is the
   // one thing a notice and createLoader's hide settle between them. The
-  // first notice wins; scene-load-failure.js
-  // honours the same marker. Returns a function that takes the notice down
-  // again, or null if none was shown.
+  // first notice wins, unless it was shown as `passing` (one that will take
+  // itself down): that one gives way to any later notice.
+  // scene-load-failure.js honours the same marker. Returns a function that
+  // takes the notice down again, or null if none was shown.
+  let clearPassingNotice = null;
   function showSceneNotice(message, opts) {
     const loader = document.getElementById('loader');
+    if (clearPassingNotice) clearPassingNotice();
     if (!loader || loader.classList.contains('loader-failed')) return null;
     const text = loader.querySelector('.loader-text');
     const bar = loader.querySelector('.loader-bar');
@@ -754,7 +757,11 @@ float fbm(vec3 p) {
       reload.addEventListener('click', () => location.reload());
       text.parentNode.appendChild(reload);
     }
-    return () => {
+    let up = true;
+    const clear = () => {
+      if (!up) return;
+      up = false;
+      if (clearPassingNotice === clear) clearPassingNotice = null;
       if (reload) reload.remove();
       if (text) text.textContent = before;
       if (bar) bar.hidden = false;
@@ -762,6 +769,8 @@ float fbm(vec3 p) {
       loader.classList.remove('loader-failed');
       if (loader.classList.contains('hidden')) loader.setAttribute('aria-hidden', 'true');
     };
+    if (opts && opts.passing) clearPassingNotice = clear;
+    return clear;
   }
 
   function failWebGL(err) {
@@ -1164,6 +1173,7 @@ float fbm(vec3 p) {
     revealRailButton,
     seededRandom,
     setText,
+    showSceneNotice,
     wirePlayPause
   };
 })();

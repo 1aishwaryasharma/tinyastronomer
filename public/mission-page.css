@@ -23,6 +23,19 @@ html { scroll-padding-top: 0; }
 }
 .crumb:hover { color: var(--accent); }
 
+/* The sound switch; mission-audio.js shows it where the browser can play. */
+.sound-toggle {
+  margin: 6px 0 0 14px; min-height: 28px; padding: 4px 10px; cursor: pointer; pointer-events: auto;
+  font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-dim); background: rgba(8, 12, 22, 0.6); border: 1px solid var(--control-border); border-radius: 2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.sound-toggle:hover { color: var(--ink); border-color: var(--ink-dim); }
+.sound-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+/* Remembered as on, but silent until the reader touches the page. */
+.sound-toggle[data-waiting="true"] { color: var(--bg); background: var(--accent); animation: sound-waiting 1.6s ease-in-out infinite; }
+@keyframes sound-waiting { 50% { box-shadow: 0 0 0 5px rgba(244, 197, 96, 0.25); } }
+
 /* The loader is a chip, not a curtain: the story is readable while the
    scene downloads, and a failure notice must not hide it either. */
 .loader.mission-loader {
@@ -106,8 +119,32 @@ html { scroll-padding-top: 0; }
 .part-detail h3 { font-size: 19px; font-weight: 400; margin-bottom: 4px; }
 .part-detail p { font-size: 14px; }
 
+/* A card's one call to action, and the line that answers it: the opening
+   card's invitation to turn sound on, and what a recording is while it plays. */
+.hello-btn {
+  margin-top: 14px; min-height: 44px; padding: 0 16px; cursor: pointer;
+  font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--bg); background: var(--accent); border: 0; border-radius: 2px;
+}
+.hello-btn:hover { background: #ffd47a; }
+.hello-out { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--ink-dim); min-height: 3em; }
+.hello-out strong { color: var(--ink); font-weight: 500; }
+
+/* Recordings a chapter can play */
+.clip-box { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.clip-box .parts { margin-top: 0; }
+.clip-box .hello-out + .parts { margin-top: 10px; }
+.card .clip-note { font-size: 12.5px; line-height: 1.5; }
+.clip-note .science-kind { margin-right: 6px; }
+.clip-credit { color: var(--ink-faint); white-space: nowrap; }
+/* The second value hides the glyph from screen readers where supported. */
+.clip-btn::before { content: '▶ '; content: '▶ ' / ''; }
+.clip-btn[aria-pressed="true"]::before { content: '■ '; content: '■ ' / ''; }
+
 .chart { display: block; width: 100%; height: 132px; margin-top: 14px; }
 .chart-caption { margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--ink-dim); font-weight: 300; }
+/* A card that also carries recordings has no room for it on a short screen. */
+@media (max-height: 920px) { .card:has(.clip-box:not([hidden])) .chart-caption { display: none; } }
 
 /* ──── Fixed overlays ──── */
 .mission-clock {
@@ -196,7 +233,17 @@ html { scroll-padding-top: 0; }
     top: calc(116px + env(safe-area-inset-top, 0px)); text-align: left; font-size: 10px;
   }
   .mission-clock .clock-date { font-size: 22px; }
-  .part-btn { min-height: 40px; }
+  /* A notice that stays up would sit on the card's buttons down there. */
+  .loader.mission-loader.loader-failed {
+    bottom: auto; top: calc(180px + env(safe-area-inset-top, 0px));
+    left: calc(16px + env(safe-area-inset-left, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); transform: none; max-width: none;
+  }
+  .part-btn, .sound-toggle { min-height: 40px; }
+  /* Under the Explore button, clear of the mission clock on the left. */
+  .sound-toggle {
+    position: fixed; margin: 0; right: calc(18px + env(safe-area-inset-right, 0px));
+    top: calc(68px + env(safe-area-inset-top, 0px));
+  }
   .part-detail { min-height: 0; }
   .chart { height: 104px; }
   .after-story { padding-top: 48px; padding-left: calc(16px + env(safe-area-inset-left, 0px)); padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
@@ -204,4 +251,5 @@ html { scroll-padding-top: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   #canvas-container, .mission-clock { transition: none; }
+  .sound-toggle[data-waiting="true"] { animation: none; }
 }

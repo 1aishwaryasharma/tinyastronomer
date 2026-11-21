@@ -26,10 +26,13 @@
      kit.light({ sun, target, sunIntensity, fill, sky })   set the three lights
      kit.sunLight, kit.stars               the Sun's DirectionalLight (for shadows); the starfield
    Overlays
-     kit.place(key, text, world, { cls, dx, dy, alpha })   a label, for this frame; it hangs
-                                           left of its point rather than run off screen
+     kit.place(key, text, world, { cls, dx, dy, alpha, rank })   a label, for this frame; it hangs
+                                           left of its point rather than run off screen.
+                                           Ranked labels fade out for a higher-ranked one
+                                           they would print over; see yieldingLabels
      kit.setClock(date, a, b)              the mission clock's three lines
-     kit.loadModel(url, onLoad)            the spacecraft; drives the loader chip
+     kit.loadModel(url, onLoad)            the spacecraft; drives the loader chip, which
+                                           says so if the model cannot load
      kit.addHotspots(model, picker)        a marker per `Hotspot_<key>` node
      kit.showHotspots()                    show them, for this frame
      kit.anchors                           Map of part key → that node
@@ -43,14 +46,14 @@
    State, read-only: kit.time, kit.stage, kit.wide, kit.reduced
    kit.run({ sets, chapters, studio, frame, onChapter })   start the story; see below */
 import * as THREE from 'three';
-import { SPACE } from './common.bundle.js?v=20260909-2';
+import { SPACE } from './common.bundle.js?v=20261121-3';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
-  clamp01, equatorialToEcliptic, indexAt, lerp, planetOrbit, planetPosition,
-} from './mission-orbits.js?v=20261121-1';
-import { createStory, follow } from './mission-story.js?v=20261121-1';
+  approach, clamp01, equatorialToEcliptic, indexAt, lerp, planetOrbit, planetPosition,
+} from './mission-orbits.js?v=20261121-2';
+import { createStory, follow, yieldingLabels } from './mission-story.js?v=20261121-3';
 import { createPlanetModelLoader } from './planet-models.js?v=20261121-1';
 
 const FOV = 35;
@@ -68,6 +71,10 @@ const LAYOUTS = {
   phoneClock: { shift: [0, 0.15], free: { across: 0.42, up: 0.1, down: 0.12 } },
 };
 const GOLD = 0xf4c560;
+// How fast a label that has to give way fades out, and back, per second.
+const LABEL_FADE = 5;
+// How long the "model could not load" notice stays up.
+const MODEL_NOTICE_MS = 10000;
 const UP = new THREE.Vector3(0, 1, 0);
 const PLANET_COLORS = {
   mercury: 0x9a9088, venus: 0xe6cf9a, earth: 0x6ab0ff, mars: 0xd0674a,
@@ -241,6 +248,10 @@ export function createMissionKit(sceneOptions = {}) {
       invalidate();
     }, (error) => {
       console.warn('Model unavailable: ' + url, error);
+      // The story reads without the spacecraft, so this is a passing notice
+      // in the loader chip, not a failure of the page.
+      const clear = SPACE.showSceneNotice('3D model unavailable. The story carries on.', { passing: true });
+      if (clear) setTimeout(clear, MODEL_NOTICE_MS);
       hideLoader();
     });
   }
@@ -303,17 +314,20 @@ export function createMissionKit(sceneOptions = {}) {
     return [(projected.x * 0.5 + 0.5) * size.x, (projected.y * -0.5 + 0.5) * size.y];
   }
   // Call every frame the label should show; one not placed is hidden.
-  function place(key, text, world, { cls = '', dx = 10, dy = -6, alpha = 1 } = {}) {
+  // `rank` (any number) opts a label into giving way: it fades out while a
+  // higher-ranked label would print over it. Without one it never moves.
+  function place(key, text, world, { cls = '', dx = 10, dy = -6, alpha = 1, rank = null } = {}) {
     let label = labels.get(key);
     if (!label) {
-      label = { el: document.createElement('span'), world: new THREE.Vector3(), width: 0, wanted: false };
+      label = { el: document.createElement('span'), world: new THREE.Vector3(), width: 0, height: 0, x: 0, y: 0, fade: 1, wanted: false };
       labelLayer.appendChild(label.el);
       labels.set(key, label);
     }
-    Object.assign(label, { text, cls, dx, dy, alpha, wanted: alpha > 0.02 });
+    Object.assign(label, { text, cls, dx, dy, alpha, rank, wanted: alpha > 0.02 });
     label.world.copy(world);
   }
-  function drawLabels() {
+  function drawLabels(dt, jump) {
+    const shown = [];
     for (const label of labels.values()) {
       const at = label.wanted && project(label.world);
       label.wanted = false;
@@ -323,11 +337,19 @@ export function createMissionKit(sceneOptions = {}) {
       if (label.text !== label.el.textContent) {
         label.el.textContent = label.text;
         label.width = label.el.offsetWidth;
+        label.height = label.el.offsetHeight;
       }
-      label.el.style.opacity = label.alpha;
-      const x = at[0] + label.dx + label.width > size.x ? at[0] - label.dx - label.width : at[0] + label.dx;
-      label.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + (at[1] + label.dy).toFixed(1) + 'px)';
+      label.x = at[0] + label.dx + label.width > size.x ? at[0] - label.dx - label.width : at[0] + label.dx;
+      label.y = at[1] + label.dy;
+      shown.push(label);
     }
+    const gives = yieldingLabels(shown.map((l) => ({ x: l.x, y: l.y, w: l.width, h: l.height, rank: l.rank })));
+    shown.forEach((label, i) => {
+      const target = gives.has(i) ? 0 : 1;
+      label.fade = jump ? target : approach(label.fade, target, dt * LABEL_FADE);
+      label.el.style.opacity = label.alpha * label.fade;
+      label.el.style.transform = 'translate(' + label.x.toFixed(1) + 'px,' + label.y.toFixed(1) + 'px)';
+    });
   }
 
   /* ── Part markers: one button per `Hotspot_<key>` node in a model ── */
@@ -477,7 +499,8 @@ export function createMissionKit(sceneOptions = {}) {
       chapter.play(state.progress, state);
       if (!kit.wide && chapter.phoneBack) pose.position.sub(pose.target).multiplyScalar(chapter.phoneBack).add(pose.target);
 
-      const k = follow(dt, cut || reduced);
+      const jumped = cut || reduced;
+      const k = follow(dt, jumped);
       cut = false;
       current.position.lerp(pose.position, k);
       current.target.lerp(pose.target, k);
@@ -496,7 +519,7 @@ export function createMissionKit(sceneOptions = {}) {
       for (const sprite of sprites) sprite.scale.setScalar(sprite.userData.fraction * lens);
       stars.points.position.copy(camera.position);
       stars.uniforms.uTime.value = kit.time;
-      drawLabels();
+      drawLabels(dt, jumped);
       drawHotspots();
       container.style.opacity = (1 - state.dim).toFixed(3);
       labelLayer.style.opacity = (1 - state.dim).toFixed(3);

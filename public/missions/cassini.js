@@ -10,13 +10,13 @@
    each chapter turns progress into a mission date and a camera pose. Every
    position Cassini or Huygens takes comes from trajectory.json and tour.bin
    (JPL Horizons). */
-import { SPACE } from '/common.bundle.js?v=20260909-2';
+import { SPACE } from '/common.bundle.js?v=20261121-3';
 import {
   clockTime, formatDate, formatLightTime, lerp, planetPosition, smooth, unpackRows,
-} from '/mission-orbits.js?v=20261121-1';
-import { createMissionKit } from '/mission-scene.js?v=20261121-1';
-import { createChart, createPartPicker } from '/mission-story.js?v=20261121-1';
-import { PARTS, SATURN, createFlight } from '/missions/cassini-mission.js?v=20261121-1';
+} from '/mission-orbits.js?v=20261121-2';
+import { createMissionKit } from '/mission-scene.js?v=20261121-4';
+import { createChart, createPartPicker } from '/mission-story.js?v=20261121-3';
+import { PARTS, SATURN, createFlight } from '/missions/cassini-mission.js?v=20261121-2';
 
 const ASSETS = '/assets/missions/cassini/';
 const $ = (id) => document.getElementById(id);
@@ -154,7 +154,9 @@ function buildSystem(kit) {
   const marks = flight.flybys.map((flyby) => ({ flyby, dot: addGlow(group, 0x6ab0ff, 0.012, 3) }));
   for (const mark of marks) kit.E(mark.flyby.at, mark.dot.position);
   const focus = new kit.THREE.Vector3();
-  const name = (planet, text, day, options) => place(planet, text, planets.dots.get(planet).position, { ...options, alpha: flight.nameTagAlpha(planet, day) });
+  // Where two tags would print over each other, the lower rank fades: a
+  // planet's name gives way to a flyby tag, and both to Cassini's.
+  const name = (planet, text, day, options) => place(planet, text, planets.dots.get(planet).position, { ...options, alpha: flight.nameTagAlpha(planet, day), rank: 1 });
   return {
     group,
     play(p) {
@@ -165,7 +167,7 @@ function buildSystem(kit) {
       planets.moveTo(ms);
       kit.orbit(focus.copy(cassini).multiplyScalar(0.42), -0.5 + p * 0.9, lerp(1.05, 0.72, p), 3.6 + sunAu * 2.3);
       kit.setClock(formatDate(ms), '<b>' + sunAu.toFixed(2) + '</b> AU from the Sun', '<b>' + kmPerSec.toFixed(1) + '</b> km/s');
-      place('cassini', 'Cassini', cassini, { cls: 'is-craft', dy: -18 });
+      place('cassini', 'Cassini', cassini, { cls: 'is-craft', dy: -18, rank: 3 });
       name('earth', 'Earth', day, { cls: 'is-home' });
       name('venus', 'Venus', day, { dy: 8 });
       if (!inner) {
@@ -175,7 +177,7 @@ function buildSystem(kit) {
       for (const { flyby, dot } of marks) {
         dot.visible = day >= flyby.day;
         // The second Venus tag sits above its mark, clear of the first's.
-        if (flight.flybyTagged(flyby, day)) place('fly-' + flyby.key, flyby.text, dot.position, { cls: 'is-event', dx: 12, dy: flyby.key === 'venus2' ? -20 : 6 });
+        if (flight.flybyTagged(flyby, day)) place('fly-' + flyby.key, flyby.text, dot.position, { cls: 'is-event', dx: 12, dy: flyby.key === 'venus2' ? -20 : 6, rank: 2 });
       }
       drawCruiseChart(day);
     },
@@ -422,7 +424,9 @@ function buildTitan(kit, pole) {
       if (landed) {
         // Pull back from the landing site to take in Cassini, which is far
         // off by now: the aim and the distance have to move together.
-        const out = smooth(0, 0.75, after);
+        // A phone's narrow slice needs the pull-back done sooner, so Cassini
+        // is in view before the card rises over Titan.
+        const out = smooth(0, kit.wide ? 0.75 : 0.45, after);
         focus.copy(here).multiplyScalar(0.75).lerp(above.copy(ship).multiplyScalar(0.42), out);
         orbit(focus, azimuth - 0.05 + after * 0.15, lerp(0.22, 0.3, out), lerp(5.4, 62, out));
       } else {

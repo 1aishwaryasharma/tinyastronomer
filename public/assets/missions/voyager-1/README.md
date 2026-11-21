@@ -1,4 +1,4 @@
-# Voyager 1 spacecraft model and stills
+# Voyager 1 spacecraft model, stills and recordings
 
 `voyager.glb`, `og-cover.png`, `poster.webp` and `poster-800.webp` are built by
 `tools/build-voyager-model.py` from NASA's own Voyager model. (`trajectory.json`
@@ -140,3 +140,85 @@ one hard Sun, a weak blue fill and a rim light, composited over a flat
 | `og-cover.png` | 216 KB | 1200 x 630 |
 | `poster.webp` | 40 KB | 1600 x 1000 |
 | `poster-800.webp` | 17 KB | 800 x 500 |
+
+## Recordings (`audio/`)
+
+Built by `tools/build-voyager-audio.ts` from NASA and University of Iowa originals. Nothing is
+changed but length, level and encoding (mono MP3).
+
+- `greeting-<language>.mp3`: ten of the Golden Record's fifty-five spoken
+  greetings, each cut from the single "Greetings in 55 Languages" track.
+  - NASA's page, with the translations the site quotes:
+    <https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/>.
+    NASA plays the track there through a SoundCloud embed and offers no file.
+  - File used: the same track as held by Wikimedia Commons,
+    `https://commons.wikimedia.org/wiki/File:Voyager_Golden_Record_-_Greetings_In_55_Languages.mp3`
+    (6,366,073 bytes, SHA-256
+    `72e19421515a4ee1debbd5595c90140a739e300805443303d1b485be73cd3630`).
+    NASA also offers the English greeting as a download:
+    <https://science.nasa.gov/resource/sounds-of-mars-hello-from-the-children-of-planet-earth/>.
+  - Credit on the page: NASA/JPL-Caltech, 1977. The greetings were recorded
+    at Cornell University by volunteer speakers.
+  - Each cut was checked by transcribing it and comparing the words with the
+    greeting the record's documentation gives for that language.
+  - **Rights: used under the licence NASA publishes them with.** NASA's
+    verified SoundCloud account offers each greeting as its own track,
+    marked Creative Commons Attribution-NonCommercial (`cc-by-nc`) and
+    downloadable: <https://soundcloud.com/nasa/sets/golden-record-greetings-to-the>.
+    All ten languages used here were checked on 2026-11-21. That licence
+    asks for three things, and the site meets them: credit (NASA/JPL-Caltech
+    beside the buttons), a pointer to the licence with a note that the audio
+    was changed (the page's Sources list says "shortened here"; the clips are
+    trimmed and re-encoded, nothing else), and non-commercial use (the site
+    is free, with no advertising or sales; if that ever changes, this needs
+    looking at again).
+  - What that does not settle: who owned the 1977 recordings. The speakers
+    were not federal employees and no release or assignment is published, so
+    this is not relied on as public domain, whatever the Commons tag says.
+    Also on record: NASA says it obtained releases for what it presents
+    online (<https://science.nasa.gov/mission/voyager/frequently-asked-questions/>),
+    and the Library of Congress presents the same recordings "courtesy of
+    the NASA Jet Propulsion Laboratory". The file the clips were cut from is
+    the Commons copy of the same NASA track, not a SoundCloud download.
+  - If a rights holder objects, remove `greeting-*.mp3`, the `record` entry
+    of `RECORDINGS` and the greeting assertions in `mission-audio.test.ts`;
+    the page's Sources list still links to NASA's greetings page.
+- `plasma-waves.mp3`: twelve seconds from the soundtrack of PIA17045, "Voyager
+  Captures Sounds of Interstellar Space",
+  <https://science.nasa.gov/photojournal/voyager-captures-sounds-of-interstellar-space>.
+  File used:
+  `https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia17/pia17045/PIA17045_20130906-640.mp4`
+  (3,532,551 bytes, SHA-256
+  `fcdec8d93dacfbe61d4282fff1f3dc896a4cbce0849e64838aff35b6287c3bdf`).
+  Credit: NASA/JPL-Caltech/University of Iowa. It is plasma-wave data from
+  October 2012 to May 2013 played at its own frequencies with the time
+  compressed, not a sound recording, and the page says so.
+- Four more excerpts of what Voyager 1's plasma wave instrument picked up,
+  from the University of Iowa's Radio and Plasma Wave Group, which built it:
+  <https://space-audio.org/>. All four are Voyager 1's own data.
+
+  | File | Source file | What and when | SHA-256 of the source |
+  | --- | --- | --- | --- |
+  | `jupiter-lightning.mp3` | `https://space-audio.org/sounds/JupiterWhistlers/jwhist.mp3` | Whistlers from lightning, Jupiter flyby, March 1979 | `1ab57a4d6e1ec859107c19abe7b8d3bf27c0f31ba60e2639ede04fb8adf8acba` |
+  | `jupiter-chorus.mp3` | `https://space-audio.org/sounds/JupiterChorus/jov-chor.mp3` | Chorus in the radiation belts, 5 March 1979 | `122c90b25b4806364f9411c56c3a298d674841a124b0dafb9e25a253beb06505` |
+  | `jupiter-bow-shock.mp3` | `https://space-audio.org/sounds/JupiterBowShock/jovbow.mp3` | Bow shock crossing on approach, 1 March 1979 | `b5a2801d398bd101cfc62cb8deffc84fe8c41d5295f413d1a1e1fa8219df8683` |
+  | `termination-shock.mp3` | `https://space.physics.uiowa.edu/space-audio/voyager/termination-shock/vgertermshock4.wav` | Plasma oscillations before the termination shock, 18:00 to 21:00 on 15 December 2004, compressed to six seconds | `4e0f2fe9158be96d1e492bb7eb231730d172373f11235171827a033d0073c15c` |
+
+  Licence: Creative Commons Attribution 4.0 International
+  (<https://space-audio.org/citation.html>), which asks for the credit
+  "Original space audio recordings provided courtesy of NASA and The
+  University of Iowa." The page credits them beside each set of buttons and
+  links to space-audio.org in its sources. These too are electric waves played
+  through a speaker, not sound.
+
+The Golden Record's music is a different matter: it belongs to its performers
+and publishers, and none of it is used here.
+
+Rebuild, with ffmpeg on PATH and the six source files downloaded into one
+folder outside the repository, under the names the script lists:
+
+    bun tools/build-voyager-audio.ts /tmp/voyager-audio
+
+The fifteen files total about 690 KB. None is fetched until it plays: on its
+button, or, with Sound on, when the story reaches its moment. The page makes
+no sound of its own: there is no background track.

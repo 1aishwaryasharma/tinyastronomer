@@ -5,11 +5,12 @@
    Scroll position picks the chapter and its progress (mission-story.js);
    each chapter turns progress into a mission date and a camera pose. Every
    position Voyager takes comes from trajectory.json (JPL Horizons). */
-import { SPACE } from '/common.bundle.js?v=20260909-2';
-import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-1';
-import { createMissionKit } from '/mission-scene.js?v=20261121-1';
-import { createChart, createPartPicker } from '/mission-story.js?v=20261121-1';
-import { PARTS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-1';
+import { SPACE } from '/common.bundle.js?v=20261121-3';
+import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-2';
+import { createMissionKit } from '/mission-scene.js?v=20261121-4';
+import { mountMissionSound } from '/mission-audio.js?v=20261121-9';
+import { createChart, createPartPicker, followStory } from '/mission-story.js?v=20261121-3';
+import { PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-9';
 
 const ASSETS = '/assets/missions/voyager-1/';
 const $ = (id) => document.getElementById(id);
@@ -47,12 +48,16 @@ $('hello-btn').addEventListener('click', () => {
 
 const picker = createPartPicker(PARTS);
 
+const sound = mountMissionSound({ recordings: RECORDINGS, assets: ASSETS });
+
 const drawJupiterChart = createChart($('chart-jupiter'), data.speed.jupiter, { events: [{ day: DAYS.jupiter, label: 'closest approach' }] });
 drawJupiterChart(data.speed.jupiter[0][0]);
 
 /* ──── 3D scene ──── */
 const kit = createMissionKit();
+// Sound follows the story with or without the 3D scene.
 if (kit) startScene(kit);
+else followStory($('story'), sound.follow);
 
 function buildCraft(kit) {
   const craft = new kit.THREE.Group();
@@ -394,9 +399,11 @@ function systemChapters(kit, system) {
           place('voyager', 'Voyager 1', voyager, { ...VOYAGER, alpha: 1 - eye * 2 });
         } else {
           const alpha = smooth(0.6, 0.68, p);
-          for (const name of ['venus', 'jupiter', 'saturn', 'uranus', 'neptune']) place(name, titled(name), dot(name), { cls: 'is-dim', alpha });
-          place('earth', 'Earth · less than one pixel', dot('earth'), { cls: 'is-home', dx: 12, alpha });
-          place('sun', 'The Sun', ORIGIN, { cls: 'is-dim', dx: 14, dy: 16, alpha });
+          // Earth is the point of the picture: where names would print over
+          // each other near the Sun, the others give way to it.
+          for (const name of ['venus', 'jupiter', 'saturn', 'uranus', 'neptune']) place(name, titled(name), dot(name), { cls: 'is-dim', alpha, rank: 1 });
+          place('earth', 'Earth · less than one pixel', dot('earth'), { cls: 'is-home', dx: 12, alpha, rank: 3 });
+          place('sun', 'The Sun', ORIGIN, { cls: 'is-dim', dx: 14, dy: 16, alpha, rank: 2 });
         }
       },
     },
@@ -454,6 +461,7 @@ function startScene(kit) {
       if (chapter.id === 'jupiter' || chapter.id === 'cruise' || chapter.id === 'saturn') saturn.load();
     },
     frame(state) {
+      sound.follow(state);
       // Light scattered inside the camera when it looked back at the Sun.
       $('sunbeams').style.opacity = state.id === 'portrait' ? (smooth(0.62, 0.9, state.progress) * 0.9).toFixed(3) : 0;
       if (kit.stage === 'system') system.dress(state, lookBack(state));

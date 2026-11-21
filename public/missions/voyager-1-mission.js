@@ -2,7 +2,7 @@
    can hold it to JPL Horizons and to the spacecraft model directly. */
 import {
   AU_KM, LIGHT_KM_PER_SEC, lerp, missionCalendar, planetPosition, sampleRows, smooth,
-} from '../mission-orbits.js?v=20261121-1';
+} from '../mission-orbits.js?v=20261121-2';
 
 // `key` names a node in voyager.glb, with a `Hotspot_<key>` anchor beside it.
 export const PARTS = [
@@ -23,6 +23,49 @@ export const PARTS = [
   { key: 'Bus', label: 'Body', title: 'The bus',
     text: 'A ten-sided box holding three pairs of computers, a tape recorder and the fuel tank. All its computers together have about 70 kilobytes of memory, far less than one phone photo.' },
 ];
+
+// The Golden Record greetings the page can play: ten of the fifty-five.
+// `said` is NASA's translation.
+const GREETINGS = [
+  { key: 'english', label: 'English', said: 'Hello from the children of planet Earth.' },
+  { key: 'mandarin', label: 'Mandarin', said: 'Hope everyone’s well. We are thinking about you all. Please come here to visit when you have time.' },
+  { key: 'hindi', label: 'Hindi', said: 'Greetings from the inhabitants of this world.' },
+  { key: 'spanish', label: 'Spanish', said: 'Hello and greetings to all.' },
+  { key: 'arabic', label: 'Arabic', said: 'Greetings to our friends in the stars. We wish that we will meet you someday.' },
+  { key: 'french', label: 'French', said: 'Hello everybody.' },
+  { key: 'bengali', label: 'Bengali', said: 'Hello! Let there be peace everywhere.' },
+  { key: 'russian', label: 'Russian', said: 'Greetings! I welcome you!' },
+  { key: 'japanese', label: 'Japanese', said: 'Hello? How are you?' },
+  { key: 'zulu', label: 'Zulu', said: 'We greet you, great ones. We wish you longevity.' },
+];
+
+// The recordings each chapter can play, as mission-audio.js takes them:
+// `key` names audio/<key>.mp3, `text` is what the card says while it plays,
+// `gain` tames the loud ones, and `at` is the scroll progress from which the
+// story plays it by itself for a reader with sound on. Jupiter's and the
+// edge's are what Voyager's plasma wave antennas picked up: electric waves,
+// not sound, played through a speaker by the University of Iowa team that
+// built the instrument. The edge's `at` are where its chapter reaches each
+// crossing's date, and the record plays its greetings one after another.
+export const RECORDINGS = {
+  jupiter: [
+    { key: 'jupiter-lightning', label: 'Lightning', gain: 0.45, at: 0.3,
+      text: '<strong>Lightning on Jupiter.</strong> Each falling whistle is the radio crackle of a lightning bolt: the first sign of storms on another planet. March 1979.' },
+    { key: 'jupiter-chorus', label: 'Dawn chorus', gain: 0.4, at: 0.62,
+      text: '<strong>Jupiter’s dawn chorus.</strong> Electrons trapped in the planet’s radiation belts make rising chirps, like birds at sunrise. 5 March 1979.' },
+    { key: 'jupiter-bow-shock', label: 'Bow shock', gain: 0.35,
+      text: '<strong>The bow shock.</strong> The hiss turns to a roar where the solar wind slams into Jupiter’s magnetic field, four days before the flyby. 1 March 1979.' },
+  ],
+  edge: [
+    { key: 'termination-shock', label: 'Solar wind slows', gain: 0.5, at: 0.58,
+      text: '<strong>15 December 2004.</strong> Ripples in the thin gas just before Voyager crossed the termination shock, where the solar wind suddenly slows. Three hours are squeezed into six seconds.' },
+    { key: 'plasma-waves', label: 'Interstellar space', gain: 0.5, at: 0.835,
+      text: '<strong>2012 and 2013.</strong> Ripples in the gas between the stars. Seven months are squeezed into twelve seconds, and the rising pitch means the gas is getting denser: the proof that Voyager had left the Sun’s bubble.' },
+  ],
+  record: GREETINGS.map(({ key, label, said }) => ({
+    key: 'greeting-' + key, label, at: 0.12, text: '“' + said + '” <strong>' + label + '</strong>',
+  })),
+};
 
 // `data` is trajectory.json.
 export function createFlight(data) {

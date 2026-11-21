@@ -1,8 +1,12 @@
-/* The parts of a mission page that work without WebGL.
+/* The parts of a mission page that work without WebGL, and the scene's
+   arithmetic that the tests can run without it.
 
      storyState(chapters, scrollY, viewportHeight)   pure scroll arithmetic
      createStory(root, { onChapter })                the page's chapters, measured
+     followStory(root, onState)                      the story's state on every scroll,
+                                                     for a page with no 3D scene to drive it
      follow(dt, jump)                                the camera's easing
+     yieldingLabels(boxes)                           which of a frame's labels give way
      createPartPicker(parts)                         the spacecraft-parts buttons
      createChart(canvas, rows, { unit, events })     a line chart in a card
 
@@ -14,7 +18,7 @@
    runs from 0 to 1 across the part of it that is not dimmed, so nothing it
    shows happens in the dark. */
 
-import { clamp01, sampleRows, smooth } from './mission-orbits.js?v=20261121-1';
+import { clamp01, sampleRows, smooth } from './mission-orbits.js?v=20261121-2';
 
 // Pure: `chapters` are { top, height, stage } in document pixels.
 export function storyState(chapters, scrollY, viewportHeight) {
@@ -77,9 +81,38 @@ export function createStory(root, { onChapter } = {}) {
   return { chapters, measure, read };
 }
 
+// For a page whose 3D scene could not start: nothing draws frames, so read
+// the story on each scroll instead. The chapter rail keeps working too.
+export function followStory(root, onState) {
+  const story = createStory(root);
+  const read = () => onState(story.read());
+  addEventListener('scroll', read, { passive: true });
+  read();
+}
+
 // The share of the way to its target the camera covers in a frame `dt`
 // seconds long. A cut between sets, or reduced motion, jumps straight there.
 export const follow = (dt, jump) => (jump ? 1 : 1 - Math.exp(-dt * 6));
+
+// Which of one frame's labels should give way. `boxes` are { x, y, w, h, rank }
+// in screen pixels, in a stable order. A label with a rank gives way to a
+// higher-ranked one it would print over, and the earlier of two equals wins;
+// one that has given way takes no one else's place. A label without a rank
+// (null) neither gives way nor is given way to. Returns a Set of indices.
+export function yieldingLabels(boxes) {
+  const order = boxes.flatMap((box, i) => (box.rank == null ? [] : [i]))
+    .sort((a, b) => boxes[b].rank - boxes[a].rank || a - b);
+  const held = [], gives = new Set();
+  for (const i of order) {
+    const a = boxes[i];
+    const covered = held.some((j) => {
+      const b = boxes[j];
+      return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    });
+    if (covered) gives.add(i); else held.push(i);
+  }
+  return gives;
+}
 
 // One button per part in #parts; picking one fills #part-title and
 // #part-text, picking it again lets go. `parts` are { key, label, title,
