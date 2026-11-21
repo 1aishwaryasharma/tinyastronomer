@@ -25,9 +25,9 @@ export const PARTS = [
 ];
 
 // The Golden Record greetings the page can play: ten of the fifty-five.
-// `said` is NASA's translation.
+// `said` is NASA's translation, `by` the speaker where the page names one.
 const GREETINGS = [
-  { key: 'english', label: 'English', said: 'Hello from the children of planet Earth.' },
+  { key: 'english', label: 'English', said: 'Hello from the children of planet Earth.', by: 'Nick Sagan, aged six' },
   { key: 'mandarin', label: 'Mandarin', said: 'Hope everyone’s well. We are thinking about you all. Please come here to visit when you have time.' },
   { key: 'hindi', label: 'Hindi', said: 'Greetings from the inhabitants of this world.' },
   { key: 'spanish', label: 'Spanish', said: 'Hello and greetings to all.' },
@@ -62,8 +62,8 @@ export const RECORDINGS = {
     { key: 'plasma-waves', label: 'Interstellar space', gain: 0.5, at: 0.835,
       text: '<strong>2012 and 2013.</strong> Ripples in the gas between the stars. Seven months are squeezed into twelve seconds, and the rising pitch means the gas is getting denser: the proof that Voyager had left the Sun’s bubble.' },
   ],
-  record: GREETINGS.map(({ key, label, said }) => ({
-    key: 'greeting-' + key, label, at: 0.12, text: '“' + said + '” <strong>' + label + '</strong>',
+  record: GREETINGS.map(({ key, label, said, by }) => ({
+    key: 'greeting-' + key, label, at: 0.12, text: '“' + said + '” <strong>' + label + '</strong>' + (by ? ', spoken by ' + by : ''),
   })),
 };
 

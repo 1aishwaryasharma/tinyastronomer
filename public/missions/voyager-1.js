@@ -10,7 +10,7 @@ import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/
 import { createMissionKit } from '/mission-scene.js?v=20261121-4';
 import { mountMissionSound } from '/mission-audio.js?v=20261121-8';
 import { createChart, createPartPicker, followStory } from '/mission-story.js?v=20261121-3';
-import { PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-7';
+import { PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-8';
 
 const ASSETS = '/assets/missions/voyager-1/';
 const $ = (id) => document.getElementById(id);

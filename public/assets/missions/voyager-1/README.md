@@ -151,15 +151,33 @@ changed but length, level and encoding (mono MP3).
   - NASA's page, with the translations the site quotes:
     <https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/>.
     NASA plays the track there through a SoundCloud embed and offers no file.
-  - File used: the same track as held by Wikimedia Commons, tagged public
-    domain as a NASA work,
+  - File used: the same track as held by Wikimedia Commons,
     `https://commons.wikimedia.org/wiki/File:Voyager_Golden_Record_-_Greetings_In_55_Languages.mp3`
     (6,366,073 bytes, SHA-256
     `72e19421515a4ee1debbd5595c90140a739e300805443303d1b485be73cd3630`).
-  - Credit: NASA/JPL. The speakers were volunteers recorded at Cornell
-    University in 1977.
+    NASA also offers the English greeting as a download:
+    <https://science.nasa.gov/resource/sounds-of-mars-hello-from-the-children-of-planet-earth/>.
+  - Credit on the page: NASA/JPL-Caltech, 1977. The greetings were organised
+    by Linda Salzman Sagan and recorded at Cornell University by volunteer
+    speakers; the English one is Nick Sagan.
   - Each cut was checked by transcribing it and comparing the words with the
     greeting the record's documentation gives for that language.
+  - **Rights: used on NASA's terms, not as proven public domain.** Commons
+    tags the track public domain as a NASA work, but that tag is a community
+    classification, and who owns the 1977 recordings has not been
+    established: the speakers were not federal employees, and no release or
+    assignment is published. What is known: NASA publishes the greetings and
+    says it obtained releases for what it presents online
+    (<https://science.nasa.gov/mission/voyager/frequently-asked-questions/>);
+    NASA's media guidelines allow its audio to be used for education,
+    including on web pages, with NASA acknowledged and no endorsement implied,
+    while noting that its use of third-party material gives others no rights
+    (<https://www.nasa.gov/nasa-brand-center/images-and-media/>); and the
+    Library of Congress presents the same recordings "courtesy of the NASA
+    Jet Propulsion Laboratory". The site's use is ten clips of one to six
+    seconds, unaltered, each with its translation, on a free educational
+    page. If a rights holder objects, remove `greeting-*.mp3` and the
+    `record` entry of `RECORDINGS`; the card then links to NASA's page.
 - `plasma-waves.mp3`: twelve seconds from the soundtrack of PIA17045, "Voyager
   Captures Sounds of Interstellar Space",
   <https://science.nasa.gov/photojournal/voyager-captures-sounds-of-interstellar-space>.
@@ -188,11 +206,8 @@ changed but length, level and encoding (mono MP3).
   links to space-audio.org in its sources. These too are electric waves played
   through a speaker, not sound.
 
-NASA material is generally not copyrighted and may be used for education with
-NASA acknowledged as the source and no suggestion of endorsement
-(<https://www.nasa.gov/nasa-brand-center/images-and-media/>). The Golden
-Record's music is a different matter: it belongs to its performers and
-publishers, and none of it is used here.
+The Golden Record's music is a different matter: it belongs to its performers
+and publishers, and none of it is used here.
 
 Rebuild, with ffmpeg on PATH and the six source files downloaded into one
 folder outside the repository, under the names the script lists:
