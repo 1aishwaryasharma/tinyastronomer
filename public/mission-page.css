@@ -109,15 +109,6 @@ html { scroll-padding-top: 0; }
 .chart { display: block; width: 100%; height: 132px; margin-top: 14px; }
 .chart-caption { margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--ink-dim); font-weight: 300; }
 
-.hello-btn {
-  margin-top: 14px; min-height: 44px; padding: 0 16px; cursor: pointer;
-  font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--bg); background: var(--accent); border: 0; border-radius: 2px;
-}
-.hello-btn:hover { background: #ffd47a; }
-.hello-out { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--ink-dim); min-height: 3em; }
-.hello-out strong { color: var(--ink); font-weight: 500; }
-
 /* ──── Fixed overlays ──── */
 .mission-clock {
   position: fixed; z-index: 3; pointer-events: none;
@@ -166,15 +157,6 @@ html { scroll-padding-top: 0; }
 .chapter-rail a:hover, .chapter-rail a:focus-visible { color: var(--ink); }
 .chapter-rail a span { padding: 3px 6px; background: rgba(5, 8, 16, 0.8); border-radius: 2px; }
 .chapter-rail a:not(:hover):not(:focus-visible) span { background: none; }
-
-/* Light scattered inside Voyager's camera when it looked back at the Sun. */
-.sunbeams {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; mix-blend-mode: screen;
-  background:
-    linear-gradient(104deg, transparent 38%, rgba(214, 170, 120, 0.20) 47%, rgba(255, 226, 180, 0.10) 52%, transparent 60%),
-    linear-gradient(98deg, transparent 12%, rgba(120, 170, 150, 0.10) 20%, transparent 29%),
-    linear-gradient(110deg, transparent 66%, rgba(150, 130, 190, 0.12) 74%, transparent 83%);
-}
 
 /* ──── Reading matter under the story ──── */
 .after-story {

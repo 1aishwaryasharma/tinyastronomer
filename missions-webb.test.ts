@@ -33,7 +33,7 @@ test("the trajectory is JPL's, sampled finely enough for what the page draws", (
   expect(data.source).toContain("JPL Horizons");
   expect(data.source).toContain("-170");
   expect(data.epoch).toBe("2021-12-25T00:00:00Z");
-  // Launch was at 12:20 UTC; Horizons' file opens at 13:01 and the first row
+  // Launch was at 12:20 UTC; Horizons' file opens at 13:00 UTC and the first row
   // is the next whole step.
   expect(data.transfer[0][0]).toBeCloseTo(dayOf("2021-12-25T13:20Z"), 3);
   expect(data.transfer[1][0] - data.transfer[0][0]).toBeCloseTo(20 / 1440, 3);
@@ -52,16 +52,16 @@ test("the trajectory is JPL's, sampled finely enough for what the page draws", (
 
 test("the climb to L2 slows the way the card and its chart say", () => {
   const speeds = data.transfer.map((row: number[]) => row[4]);
-  expect(speeds[0]).toBeCloseTo(6.7, 1);
+  expect(speeds[0]).toBeCloseTo(6.6, 1);
   const arrival = sampleRows(data.transfer, dayOf("2022-01-24T19:00Z"));
   expect(arrival[4]).toBeCloseTo(0.2, 1);
   // It only ever slows: nothing in the month speeds it back up.
   for (let i = 1; i < speeds.length; i++) expect(speeds[i]).toBeLessThan(speeds[i - 1] + 0.002);
-  expect(page).toContain("from 6.7 km/s an hour after launch to 0.2 km/s a month later");
-  expect(page).toContain("falls from 6.7 kilometres per second an hour after launch to about 0.2");
+  expect(page).toContain("from 6.6 km/s an hour after launch to 0.2 km/s a month later");
+  expect(page).toContain("falls from 6.6 kilometres per second an hour after launch to about 0.2");
   // The shared chart draws its grid in tens, so the trace must fit under 10.
   expect(Math.max(...speeds)).toBeLessThan(10);
-  expect(script).toContain("createChart($('chart-speed'), speedRows, DAYS.arrive, { eventLabel: 'arrives' })");
+  expect(script).toContain("createChart($('chart-speed'), speedRows, { events: [{ day: DAYS.arrive, label: 'arrives' }] })");
 });
 
 test("the distance from Earth follows Horizons, and L2 sits where the page says", () => {
@@ -155,7 +155,7 @@ test("every chapter in the markup has a scene, a rail link, and a known set", ()
   expect(chapters.map((m) => m[1])).toEqual([
     "hero", "telescope", "unfold", "journey", "halo", "sunshield", "mirror", "infrared", "future",
   ]);
-  const handlers = script.slice(script.indexOf("const CHAPTERS = {"), script.indexOf("function enterStage"));
+  const handlers = script.slice(script.indexOf("const CHAPTERS = {"), script.indexOf("function before"));
   for (const [, id, stage] of chapters) {
     expect(handlers, `no scene for chapter ${id}`).toMatch(new RegExp(`\\n    ${id}\\(`));
     expect(["craft", "l2", "nebula"], `${id} names an unknown set`).toContain(stage);
@@ -179,7 +179,7 @@ test("the story is readable and its controls work without the 3D scene", () => {
   const scene = script.indexOf("createMissionKit(");
   expect(scene).toBeGreaterThan(0);
   expect(script.indexOf("setInterval(tickLive, 1000)")).toBeLessThan(scene);
-  expect(script.indexOf("$('parts').appendChild(btn)")).toBeLessThan(scene);
+  expect(script.indexOf("createPartPicker(PARTS)")).toBeLessThan(scene);
   expect(script.indexOf("$('align-slider').addEventListener")).toBeLessThan(scene);
   expect(script.indexOf("$('ir-slider').addEventListener")).toBeLessThan(scene);
   expect(script).toContain("if (kit) startScene(kit);");
@@ -196,7 +196,7 @@ test("the story is readable and its controls work without the 3D scene", () => {
   // Each control says what it is.
   for (const input of page.match(/<input[^>]*type="range"[^>]*>/g)!) expect(input).toContain("aria-label=");
   for (const button of page.match(/<button[^>]*>/g) ?? []) expect(button).toContain('type="');
-  expect(script).toContain("btn.type = 'button';");
+  expect(read("mission-story.js")).toContain("btn.type = 'button';");
 });
 
 test("what is drawn rather than measured says so", () => {

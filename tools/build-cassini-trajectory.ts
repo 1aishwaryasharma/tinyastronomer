@@ -10,9 +10,9 @@
 // the Huygens probe, release to landing; Horizons still serves the descent
 // as PREDICTED on 6 January 2005, not as flown, and the page says so.
 //
-// Vectors are geometric states in the ecliptic-of-J2000 frame. Horizons
-// tabulates them in TDB; times here are converted to UTC. `--cache DIR` keeps
-// the raw replies (about 100 MB) so a second run does not ask again.
+// Vectors are geometric states in the ecliptic-of-J2000 frame, with times in
+// UTC (see tools/horizons.ts). `--cache DIR` keeps the raw replies (about
+// 100 MB) so a second run does not ask again.
 //
 // trajectory.json (times are days since 1997-10-15 00:00 UTC):
 //   cruise     heliocentric position (AU) and speed (km/s), launch to Saturn:
@@ -37,80 +37,19 @@
 // `stepSeconds`). Samples are kept wherever the path has turned by a set
 // angle, so a fast pass by Saturn gets many and a slow apoapsis few.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { AU_KM, DAY_MS, equatorialToEcliptic } from "../public/mission-orbits.js";
+import { closest, dot, helioRow, horizons, kmRow, norm, round, speed, stamp, sub, utc, type State, type Vec } from "./horizons.ts";
 
-const API = "https://ssd.jpl.nasa.gov/api/horizons.api";
-const AU_KM = 149597870.7;
-const EPOCH = Date.UTC(1997, 9, 15);
-const DAY = 86400000;
+const EPOCH = "1997-10-15T00:00:00Z";
 const SATURN_KM = 60268;
 const TITAN_KM = 2574.7;
 const ENCELADUS_KM = 252.1;
 const RAD = Math.PI / 180;
 
-const cacheAt = process.argv.indexOf("--cache");
-const cacheDir = cacheAt > 0 ? process.argv[cacheAt + 1] : null;
-if (cacheDir) mkdirSync(cacheDir, { recursive: true });
-
-type Vec = [number, number, number];
-type State = { t: number; p: Vec; v: Vec };
-
-// TAI − UTC over the mission; TDB runs 32.184 s ahead of TAI.
-const LEAPS: [number, number][] = [
-  [Date.UTC(2017, 0, 1), 37], [Date.UTC(2015, 6, 1), 36], [Date.UTC(2012, 6, 1), 35],
-  [Date.UTC(2009, 0, 1), 34], [Date.UTC(2006, 0, 1), 33], [Date.UTC(1999, 0, 1), 32], [Date.UTC(1997, 6, 1), 31],
-];
-const tdbMinusUtc = (ms: number) => (LEAPS.find(([from]) => ms >= from)![1] + 32.184) * 1000;
-const stamp = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace("T", " ");
-const utc = (y: number, m: number, d: number, h = 0, min = 0) => Date.UTC(y, m - 1, d, h, min);
-const dayOf = (ms: number) => (ms - EPOCH) / DAY;
-
-// `from` and `to` are UTC milliseconds; the request is made in TDB so that
-// the samples land on whole UTC minutes.
-async function vectors(target: string, center: string, from: number, to: number, step: string, withVelocity = true): Promise<State[]> {
-  const tdb = (ms: number) => new Date(ms + tdbMinusUtc(ms)).toISOString().replace("T", " ").slice(0, 23);
-  const params = new URLSearchParams({
-    format: "text",
-    COMMAND: `'${target}'`,
-    OBJ_DATA: "'NO'",
-    MAKE_EPHEM: "'YES'",
-    EPHEM_TYPE: "'VECTORS'",
-    CENTER: `'${center}'`,
-    START_TIME: `'${tdb(from)}'`,
-    STOP_TIME: `'${tdb(to)}'`,
-    STEP_SIZE: `'${step}'`,
-    VEC_TABLE: withVelocity ? "'2'" : "'1'",
-    REF_PLANE: "'ECLIPTIC'",
-    OUT_UNITS: "'KM-S'",
-    CSV_FORMAT: "'YES'",
-  });
-  const url = `${API}?${params}`;
-  const cached = cacheDir && `${cacheDir}/${createHash("sha1").update(url).digest("hex")}.txt`;
-  let text = "";
-  if (cached && existsSync(cached)) text = readFileSync(cached, "utf8");
-  else {
-    for (let attempt = 0; ; attempt++) {
-      const response = await fetch(url);
-      text = await response.text();
-      if (response.ok && text.includes("$$SOE")) break;
-      if (attempt === 3) throw new Error(`Horizons ${response.status} for ${target} ${stamp(from)}:\n${text.slice(0, 600)}`);
-      await Bun.sleep(4000 * (attempt + 1));
-    }
-    if (cached) writeFileSync(cached, text);
-  }
-  const body = text.match(/\$\$SOE\n([\s\S]*?)\$\$EOE/)?.[1];
-  if (!body) throw new Error(`Horizons returned no table for ${target} ${stamp(from)}:\n${text.slice(0, 600)}`);
-  return body.trim().split("\n").map((line) => {
-    const cells = line.split(",");
-    const n = cells.slice(2, 8).map(Number);
-    // JD 2440587.5 is the Unix epoch.
-    const tdbMs = (Number(cells[0]) - 2440587.5) * DAY;
-    const ms = tdbMs - tdbMinusUtc(tdbMs);
-    return { t: dayOf(ms), p: [n[0], n[1], n[2]], v: withVelocity ? [n[3], n[4], n[5]] : [0, 0, 0] } as State;
-  });
-}
+const { dayOf, vectors, stateAt } = horizons(EPOCH);
+const iso = (day: number) => new Date(Date.parse(EPOCH) + day * DAY_MS).toISOString().slice(0, 19) + "Z";
 
 // Horizons caps one table at about 90,000 rows.
 async function longVectors(target: string, center: string, from: number, to: number, stepMinutes: number): Promise<State[]> {
@@ -124,42 +63,17 @@ async function longVectors(target: string, center: string, from: number, to: num
   return out;
 }
 
-const round = (value: number, digits: number) => Number(value.toFixed(digits));
-const norm = (p: number[]) => Math.hypot(p[0], p[1], p[2]);
-const sub = (a: Vec, b: Vec): Vec => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const dot = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const speed = (s: State) => norm(s.v);
-const helioRow = (s: State) => [round(s.t, 3), ...s.p.map((km) => round(km / AU_KM, 4)), round(speed(s), 2)];
-const kmRow = (s: State) => [round(s.t, 4), ...s.p.map((km) => Math.round(km))];
-const iso = (day: number) => new Date(EPOCH + day * DAY).toISOString().slice(0, 19) + "Z";
-
-// The moment of closest approach between samples, from the samples either
-// side of the nearest one (distance squared is a parabola there).
-function closest(states: State[]) {
-  let i = 0;
-  states.forEach((s, k) => { if (norm(s.p) < norm(states[i].p)) i = k; });
-  i = Math.max(1, Math.min(states.length - 2, i));
-  const [a, b, c] = [states[i - 1], states[i], states[i + 1]].map((s) => dot(s.p, s.p));
-  const offset = Math.max(-1, Math.min(1, (a - c) / (2 * (a - 2 * b + c))));
-  const step = states[i + 1].t - states[i].t;
-  return { day: states[i].t + offset * step, km: Math.sqrt(b - ((a - c) * offset) / 4), speed: speed(states[i]) };
-}
-
-// Saturn's north pole (IAU: right ascension 40.589°, declination 83.537°) in
-// the ecliptic frame. Titan and Enceladus orbit in Saturn's equator plane and
-// keep their own poles within a degree of this.
-const POLE = (() => {
-  const ra = 40.589 * RAD, dec = 83.537 * RAD, eps = 23.4392911 * RAD;
-  const x = Math.cos(dec) * Math.cos(ra), y = Math.cos(dec) * Math.sin(ra), z = Math.sin(dec);
-  return [x, y * Math.cos(eps) + z * Math.sin(eps), -y * Math.sin(eps) + z * Math.cos(eps)];
-})();
+// Saturn's north pole (IAU: right ascension 40.589°, declination 83.537°).
+// Titan and Enceladus orbit in Saturn's equator plane and keep their own
+// poles within a degree of this.
+const POLE = equatorialToEcliptic(40.589, 83.537);
 
 /* ── Cruise ── */
 console.log("cruise");
 const cruiseNear = await vectors("-82", "500@10", utc(1997, 10, 16), utc(2000, 1, 1), "1d");
 const cruiseFar = await vectors("-82", "500@10", utc(2000, 1, 1), utc(2004, 7, 1), "5d");
 // Five-day steps from 1 January stop short of arrival day; add it.
-const [cruiseEnd] = await vectors("-82", "500@10", utc(2004, 7, 1), utc(2004, 7, 1, 0, 1), "1d");
+const cruiseEnd = await stateAt("-82", "500@10", utc(2004, 7, 1));
 const cruise = cruiseNear.concat(cruiseFar.slice(1), cruiseEnd);
 
 const FLYBYS = [
@@ -175,14 +89,14 @@ for (const f of FLYBYS) {
   // Speed relative to the Sun a set time either side: a day for the inner
   // planets, a hundred days for Jupiter, whose pull acts over months.
   const lead = f.key === "jupiter" ? 100 : 1;
-  const ms = EPOCH + near.day * DAY;
-  const [before] = await vectors("-82", "500@10", ms - lead * DAY, ms - lead * DAY + 60000, "1d");
-  const [after] = await vectors("-82", "500@10", ms + lead * DAY, ms + lead * DAY + 60000, "1d");
+  const ms = Date.parse(EPOCH) + near.day * DAY_MS;
+  const before = await stateAt("-82", "500@10", ms - lead * DAY_MS);
+  const after = await stateAt("-82", "500@10", ms + lead * DAY_MS);
   flybys[f.key] = {
     name: f.name, utc: iso(near.day), day: round(near.day, 4), centreKm: Math.round(near.km),
     altitudeKm: Math.round(near.km - f.radiusKm), speedBefore: round(speed(before), 2), speedAfter: round(speed(after), 2), leadDays: lead,
   };
-  if (f.key !== "jupiter") spikes.push(...await vectors("-82", "500@10", ms - 2 * DAY, ms + 2 * DAY, "1h"));
+  if (f.key !== "jupiter") spikes.push(...await vectors("-82", "500@10", ms - 2 * DAY_MS, ms + 2 * DAY_MS, "1h"));
 }
 const speedRows = cruise.concat(spikes).sort((a, b) => a.t - b.t)
   .filter((s) => s.t < dayOf(utc(2001, 7, 1)))
@@ -207,8 +121,7 @@ for (let i = 1; i < soiFine.length; i++) {
 /* ── Huygens ── */
 console.log("Huygens");
 // Horizons picks Huygens up as it leaves Cassini, at 02:00 UTC on 25 December.
-const releaseFrom = utc(2004, 12, 25, 2, 1);
-const [releaseHuygens] = await vectors("-150", "500@606", releaseFrom, releaseFrom + 60000, "1d");
+const releaseHuygens = await stateAt("-150", "500@606", utc(2004, 12, 25, 2, 1));
 const lastDayFrom = utc(2005, 1, 13, 12);
 const titanHuygens = (await vectors("-150", "500@606", lastDayFrom, utc(2005, 1, 14, 9), "10m"))
   .concat((await vectors("-150", "500@606", utc(2005, 1, 14, 9), utc(2005, 1, 14, 12, 5), "1m")).slice(1));
@@ -313,7 +226,7 @@ bin.set(finalePacked.bytes, tourPacked.bytes.length);
 console.log("Titan");
 // The period that carries Titan's longitude from the first day of the tour to
 // the last: its direction at both ends, and the whole turns between them.
-const titanEnds = [await vectors("606", "500@699", tourFrom, tourFrom + 60000, "1d"), await vectors("606", "500@699", end, end + 60000, "1d")].map((s) => s[0]);
+const titanEnds = [await stateAt("606", "500@699", tourFrom), await stateAt("606", "500@699", end)];
 const longitude = (s: State) => {
   const ref: Vec = [POLE[1], -POLE[0], 0];
   const u = ref.map((v) => v / norm(ref)), w = [POLE[1] * u[2] - POLE[2] * u[1], POLE[2] * u[0] - POLE[0] * u[2], POLE[0] * u[1] - POLE[1] * u[0]];
@@ -324,22 +237,22 @@ const turns = Math.round(span / 15.9454) + ((longitude(titanEnds[1]) - longitude
 const candidates = [-1, 0, 1].map((k) => span / (turns + k)).sort((a, b) => Math.abs(a - 15.9454) - Math.abs(b - 15.9454));
 const titanPeriod = candidates[0];
 const loopFrom = utc(2011, 1, 1);
-const titanLoop = await vectors("606", "500@699", loopFrom, loopFrom + titanPeriod * DAY, "2h");
+const titanLoop = await vectors("606", "500@699", loopFrom, loopFrom + titanPeriod * DAY_MS, "2h");
 const titanChecks = [];
 for (const at of [utc(2004, 10, 26, 15, 30), utc(2008, 6, 1), utc(2013, 2, 1), utc(2017, 4, 22, 6)]) {
-  const [s] = await vectors("606", "500@699", at, at + 60000, "1d");
+  const s = await stateAt("606", "500@699", at);
   titanChecks.push({ day: round(s.t, 4), km: s.p.map(Math.round) });
 }
 
 const out = {
   source: "NASA/JPL Horizons, targets -82 (Cassini) and -150 (Huygens probe, predicted descent), geometric states, ecliptic of J2000, times in UTC",
   generated: new Date().toISOString().slice(0, 10),
-  epoch: "1997-10-15T00:00:00Z",
+  epoch: EPOCH,
   auKm: AU_KM,
   saturnKm: SATURN_KM,
   titanKm: TITAN_KM,
   enceladusKm: ENCELADUS_KM,
-  cruise: cruise.map(helioRow),
+  cruise: cruise.map((s) => helioRow(s, 4, 2)),
   speed: speedRows,
   flybys,
   soi: {

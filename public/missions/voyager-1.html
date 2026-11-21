@@ -40,6 +40,22 @@
   @media (max-width: 860px) {
     #canvas-container { --mission-poster: url('/assets/missions/voyager-1/poster-800.webp'); }
   }
+  .hello-btn {
+    margin-top: 14px; min-height: 44px; padding: 0 16px; cursor: pointer;
+    font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--bg); background: var(--accent); border: 0; border-radius: 2px;
+  }
+  .hello-btn:hover { background: #ffd47a; }
+  .hello-out { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--ink-dim); min-height: 3em; }
+  .hello-out strong { color: var(--ink); font-weight: 500; }
+  /* Light scattered inside Voyager's camera when it looked back at the Sun. */
+  .sunbeams {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; mix-blend-mode: screen;
+    background:
+      linear-gradient(104deg, transparent 38%, rgba(214, 170, 120, 0.20) 47%, rgba(255, 226, 180, 0.10) 52%, transparent 60%),
+      linear-gradient(98deg, transparent 12%, rgba(120, 170, 150, 0.10) 20%, transparent 29%),
+      linear-gradient(110deg, transparent 66%, rgba(150, 130, 190, 0.12) 74%, transparent 83%);
+  }
 </style>
 </head>
 <body>

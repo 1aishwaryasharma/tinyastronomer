@@ -185,10 +185,12 @@ the repository, then:
     /Applications/Blender.app/Contents/MacOS/Blender --background \
       --python tools/build-webb-model.py -- /tmp/webb.glb
 
-That writes all four files. `--no-renders` exports the GLB only, `--no-glb`
-renders only, and `--previews DIR` adds quick check renders of the clip at
-thirteen moments from two sides. The Meshopt pass runs inside the script as
-`bunx @gltf-transform/cli@4.2.1 meshopt <raw> webb.glb --level medium`.
+That writes all four files. `--out DIR` writes them to another folder,
+`--no-renders` exports the GLB only, `--no-glb` renders only, and `--previews
+DIR` adds quick check renders of the clip at thirteen moments from two sides.
+The script imports `tools/mission_model_kit.py`, which holds what the three
+mission model builders share. The Meshopt pass runs there as `bunx
+@gltf-transform/cli@4.2.1 meshopt <raw> webb.glb --level medium`.
 `missions-webb.test.ts` loads the packed file with the vendored three.js and
 plays the clip, so a rebuild that loses the animation fails the tests.
 

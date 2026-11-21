@@ -1,12 +1,28 @@
-/* Orbital arithmetic for the mission pages. No DOM and no Three.js, so the
-   tests can hold it to JPL Horizons directly.
+/* Arithmetic for the mission pages. No DOM and no Three.js, so the tests can
+   hold it to JPL Horizons directly.
 
-   Positions are heliocentric, in astronomical units, in the ecliptic-of-J2000
-   frame: +x toward the March equinox, +z toward the ecliptic north pole. */
+     lerp, smooth, clamp01                  easing
+     planetPosition, planetOrbit, PLANETS   JPL's approximate planets
+     equatorialToEcliptic                   spin axes
+     indexAt, sampleRows, unpackRows        sampled paths, rows of [day, x, y, z, …]
+     missionCalendar                        mission days ↔ wall-clock time
+     formatDate, clockTime, formatLightTime text for the cards and the clock
+
+   Planet positions are heliocentric, in astronomical units, in the
+   ecliptic-of-J2000 frame: +x toward the March equinox, +z toward the
+   ecliptic north pole. */
 
 export const AU_KM = 149597870.7;
 export const LIGHT_KM_PER_SEC = 299792.458;
 export const DAY_MS = 86400000;
+
+export const clamp01 = (x) => Math.max(0, Math.min(1, x));
+export const lerp = (a, b, t) => a + (b - a) * t;
+// 0 below `a`, 1 above `b`, an eased ramp between.
+export const smooth = (a, b, x) => {
+  const t = clamp01((x - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
 
 const J2000_MS = Date.UTC(2000, 0, 1, 12);
 const RAD = Math.PI / 180;
@@ -82,49 +98,69 @@ export function equatorialToEcliptic(raDeg, decDeg) {
   return [x, y * Math.cos(eps) + z * Math.sin(eps), -y * Math.sin(eps) + z * Math.cos(eps)];
 }
 
+// Index of the last sample at or before `day`, clamped to the ends.
+// `samples` are sorted; `dayOf` reads the day out of one.
+export function indexAt(samples, day, dayOf = (sample) => sample) {
+  let lo = 0, hi = samples.length - 1;
+  if (day >= dayOf(samples[hi])) return hi;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (dayOf(samples[mid]) <= day) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
+const rowDay = (row) => row[0];
 // Samples are rows of [day, x, y, z, ...extra], sorted by day. Returns the
 // row interpolated at `day`, clamped to the ends.
 export function sampleRows(rows, day) {
-  if (day <= rows[0][0]) return rows[0].slice();
-  const last = rows[rows.length - 1];
-  if (day >= last[0]) return last.slice();
-  let lo = 0, hi = rows.length - 1;
-  while (hi - lo > 1) {
-    const mid = (lo + hi) >> 1;
-    if (rows[mid][0] <= day) lo = mid; else hi = mid;
-  }
-  const a = rows[lo], b = rows[hi];
+  const i = indexAt(rows, day, rowDay);
+  const a = rows[i], b = rows[i + 1];
+  if (!b || day <= a[0]) return a.slice();
   const f = (day - a[0]) / (b[0] - a[0]);
-  return a.map((value, i) => value + (b[i] - value) * f);
+  return a.map((value, k) => value + (b[k] - value) * f);
 }
 
-// One lookup over the mission: the daily cruise rows to 1981, then the
-// thirty-day rows. Returns [day, x, y, z, speed].
-export function createTrajectory(data) {
-  const epochMs = Date.parse(data.epoch);
-  const rows = data.cruise.concat(data.deep.slice(1));
-  const at = (day) => sampleRows(rows, day);
-  const dayOf = (ms) => (ms - epochMs) / DAY_MS;
-  const msOf = (day) => epochMs + day * DAY_MS;
-
-  // Where Voyager 1 is at a wall-clock moment, measured two ways. The range
-  // from Earth swings by about 250 million km over a year as Earth circles
-  // the Sun, so for a few months of each year it shrinks.
-  function live(ms) {
-    const [, x, y, z, kmPerSec] = at(dayOf(ms));
-    const earth = planetPosition('earth', ms);
-    const sunKm = Math.hypot(x, y, z) * AU_KM;
-    const earthKm = Math.hypot(x - earth[0], y - earth[1], z - earth[2]) * AU_KM;
-    return { sunKm, earthKm, lightSeconds: earthKm / LIGHT_KM_PER_SEC, kmPerSec, au: [x, y, z] };
+// Rows of [day, x, y, z] in km from a packed path: eight bytes a sample,
+// x, y, z as signed 16-bit counts of `unitKm` and the time since the sample
+// before as an unsigned count of `stepSeconds`.
+export function unpackRows(buffer, { byteOffset, count, unitKm, stepSeconds, startDay }) {
+  const view = new DataView(buffer, byteOffset, count * 8);
+  const rows = [];
+  let tick = 0;
+  for (let i = 0; i < count; i++) {
+    tick += view.getUint16(i * 8 + 6, true);
+    rows.push([
+      startDay + (tick * stepSeconds) / 86400,
+      view.getInt16(i * 8, true) * unitKm, view.getInt16(i * 8 + 2, true) * unitKm, view.getInt16(i * 8 + 4, true) * unitKm,
+    ]);
   }
+  return rows;
+}
 
-  return { at, dayOf, msOf, epochMs, rows, live, lastDay: rows[rows.length - 1][0] };
+// Mission days count from `epoch` (an ISO date), in UTC.
+export function missionCalendar(epoch) {
+  const epochMs = Date.parse(epoch);
+  const dayOf = (ms) => (ms - epochMs) / DAY_MS;
+  return {
+    epochMs,
+    dayOf,
+    msOf: (day) => epochMs + day * DAY_MS,
+    dayOn: (year, month, date, hour = 0, minute = 0) => dayOf(Date.UTC(year, month - 1, date, hour, minute)),
+  };
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export function formatDate(ms) {
   const d = new Date(ms);
   return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+}
+
+// "02:38 UTC", or "15:22:42 UTC" with seconds.
+export function clockTime(ms, seconds = false) {
+  const d = new Date(ms);
+  const pad = (n) => String(n).padStart(2, '0');
+  return pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + (seconds ? ':' + pad(d.getUTCSeconds()) : '') + ' UTC';
 }
 
 // 86,412 s → "24 h 00 min 12 s".

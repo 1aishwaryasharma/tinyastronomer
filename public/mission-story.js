@@ -1,18 +1,20 @@
-/* Scroll position → story position, for the mission pages.
+/* The parts of a mission page that work without WebGL.
+
+     storyState(chapters, scrollY, viewportHeight)   pure scroll arithmetic
+     createStory(root, { onChapter })                the page's chapters, measured
+     follow(dt, jump)                                the camera's easing
+     createPartPicker(parts)                         the spacecraft-parts buttons
+     createChart(canvas, rows, { unit, events })     a line chart in a card
 
    A mission page is a column of tall `.chapter` sections over one fixed 3D
    canvas. Scrolling is the timeline: the chapter under the middle of the
-   viewport is the active one, and how far the middle has travelled through
-   it (0 to 1) is that chapter's progress. Each chapter names the 3D set it
-   plays on in `data-stage`; where two neighbours use different sets, `dim`
-   rises to 1 at the boundary so the page can cut between them unseen. */
+   viewport is the active one. Each chapter names the 3D set it plays on in
+   `data-stage`; where two neighbours use different sets, `dim` rises to 1 at
+   the boundary so the page can cut between them unseen. A chapter's progress
+   runs from 0 to 1 across the part of it that is not dimmed, so nothing it
+   shows happens in the dark. */
 
-import { sampleRows } from './mission-orbits.js?v=20261121-1';
-
-const smoothstep = (a, b, x) => {
-  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
+import { clamp01, sampleRows, smooth } from './mission-orbits.js?v=20261121-1';
 
 // Pure: `chapters` are { top, height, stage } in document pixels.
 export function storyState(chapters, scrollY, viewportHeight) {
@@ -24,22 +26,22 @@ export function storyState(chapters, scrollY, viewportHeight) {
   const into = middle - chapter.top;
   const left = chapter.top + chapter.height - middle;
   const band = viewportHeight * 0.22;
-  let dim = 0;
-  if (index > 0 && chapters[index - 1].stage !== chapter.stage) dim = Math.max(dim, 1 - smoothstep(0, band, into));
-  if (index < last && chapters[index + 1].stage !== chapter.stage) dim = Math.max(dim, 1 - smoothstep(0, band, left));
+  const cutIn = index > 0 && chapters[index - 1].stage !== chapter.stage ? band : 0;
   // Past the last chapter the reading matter below takes over the screen.
-  if (index === last) dim = Math.max(dim, 1 - smoothstep(0, band * 2, left));
+  const cutOut = index === last ? band * 2 : chapters[index + 1].stage !== chapter.stage ? band : 0;
   return {
     index,
-    progress: Math.max(0, Math.min(1, into / chapter.height)),
-    dim,
+    progress: clamp01((into - cutIn) / Math.max(1, chapter.height - cutIn - cutOut)),
+    dim: 1 - Math.min(cutIn ? smooth(0, cutIn, into) : 1, cutOut ? smooth(0, cutOut, left) : 1),
     past: index === last && left < -viewportHeight * 0.5,
   };
 }
 
+// `read()` returns storyState plus the chapter's id, its stage, and the side
+// of the screen its card sits on (`.chapter.right` in the markup).
 export function createStory(root, { onChapter } = {}) {
   const chapters = [...root.querySelectorAll('.chapter')].map((el) => ({
-    el, id: el.id, stage: el.dataset.stage, top: 0, height: 1,
+    el, id: el.id, stage: el.dataset.stage, side: el.classList.contains('right') ? 'right' : 'left', top: 0, height: 1,
   }));
   const rail = document.querySelector('.chapter-rail');
   const railLinks = rail ? [...rail.querySelectorAll('a')] : [];
@@ -64,7 +66,7 @@ export function createStory(root, { onChapter } = {}) {
       }
       if (onChapter) onChapter(chapter);
     }
-    return { ...state, id: chapter.id, stage: chapter.stage };
+    return { ...state, id: chapter.id, stage: chapter.stage, side: chapter.side };
   }
 
   measure();
@@ -75,9 +77,46 @@ export function createStory(root, { onChapter } = {}) {
   return { chapters, measure, read };
 }
 
+// The share of the way to its target the camera covers in a frame `dt`
+// seconds long. A cut between sets, or reduced motion, jumps straight there.
+export const follow = (dt, jump) => (jump ? 1 : 1 - Math.exp(-dt * 6));
+
+// One button per part in #parts; picking one fills #part-title and
+// #part-text, picking it again lets go. `parts` are { key, label, title,
+// text }. The kit's hotspots read and set the same selection.
+export function createPartPicker(parts) {
+  const title = document.getElementById('part-title'), text = document.getElementById('part-text');
+  const buttons = new Map();
+  const picker = {
+    parts,
+    selected: null,
+    select(key) {
+      picker.selected = picker.selected === key ? null : key;
+      for (const [k, btn] of buttons) btn.setAttribute('aria-pressed', String(k === picker.selected));
+      const part = parts.find((p) => p.key === picker.selected);
+      if (part) {
+        title.textContent = part.title;
+        text.textContent = part.text;
+      }
+    },
+  };
+  for (const part of parts) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'part-btn';
+    btn.textContent = part.label;
+    btn.setAttribute('aria-pressed', 'false');
+    btn.addEventListener('click', () => picker.select(part.key));
+    document.getElementById('parts').appendChild(btn);
+    buttons.set(part.key, btn);
+  }
+  return picker;
+}
+
 // A small line chart on a 2D canvas inside a card: `rows` are [day, value]
-// samples, and the returned function draws the trace up to a given day.
-export function createChart(canvas, rows, eventDay, { unit = 'km/s', eventLabel = 'closest approach' } = {}) {
+// samples and `events` are { day, label } marks under the axis. The returned
+// function draws the trace up to a given day.
+export function createChart(canvas, rows, { unit = 'km/s', events = [] } = {}) {
   const ctx = canvas.getContext('2d');
   const style = getComputedStyle(document.documentElement);
   const ink = style.getPropertyValue('--ink-faint').trim(), accent = style.getPropertyValue('--accent').trim();
@@ -107,7 +146,11 @@ export function createChart(canvas, rows, eventDay, { unit = 'km/s', eventLabel 
     }
     ctx.fillText(unit, 4, h - 4);
     ctx.textAlign = 'center';
-    ctx.fillText(eventLabel, X(eventDay), h - 4);
+    for (const event of events) {
+      ctx.fillStyle = day >= event.day ? accent : ink;
+      ctx.fillRect(Math.round(X(event.day)), h - padB + 1, 1, 4);
+      ctx.fillText(event.label, X(event.day), h - 3);
+    }
     ctx.textAlign = 'left';
     const trace = (until, color, width) => {
       ctx.beginPath();

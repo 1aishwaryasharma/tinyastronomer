@@ -9,10 +9,10 @@
    trajectory.json (JPL Horizons). */
 import { SPACE } from '/common.bundle.js?v=20260909-2';
 import {
-  AU_KM, DAY_MS, LIGHT_KM_PER_SEC, formatDate, planetPosition, sampleRows,
+  AU_KM, DAY_MS, LIGHT_KM_PER_SEC, formatDate, lerp, planetPosition, sampleRows, smooth,
 } from '/mission-orbits.js?v=20261121-1';
-import { createMissionKit, lerp, smooth } from '/mission-scene.js?v=20261121-1';
-import { createChart } from '/mission-story.js?v=20261121-1';
+import { createMissionKit } from '/mission-scene.js?v=20261121-1';
+import { createChart, createPartPicker } from '/mission-story.js?v=20261121-1';
 
 const ASSETS = '/assets/missions/webb/';
 const $ = (id) => document.getElementById(id);
@@ -85,27 +85,7 @@ const PARTS = [
   { key: 'MomentumFlap', label: 'Trim flap', title: 'Momentum flap',
     text: 'Sunlight pushes very gently on the huge sunshield, like wind on a sail. This flap balances the push so Webb does not slowly tip over, which saves fuel.' },
 ];
-let selectedPart = null;
-const partButtons = new Map();
-function selectPart(key) {
-  selectedPart = selectedPart === key ? null : key;
-  for (const [k, btn] of partButtons) btn.setAttribute('aria-pressed', String(k === selectedPart));
-  const part = PARTS.find((p) => p.key === selectedPart);
-  if (part) {
-    $('part-title').textContent = part.title;
-    $('part-text').textContent = part.text;
-  }
-}
-for (const part of PARTS) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'part-btn';
-  btn.textContent = part.label;
-  btn.setAttribute('aria-pressed', 'false');
-  btn.addEventListener('click', () => selectPart(part.key));
-  $('parts').appendChild(btn);
-  partButtons.set(part.key, btn);
-}
+const picker = createPartPicker(PARTS);
 
 /* ──── Unfolding steps: clip second N is the start of step N ──── */
 const STEPS = [
@@ -131,7 +111,7 @@ function showStep(index) {
 
 /* ──── The speed chart, the alignment toy and the infrared slider ──── */
 const speedRows = data.transfer.map((row) => [row[0], row[4]]);
-const drawSpeedChart = createChart($('chart-speed'), speedRows, DAYS.arrive, { eventLabel: 'arrives' });
+const drawSpeedChart = createChart($('chart-speed'), speedRows, { events: [{ day: DAYS.arrive, label: 'arrives' }] });
 drawSpeedChart(DAYS.first);
 
 // Where each of the 18 unaligned images starts, as a share of the canvas.
@@ -212,7 +192,7 @@ const kit = createMissionKit({ shadowMap: true });
 if (kit) startScene(kit);
 
 function startScene(kit) {
-  const { THREE, scene, camera, renderer, E, addGlow, fatLine, setSegment, thinLoop, sunLight, skyLight, fill, place, anchors, setClock, pose, orbit, drag } = kit;
+  const { THREE, scene, renderer, E, addGlow, fatLine, setSegment, thinLoop, sunLight, place, anchors, setClock, orbit, drag } = kit;
   const scratch = new THREE.Vector3(), scratch2 = new THREE.Vector3(), viewport = new THREE.Vector2();
   const far = () => (kit.wide ? 1 : 1.45);
   // On a phone a label that would run off the right edge hangs to the left
@@ -243,8 +223,8 @@ function startScene(kit) {
     deploy.setLoop(THREE.LoopOnce);
     deploy.clampWhenFinished = true;
     deploy.play();
-    kit.addHotspots(gltf.scene, PARTS, selectPart);
-  }, { tracked: true });
+    kit.addHotspots(gltf.scene, picker);
+  });
   function poseTelescope(second) {
     if (!mixer || second === posed) return;
     posed = second;
@@ -257,14 +237,8 @@ function startScene(kit) {
   sunLight.shadow.normalBias = 0.06;
   // Two ways to light it. `shown`: from the front, so the mirror can be
   // seen. `true`: the Sun where it really is, under the shield.
-  const SUN_SHOWN = new THREE.Vector3(16, 30, 40), SUN_TRUE = new THREE.Vector3(5, -52, 9);
-  function light(real) {
-    sunLight.position.copy(real ? SUN_TRUE : SUN_SHOWN).add(CENTRE);
-    sunLight.target.position.copy(CENTRE);
-    sunLight.intensity = real ? 5.2 : 3.4;
-    fill.intensity = real ? 0.6 : 0.55;
-    skyLight.intensity = real ? 0.18 : 0.7;
-  }
+  const SHOWN = { sun: [16, 33.4, 40], target: CENTRE.toArray(), sunIntensity: 3.4, fill: 0.55, sky: 0.7 };
+  const TRUE = { sun: [5, -48.6, 9], target: CENTRE.toArray(), sunIntensity: 5.2, fill: 0.6, sky: 0.18 };
 
   // The mirror chapter's yardsticks, to scale: Hubble's 2.4 m mirror and a
   // child 1.35 m tall, standing in the plane of Webb's mirror.
@@ -433,18 +407,18 @@ function startScene(kit) {
       orbit(CENTRE, 0.55 + Math.sin(kit.time * 0.11) * 0.4 + drag.yaw, 0.3 + drag.pitch, lerp(40, 35, p) * far());
     },
     telescope(p) {
-      const anchor = selectedPart && anchors.get(selectedPart);
+      const anchor = anchors.get(picker.selected);
       if (anchor) {
         anchor.getWorldPosition(scratch);
         const azimuth = Math.atan2(scratch.x, scratch.z + 0.001) + 0.45 + drag.yaw;
         // Parts under the shield are seen from the Sun's side, by its light.
         const below = scratch.y < 1.2;
-        if (below) light(true);
+        if (below) kit.light(TRUE);
         orbit(scratch2.copy(scratch).lerp(CENTRE, 0.5), azimuth, (below ? -0.42 : 0.3) + drag.pitch, (32 + scratch.distanceTo(CENTRE) * 0.8) * far());
       } else {
         orbit(CENTRE, 0.3 + p * 1.5 + drag.yaw, 0.3 + drag.pitch, 44 * far());
       }
-      kit.showHotspots(selectedPart);
+      kit.showHotspots();
     },
     unfold(p) {
       // Hold folded, play, hold open. Each step eases in and out.
@@ -470,11 +444,11 @@ function startScene(kit) {
       moonDot.position.copy(moon);
       const reach = webb.length();
       orbit(scratch.copy(webb).multiplyScalar(0.5), lerp(-0.25, 0.2, p), lerp(0.95, 0.7, p), (9 + reach * 2.3) * (kit.wide ? 1 : 1.75));
-      place('earth', 'Earth', origin, 'is-home', 10, 8);
-      place('moon', 'Moon', moon, '', 8, -4);
-      place('webb', 'Webb', webb, 'is-craft', 10, -18);
-      if (reach > 6) place('l2', 'L2', l2, 'is-event', 10, 10, smooth(6, 9, reach));
-      milestones.forEach((m, i) => { if (m.day <= day) place('m' + i, m.text, m.at, 'is-event', hang(m.text, 12), i ? 8 : -16); });
+      place('earth', 'Earth', origin, { cls: 'is-home', dy: 8 });
+      place('moon', 'Moon', moon, { dx: 8, dy: -4 });
+      place('webb', 'Webb', webb, { cls: 'is-craft', dy: -18 });
+      if (reach > 6) place('l2', 'L2', l2, { cls: 'is-event', dy: 10, alpha: smooth(6, 9, reach) });
+      milestones.forEach((m, i) => { if (m.day <= day) place('m' + i, m.text, m.at, { cls: 'is-event', dx: hang(m.text, 12), dy: i ? 8 : -16 }); });
       setClock(formatDate(msOf(day)),
         '<b>' + km(Math.round(Math.hypot(row[1], row[2], row[3]) / 1000) * 1000) + '</b> km from Earth',
         '<b>' + sampleRows(data.transfer, day)[4].toFixed(2) + '</b> km/s');
@@ -490,16 +464,16 @@ function startScene(kit) {
       // along the Sun-Earth line at the loop face-on.
       const turn = smooth(0.25, 0.85, p);
       orbit(scratch.copy(l2).multiplyScalar(lerp(0.75, 1, turn)), lerp(0.1, -1.25, turn), lerp(1.0, 0.16, turn), lerp(52, 46, turn) * (kit.wide ? 1 : 1.65));
-      place('earth', 'Earth', origin, 'is-home', 10, 8);
-      place('moon', 'Moon’s orbit', moon, 'is-dim', 8, -4);
-      place('webb', 'Webb', webb, 'is-craft', 10, -18);
-      place('l2', 'L2 · nothing here', l2, 'is-event', hang('L2 · nothing here', 12), 10);
+      place('earth', 'Earth', origin, { cls: 'is-home', dy: 8 });
+      place('moon', 'Moon’s orbit', moon, { cls: 'is-dim', dx: 8, dy: -4 });
+      place('webb', 'Webb', webb, { cls: 'is-craft', dy: -18 });
+      place('l2', 'L2 · nothing here', l2, { cls: 'is-event', dx: hang('L2 · nothing here', 12), dy: 10 });
       setClock(formatDate(msOf(day)),
         '<b>' + km(Math.round(Math.hypot(row[1], row[2], row[3]) / 1000) * 1000) + '</b> km from Earth',
         'Lap <b>' + (lapsBy(day) + 1) + '</b> around L2');
     },
     sunshield(p) {
-      light(true);
+      kit.light(TRUE);
       // From under the shield, where the Sun is, up over the edge into its
       // shadow.
       const elevation = lerp(-0.62, 0.5, smooth(0.12, 0.8, p));
@@ -508,8 +482,8 @@ function startScene(kit) {
       const degrees = Math.round(lerp(85, -233, side));
       SPACE.setText($('temp-value'), (degrees > 0 ? '+' : '−') + Math.abs(degrees) + ' °C');
       SPACE.setText($('temp-side'), side < 0.03 ? 'Sun side' : side > 0.97 ? 'Mirror side' : 'Between the layers');
-      place('hot', 'Sun side · +85 °C', scratch.set(0, -1.6, 3.5), 'is-craft', 12, 0, 1 - side);
-      place('cold', 'Mirror side · −233 °C', scratch.copy(MIRROR).setY(9), 'is-home', 12, -8, side);
+      place('hot', 'Sun side · +85 °C', scratch.set(0, -1.6, 3.5), { cls: 'is-craft', dx: 12, dy: 0, alpha: 1 - side });
+      place('cold', 'Mirror side · −233 °C', scratch.copy(MIRROR).setY(9), { cls: 'is-home', dx: 12, dy: -8, alpha: side });
     },
     mirror(p) {
       const show = smooth(0.02, 0.2, p);
@@ -517,9 +491,9 @@ function startScene(kit) {
       hubble.scale.setScalar(show);
       child.scale.setScalar(show);
       orbit(scratch.copy(MIRROR).setX(0.3), lerp(0.5, -0.12, smooth(0, 0.5, p)) + drag.yaw, 0.1 + drag.pitch, lerp(34, 27, smooth(0, 0.5, p)) * (kit.wide ? 1 : 1.8));
-      place('webb-mirror', 'Webb · 6.5 m', scratch.copy(MIRROR).setY(8.9), 'is-craft', -34, -16, show);
-      place('hubble-mirror', 'Hubble · 2.4 m', scratch.copy(hubble.position).setY(7.6), '', -50, -8, show);
-      place('child', 'Age 9 · 1.35 m', scratch.copy(child.position).setY(5.7), 'is-home', -50, -16, show);
+      place('webb-mirror', 'Webb · 6.5 m', scratch.copy(MIRROR).setY(8.9), { cls: 'is-craft', dx: -34, dy: -16, alpha: show });
+      place('hubble-mirror', 'Hubble · 2.4 m', scratch.copy(hubble.position).setY(7.6), { dx: -50, dy: -8, alpha: show });
+      place('child', 'Age 9 · 1.35 m', scratch.copy(child.position).setY(5.7), { cls: 'is-home', dx: -50, dy: -16, alpha: show });
     },
     infrared(p) {
       if (!readerHasSlider) setInfrared(smooth(0.3, 0.7, p), false);
@@ -530,43 +504,33 @@ function startScene(kit) {
     },
   };
 
-  function enterStage(next) {
-    craft.visible = next === 'craft';
-    l2set.visible = next === 'l2';
-    nebula.visible = next === 'nebula';
-    kit.stars.points.visible = next !== 'nebula';
-    sunLight.castShadow = next === 'craft';
-    if (next === 'l2') {
-      transferAhead.material.opacity = 0.18;
-    }
+  // What only some chapters change, put back before each one plays.
+  function before(state) {
+    compare.visible = false;
+    if (state.id !== 'unfold') poseTelescope(CLIP_END);
+    sunLight.castShadow = state.stage === 'craft';
+    const onHalo = state.id === 'halo';
+    haloLine.visible = haloAhead.visible = forecastLine.visible = onHalo;
+    transferAhead.visible = !onHalo;
+    for (const m of milestones) m.dot.visible = !onHalo;
+    moonLine.material.opacity = onHalo ? 0.3 : 0.4;
+    renderer.getSize(viewport);
+    nebulaUniforms.uAspect.value = viewport.x / viewport.y;
+    nebulaUniforms.uTime.value = kit.time;
+    // On a phone the card covers the lower half, so the top of the cloud
+    // is lifted into the half that shows.
+    nebulaUniforms.uShift.value.set(kit.wide ? -0.12 : 0, kit.wide ? 0 : -0.2);
   }
+  const chapters = {};
+  for (const [id, play] of Object.entries(CHAPTERS)) {
+    chapters[id] = { play(progress, state) { before(state); play(progress); } };
+  }
+  chapters.unfold.clock = true;
+  chapters.infrared.clock = false;
 
   kit.run({
-    chapters: CHAPTERS,
-    enterStage,
-    canDrag: () => kit.stage === 'craft',
-    // Keep the subject clear of the card: beside it on wide screens, above
-    // it on phones. The dust cloud fills the whole frame.
-    offset(state, wide) {
-      if (state.stage === 'nebula') return [0, 0];
-      return wide ? [0.15, 0] : [0, state.stage === 'l2' ? 0.13 : 0.2];
-    },
-    before(state) {
-      light(false);
-      compare.visible = false;
-      if (state.id !== 'unfold') poseTelescope(CLIP_END);
-      kit.clock.classList.toggle('is-on', state.stage === 'l2' || state.id === 'unfold');
-      const onHalo = state.id === 'halo';
-      haloLine.visible = haloAhead.visible = forecastLine.visible = onHalo;
-      transferAhead.visible = !onHalo;
-      for (const m of milestones) m.dot.visible = !onHalo;
-      moonLine.material.opacity = onHalo ? 0.3 : 0.4;
-      renderer.getSize(viewport);
-      nebulaUniforms.uAspect.value = viewport.x / viewport.y;
-      nebulaUniforms.uTime.value = kit.time;
-      // On a phone the card covers the lower half, so the top of the cloud
-      // is lifted into the half that shows.
-      nebulaUniforms.uShift.value.set(kit.wide ? -0.12 : 0, kit.wide ? 0 : -0.2);
-    },
+    sets: { craft: [craft, kit.stars.points], l2: [l2set, kit.stars.points], nebula: [nebula] },
+    chapters,
+    studio: SHOWN,
   });
 }

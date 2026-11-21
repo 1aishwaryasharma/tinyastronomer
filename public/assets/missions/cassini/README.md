@@ -136,11 +136,13 @@ the repository, then:
     /Applications/Blender.app/Contents/MacOS/Blender --background \
       --python tools/build-cassini-model.py -- /tmp/Cassini.glb
 
-That writes all four files. `--no-renders` exports the GLB only, `--no-glb`
-renders only, `--previews DIR` adds quick check renders from six angles, and
-`--part-colours` paints each part a flat colour in those previews to check
-the split. The Meshopt pass runs inside the script as
-`bunx @gltf-transform/cli@4.2.1 meshopt <raw> cassini.glb --level medium`.
+That writes all four files. `--out DIR` writes them to another folder,
+`--no-renders` exports the GLB only, `--no-glb` renders only, `--previews DIR`
+adds quick check renders from six angles, and `--part-colours` paints each
+part a flat colour in those previews to check the split. The script imports
+`tools/mission_model_kit.py`, which holds what the three mission model
+builders share. The Meshopt pass runs there as `bunx @gltf-transform/cli@4.2.1
+meshopt <raw> cassini.glb --level medium`.
 
 The stills are Cycles renders (160 samples, denoised, AgX) of the same scene:
 one hard Sun, a weak blue fill and a rim light, composited over a flat

@@ -16,26 +16,22 @@ Options after the source path:
     --previews DIR      also write low-sample check renders from several angles
     --part-colours      with --previews: flat colour per part, to check the split
     --samples N         Cycles samples for the finals (default 160)
+    --out DIR           write there instead of public/assets/missions/cassini
 
 Needs Blender 5.x; `bunx` (for the gltf-transform Meshopt pass) on PATH.
 Runs against the unmodified NASA file and is deterministic.
 """
 import math
-import random
-import shutil
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import bpy
-import bmesh
-import numpy as np
 from mathutils import Matrix, Vector
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / 'public' / 'assets' / 'missions' / 'cassini'
-GLTF_TRANSFORM = '@gltf-transform/cli@4.2.1'
+# The kit sits beside this file; importing it must not leave a __pycache__ here.
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import mission_model_kit as kit
 
 PARTS = [
     'HighGainAntenna', 'Bus', 'RemoteSensingPallet', 'MagnetometerBoom',
@@ -124,31 +120,6 @@ def classify(source, lo, hi):
     return 'Bus'
 
 
-def islands(bm):
-    """Group faces into connected pieces, welding coincident vertices."""
-    parent = {}
-
-    def find(a):
-        while parent[a] != a:
-            parent[a] = parent[parent[a]]
-            a = parent[a]
-        return a
-
-    key_of = {}
-    for v in bm.verts:
-        key = (round(v.co.x, 4), round(v.co.y, 4), round(v.co.z, 4))
-        key_of[v.index] = key
-        parent.setdefault(key, key)
-    for f in bm.faces:
-        first = find(key_of[f.verts[0].index])
-        for v in f.verts[1:]:
-            parent[find(key_of[v.index])] = first
-    groups = {}
-    for f in bm.faces:
-        groups.setdefault(find(key_of[f.verts[0].index]), []).append(f)
-    return list(groups.values())
-
-
 def make_material(role):
     color, metallic, roughness = MATERIALS[role]
     mat = bpy.data.materials.new(role)
@@ -177,159 +148,52 @@ def make_material(role):
     return mat
 
 
-def join(objects, name):
-    with bpy.context.temp_override(active_object=objects[0], object=objects[0],
-                                   selected_objects=objects,
-                                   selected_editable_objects=objects):
-        bpy.ops.object.join()
-    objects[0].name = name
-    objects[0].data.name = name
-    return objects[0]
-
-
-def apply_transform(obj):
-    with bpy.context.temp_override(active_object=obj, object=obj,
-                                   selected_objects=[obj],
-                                   selected_editable_objects=[obj]):
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-
-
-def build_antennas(ends, to_final):
-    """Three tapered rods along the lines NASA drew, root to tip."""
-    bm = bmesh.new()
-    placed = []
-    for root, tip in ends:
-        root, tip = to_final @ root, to_final @ tip
-        length = (tip - root).length
-        direction = (tip - root).normalized()
-        made = bmesh.ops.create_cone(
-            bm, cap_ends=True, segments=8, radius1=ANTENNA_RADIUS_ROOT,
-            radius2=ANTENNA_RADIUS_TIP, depth=length)
-        place = (Matrix.Translation(root + direction * length / 2)
-                 @ Vector((0, 0, 1)).rotation_difference(direction).to_matrix().to_4x4())
-        bmesh.ops.transform(bm, matrix=place, verts=made['verts'])
-        placed.append((root, direction, length))
-    for f in bm.faces:
-        f.smooth = True
-    mesh = bpy.data.meshes.new('RPWSAntennas')
-    bm.to_mesh(mesh)
-    bm.free()
-    mesh.materials.append(make_material('Antenna'))
-    obj = bpy.data.objects.new('RPWSAntennas', mesh)
-    bpy.context.scene.collection.objects.link(obj)
-    return obj, placed
-
-
 def build_model(source_path):
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    bpy.ops.import_scene.gltf(filepath=str(source_path))
-    scene = bpy.context.scene
+    scene = kit.open_source(source_path)
 
     role_materials = {}
-    pieces = {part: [] for part in PARTS}
     antenna_ends = []
-    sources = [o for o in scene.objects if o.type == 'MESH' and o.name != '_root']
-    for src in sources:
-        world = src.matrix_world.copy()
-        bm = bmesh.new()
-        bm.from_mesh(src.data)
-        bm.faces.ensure_lookup_table()
-        part_of_face = {}
-        for faces in islands(bm):
-            points = [world @ v.co for f in faces for v in f.verts]
-            lo = [min(p[i] for p in points) for i in range(3)]
-            hi = [max(p[i] for p in points) for i in range(3)]
-            part = classify(src.name, lo, hi)
-            if part == 'RPWSAntennas':
-                by_reach = sorted(points, key=lambda c: c.length)
-                antenna_ends.append((sum(by_reach[:4], Vector()) / 4,
-                                     sum(by_reach[-4:], Vector()) / 4))
-                continue
-            for f in faces:
-                part_of_face[f.index] = part
-        bm.free()
 
-        for part in PARTS:
-            if part not in part_of_face.values():
-                continue
-            piece = src.copy()
-            piece.data = src.data.copy()
-            scene.collection.objects.link(piece)
-            piece.parent = None
-            piece.matrix_world = world
-            bm = bmesh.new()
-            bm.from_mesh(piece.data)
-            doomed = [f for f in bm.faces if part_of_face.get(f.index) != part]
-            bmesh.ops.delete(bm, geom=doomed, context='FACES')
-            bm.to_mesh(piece.data)
-            bm.free()
-            for i, old in enumerate(piece.data.materials):
-                role = ROLE_OF[old.name]
-                if role not in role_materials:
-                    role_materials[role] = make_material(role)
-                piece.data.materials[i] = role_materials[role]
-            pieces[part].append(piece)
+    def part_of(src, faces, points, lo, hi):
+        part = classify(src.name, lo, hi)
+        if part == 'RPWSAntennas':
+            by_reach = sorted(points, key=lambda c: c.length)
+            antenna_ends.append((sum(by_reach[:4], Vector()) / 4,
+                                 sum(by_reach[-4:], Vector()) / 4))
+            return None
+        return part
 
-    for obj in list(scene.objects):
-        if not any(obj in group for group in pieces.values()):
-            bpy.data.objects.remove(obj)
+    def material_for(old, part):
+        role = ROLE_OF[old.name]
+        if role not in role_materials:
+            role_materials[role] = make_material(role)
+        return role_materials[role]
+
+    pieces = kit.split_by_island(scene, PARTS, part_of, material_for)
 
     # NASA's model is already at true size (the dish is 4.00 m across) with
     # its origin on the axis at mid-height of the stack.
     to_final = REORIENT.to_4x4()
+    parts = kit.settle_parts(pieces, to_final)
 
-    parts = {}
-    for part, group in pieces.items():
-        if not group:
-            continue
-        obj = join(group, part) if len(group) > 1 else group[0]
-        obj.name = obj.data.name = part
-        obj.matrix_world = to_final @ obj.matrix_world
-        apply_transform(obj)
-        with bpy.context.temp_override(object=obj, active_object=obj):
-            bpy.ops.object.material_slot_remove_unused()
-        parts[part] = obj
-
+    # Rods along the lines NASA drew, root to tip.
     antenna_ends.sort(key=lambda pair: -pair[1].x)
-    parts['RPWSAntennas'], placed = build_antennas(antenna_ends, to_final)
+    placed = []
+    for root, tip in antenna_ends:
+        root, tip = to_final @ root, to_final @ tip
+        placed.append((root, (tip - root).normalized(), (tip - root).length))
+    parts['RPWSAntennas'] = kit.tapered_rods(
+        'RPWSAntennas', placed, ANTENNA_RADIUS_ROOT, ANTENNA_RADIUS_TIP, make_material('Antenna'))
 
-    hotspots = {}
-    for part, target in HOTSPOT_TARGETS.items():
-        goal = to_final @ Vector(target)
-        hotspots[part] = min((v.co for v in parts[part].data.vertices),
-                             key=lambda c: (c - goal).length_squared).copy()
+    hotspots = {part: kit.nearest_vertex(parts[part], to_final @ Vector(target))
+                for part, target in HOTSPOT_TARGETS.items()}
     root, direction, length = placed[0]
     hotspots['RPWSAntennas'] = root + direction * length * 0.22
     for part in PARTS:
-        empty = bpy.data.objects.new('Hotspot_' + part, None)
-        empty.empty_display_size = 0.1
-        empty.location = hotspots[part]
-        scene.collection.objects.link(empty)
+        kit.add_hotspot(part, hotspots[part])
     for (root, direction, length) in placed:
         print(f'ANTENNA length {length:.2f} m')
     return parts
-
-
-def export_glb(target):
-    raw = Path(tempfile.mkdtemp(prefix='cassini-glb-')) / 'cassini-raw.glb'
-    bpy.ops.export_scene.gltf(
-        filepath=str(raw), export_format='GLB', export_yup=True,
-        export_apply=False, export_image_format='WEBP',
-        export_image_quality=TEXTURE_QUALITY, export_cameras=False,
-        export_lights=False, export_animations=False, export_extras=False,
-        export_tangents=False, export_vertex_color='NONE')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(['bunx', GLTF_TRANSFORM, 'meshopt', str(raw), str(target),
-                    '--level', 'medium'], check=True)
-    shutil.rmtree(raw.parent)
-
-
-def look_at(obj, position, target, up):
-    forward = (Vector(target) - Vector(position)).normalized()
-    right = forward.cross(Vector(up)).normalized()
-    true_up = right.cross(forward)
-    obj.matrix_world = Matrix.Translation(position) @ Matrix(
-        (right, true_up, -forward)).transposed().to_4x4()
 
 
 def from_nasa(vector):
@@ -337,101 +201,17 @@ def from_nasa(vector):
     return REORIENT @ Vector(vector)
 
 
-def setup_lighting(scene):
-    scene.render.engine = 'CYCLES'
-    scene.cycles.use_denoising = True
-    scene.cycles.use_adaptive_sampling = True
-    scene.render.film_transparent = True
-    scene.render.image_settings.file_format = 'PNG'
-    scene.render.image_settings.color_mode = 'RGBA'
-    scene.render.image_settings.color_depth = '8'
-    scene.view_settings.view_transform = 'AgX'
-    try:
-        scene.view_settings.look = 'AgX - Medium High Contrast'
-    except TypeError:
-        pass
-    world = bpy.data.worlds.new('Space')
-    world.use_nodes = True
-    background = world.node_tree.nodes['Background']
-    background.inputs['Color'].default_value = (0.02, 0.03, 0.06, 1)
-    background.inputs['Strength'].default_value = 0.25
-    scene.world = world
-
-    def sun(name, toward, energy, color, angle):
-        light = bpy.data.lights.new(name, 'SUN')
-        light.energy = energy
-        light.color = color
-        light.angle = math.radians(angle)
-        obj = bpy.data.objects.new(name, light)
-        scene.collection.objects.link(obj)
-        look_at(obj, from_nasa(toward) * -1, (0, 0, 0), from_nasa((0, 0.3, 1)))
-        return obj
-
-    # `toward` is the direction the light travels, in NASA's frame.
-    sun('Sun', (-0.7, 0.45, -0.55), 5.0, (1.0, 0.97, 0.92), 0.6)
-    sun('Fill', (-0.5, -0.6, 0.6), 0.25, (0.55, 0.7, 1.0), 20)
-    sun('Rim', (0.2, -0.8, 0.5), 0.8, (0.6, 0.75, 1.0), 4)
+def view(shot):
+    position, target, up, *lens = shot
+    return (from_nasa(position), from_nasa(target), from_nasa(up), *lens)
 
 
-def star_field(width, height, seed):
-    rng = random.Random(seed)
-    sky = np.empty((height, width, 3), dtype=np.float32)
-    sky[:] = np.array([0x05, 0x08, 0x10], dtype=np.float32) / 255
-    ys, xs = np.mgrid[0:height, 0:width]
-    for _ in range(int(width * height / 3200)):
-        x, y = rng.uniform(0, width), rng.uniform(0, height)
-        brightness = 0.12 + 0.88 * rng.random() ** 4
-        radius = (0.55 + 1.0 * brightness) * width / 1200
-        tint = rng.choice(((1.0, 0.96, 0.9), (0.86, 0.92, 1.0), (1.0, 1.0, 1.0)))
-        x0, x1 = max(0, int(x - 6)), min(width, int(x + 7))
-        y0, y1 = max(0, int(y - 6)), min(height, int(y + 7))
-        glow = np.exp(-((xs[y0:y1, x0:x1] - x) ** 2 + (ys[y0:y1, x0:x1] - y) ** 2)
-                      / (2 * radius * radius)) * brightness
-        sky[y0:y1, x0:x1] += glow[..., None] * np.array(tint, dtype=np.float32)
-    return np.clip(sky, 0, 1)
-
-
-def save_pixels(pixels, path, file_format, quality=90):
-    height, width = pixels.shape[:2]
-    image = bpy.data.images.new('still', width, height, alpha=False)
-    image.colorspace_settings.name = 'Non-Color'
-    rgba = np.ones((height, width, 4), dtype=np.float32)
-    rgba[..., :3] = pixels
-    image.pixels.foreach_set(rgba.ravel())
-    image.file_format = file_format
-    image.filepath_raw = str(path)
-    image.save(quality=quality)
-    bpy.data.images.remove(image)
-
-
-def halve(pixels):
-    h, w = pixels.shape[0] // 2, pixels.shape[1] // 2
-    return pixels[:h * 2, :w * 2].reshape(h, 2, w, 2, 3).mean(axis=(1, 3))
-
-
-def render_still(scene, camera, shot, width, height, samples, seed):
-    """Render the craft over the star field; returns bottom-up sRGB pixels."""
-    position, target, up, lens, shift_x, shift_y = shot
-    look_at(camera, from_nasa(position), from_nasa(target), from_nasa(up))
-    camera.data.lens = lens
-    camera.data.shift_x, camera.data.shift_y = shift_x, shift_y
-    scene.render.resolution_x, scene.render.resolution_y = width, height
-    scene.render.resolution_percentage = 100
-    scene.cycles.samples = samples
-    path = Path(tempfile.mkdtemp(prefix='cassini-still-')) / 'craft.png'
-    scene.render.filepath = str(path)
-    bpy.ops.render.render(write_still=True)
-    image = bpy.data.images.load(str(path))
-    image.colorspace_settings.name = 'Non-Color'
-    image.alpha_mode = 'CHANNEL_PACKED'
-    craft = np.empty(width * height * 4, dtype=np.float32)
-    image.pixels.foreach_get(craft)
-    craft = craft.reshape(height, width, 4)
-    bpy.data.images.remove(image)
-    shutil.rmtree(path.parent)
-    alpha = craft[..., 3:4]
-    return craft[..., :3] * alpha + star_field(width, height, seed) * (1 - alpha)
-
+# name, direction the light travels (NASA frame), energy, colour, angular size
+LAMPS = [
+    ('Sun', (-0.7, 0.45, -0.55), 5.0, (1.0, 0.97, 0.92), 0.6),
+    ('Fill', (-0.5, -0.6, 0.6), 0.25, (0.55, 0.7, 1.0), 20),
+    ('Rim', (0.2, -0.8, 0.5), 0.8, (0.6, 0.75, 1.0), 4),
+]
 
 # position, target, up (NASA frame: +Z boresight, +Y magnetometer boom, +X
 # Huygens), lens mm, shift x, shift y
@@ -454,36 +234,21 @@ PART_COLOURS = {
 
 
 def main():
-    args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    if not args or args[0].startswith('--'):
-        sys.exit(__doc__)
-    source = Path(args[0]).resolve()
-    samples = int(args[args.index('--samples') + 1]) if '--samples' in args else 160
-    previews = Path(args[args.index('--previews') + 1]) if '--previews' in args else None
-
-    parts = build_model(source)
-    if '--no-glb' not in args:
-        export_glb(OUT / 'cassini.glb')
+    opts = kit.options(__doc__, 'cassini')
+    parts = build_model(opts.source)
+    if opts.glb:
+        kit.export_glb(opts.out / 'cassini.glb', export_image_format='WEBP',
+                       export_image_quality=TEXTURE_QUALITY, export_animations=False)
 
     scene = bpy.context.scene
-    if previews or '--no-renders' not in args:
-        setup_lighting(scene)
-        camera = bpy.data.objects.new('Camera', bpy.data.cameras.new('Camera'))
-        camera.data.sensor_width = 36
-        camera.data.clip_end = 500
-        scene.collection.objects.link(camera)
-        scene.camera = camera
-        for empty in [o for o in scene.objects if o.type == 'EMPTY']:
-            empty.hide_render = True
-    if '--no-renders' not in args:
-        cover = render_still(scene, camera, SHOT_COVER, 1200, 630, samples, 1997)
-        save_pixels(cover, OUT / 'og-cover.png', 'PNG')
-        poster = render_still(scene, camera, SHOT_POSTER, 1600, 1000, samples, 1997)
-        save_pixels(poster, OUT / 'poster.webp', 'WEBP', quality=82)
-        save_pixels(halve(poster), OUT / 'poster-800.webp', 'WEBP', quality=84)
-    if previews:
-        previews.mkdir(parents=True, exist_ok=True)
-        if '--part-colours' in args:
+    if opts.previews or opts.renders:
+        lamps = [(name, from_nasa(toward), *rest) for name, toward, *rest in LAMPS]
+        camera = kit.stage(scene, lamps, from_nasa((0, 0.3, 1)), sky_strength=0.25)
+    if opts.renders:
+        kit.render_finals(scene, camera, opts.out, view(SHOT_COVER), view(SHOT_POSTER), opts.samples, 1997)
+    if opts.previews:
+        opts.previews.mkdir(parents=True, exist_ok=True)
+        if '--part-colours' in opts.flags:
             for part, colour in PART_COLOURS.items():
                 flat = bpy.data.materials.new('Check' + part)
                 flat.use_nodes = True
@@ -491,17 +256,13 @@ def main():
                 parts[part].data.materials.clear()
                 parts[part].data.materials.append(flat)
         for name, shot in PREVIEW_SHOTS.items():
-            pixels = render_still(scene, camera, shot, 1000, 700, 24, 1)
-            save_pixels(pixels, previews / f'{name}.png', 'PNG')
+            pixels = kit.render_still(scene, camera, view(shot), 1000, 700, 24, 1)
+            kit.save_pixels(pixels, opts.previews / f'{name}.png', 'PNG')
 
     for part in PARTS:
-        mesh = parts[part].data
-        mesh.calc_loop_triangles()
-        points = [v.co for v in mesh.vertices]
-        lo = [min(p[i] for p in points) for i in range(3)]
-        hi = [max(p[i] for p in points) for i in range(3)]
+        lo, hi = kit.bounds([v.co for v in parts[part].data.vertices])
         # Blender's (x, y, z) is glTF's (x, z, -y).
-        print(f'PART {part}: {len(mesh.loop_triangles)} triangles, glTF bounds '
+        print(f'PART {part}: {kit.triangles(parts[part])} triangles, glTF bounds '
               f'({lo[0]:.2f}, {lo[2]:.2f}, {-hi[1]:.2f}) to ({hi[0]:.2f}, {hi[2]:.2f}, {-lo[1]:.2f})')
 
 

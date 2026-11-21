@@ -17,26 +17,24 @@ Options after the source path:
     --no-glb            render only
     --previews DIR      also write quick check renders at several clip times
     --samples N         Cycles samples for the finals (default 160)
+    --out DIR           write there instead of public/assets/missions/webb
 
 Needs Blender 5.x; `bunx` (for the gltf-transform Meshopt pass) on PATH.
 Runs against the unmodified NASA file and is deterministic.
 """
 import math
-import random
-import shutil
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import bpy
 import bmesh
-import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / 'public' / 'assets' / 'missions' / 'webb'
-GLTF_TRANSFORM = '@gltf-transform/cli@4.2.1'
+# The kit sits beside this file; importing it must not leave a __pycache__ here.
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import mission_model_kit as kit
+
 PREFIX = 'James_Webb_Space_Telescope:'
 FPS = 24
 
@@ -72,7 +70,6 @@ PARTS = [
     'SunshieldFwd', 'SunshieldAft', 'FwdPallet', 'AftPallet',
     'MidBoomA', 'MidBoomB',
 ]
-HOTSPOT_PARTS = PARTS[:8]
 
 # Triangles each part is thinned to. Mirrors and struts are already light.
 BUDGET = {
@@ -192,17 +189,6 @@ def make_material(name):
     return mat
 
 
-def override(obj, others=None):
-    objects = others or [obj]
-    return bpy.context.temp_override(active_object=obj, object=obj, selected_objects=objects,
-                                     selected_editable_objects=objects)
-
-
-def triangles(obj):
-    obj.data.calc_loop_triangles()
-    return len(obj.data.loop_triangles)
-
-
 def tidy(obj, target=None, sharp_degrees=38):
     """Weld, thin to `target` triangles, and set which edges stay hard."""
     bm = bmesh.new()
@@ -210,10 +196,10 @@ def tidy(obj, target=None, sharp_degrees=38):
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0004)
     bm.to_mesh(obj.data)
     bm.free()
-    if target and triangles(obj) > target:
+    if target and kit.triangles(obj) > target:
         mod = obj.modifiers.new('thin', 'DECIMATE')
-        mod.ratio = target / triangles(obj)
-        with override(obj):
+        mod.ratio = target / kit.triangles(obj)
+        with kit.override(obj):
             bpy.ops.object.modifier_apply(modifier=mod.name)
     bm = bmesh.new()
     bm.from_mesh(obj.data)
@@ -251,9 +237,7 @@ SPLIT_FWD, SPLIT_AFT = 1.45, -1.55
 
 
 def build_parts(source_path):
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    bpy.ops.import_scene.gltf(filepath=str(source_path))
-    scene = bpy.context.scene
+    scene = kit.open_source(source_path)
     scene.render.fps = FPS
     materials = {name: make_material(name) for name in MATERIALS}
 
@@ -266,8 +250,8 @@ def build_parts(source_path):
         if any(name in DROPPED for name in chain):
             continue
         part = classify(chain)
-        corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
-        size = max(max(c[i] for c in corners) - min(c[i] for c in corners) for i in range(3))
+        lo, hi = kit.bounds([obj.matrix_world @ Vector(c) for c in obj.bound_box])
+        size = max(h - l for l, h in zip(lo, hi))
         if size < SMALLEST_KEPT and part not in ('PrimaryMirror', 'SecondaryMirror'):
             continue
         if part == 'Shield':
@@ -303,14 +287,8 @@ def build_parts(source_path):
 
     parts = {}
     for part, members in groups.items():
-        first = members[0]
-        if len(members) > 1:
-            with override(first, members):
-                bpy.ops.object.join()
-        with override(first):
-            bpy.ops.object.material_slot_remove_unused()
-        first.name = first.data.name = part
-        parts[part] = first
+        parts[part] = kit.join(members, part)
+        kit.drop_unused_slots(parts[part])
     for obj in list(scene.objects):
         if obj not in parts.values():
             bpy.data.objects.remove(obj)
@@ -340,18 +318,10 @@ def build_parts(source_path):
     layers = [parts.pop('Shield' + str(i)) for i in range(1, 6)]
     for name, lo, hi in (('SunshieldFwd', SPLIT_FWD, None), ('Sunshield', SPLIT_AFT, SPLIT_FWD),
                          ('SunshieldAft', None, SPLIT_AFT)):
-        pieces = [cut(layer, name + str(i), lo, hi) for i, layer in enumerate(layers)]
-        with override(pieces[0], pieces):
-            bpy.ops.object.join()
-        pieces[0].name = pieces[0].data.name = name
-        parts[name] = pieces[0]
+        parts[name] = kit.join([cut(layer, name + str(i), lo, hi) for i, layer in enumerate(layers)], name)
     for layer in layers:
         bpy.data.objects.remove(layer)
 
-    for name in ('PrimaryMirror', 'MirrorWingA', 'Sunshield', 'SunshieldFwd', 'SunshieldAft', 'MomentumFlap'):
-        xs = [v.co for v in parts[name].data.vertices]
-        lo = [min(c[i] for c in xs) for i in range(3)]
-        hi = [max(c[i] for c in xs) for i in range(3)]
     for obj in parts.values():
         obj.data.transform(TO_FINAL)
         obj.data.update()
@@ -548,148 +518,31 @@ HOTSPOT_TARGETS = {
 
 
 def add_hotspots(parts, pivots):
-    scene = bpy.context.scene
     for part, target in HOTSPOT_TARGETS.items():
         mesh = parts[part]
         parent = pivots.get(mesh.get('pivot', ''))
         offset = Vector(parent['world']) if parent else Vector()
-        goal = F(*target) - offset
-        spot = min((v.co for v in mesh.data.vertices), key=lambda c: (c - goal).length_squared).copy()
-        empty = bpy.data.objects.new('Hotspot_' + part, None)
-        empty.empty_display_size = 0.1
-        scene.collection.objects.link(empty)
-        if parent:
-            empty.parent = parent
-        empty.location = spot
+        kit.add_hotspot(part, kit.nearest_vertex(mesh, F(*target) - offset), parent)
 
 
-def export_glb(target):
-    raw = Path(tempfile.mkdtemp(prefix='webb-glb-')) / 'webb-raw.glb'
-    # Node rest transforms are the open telescope; the clip folds it.
-    bpy.context.scene.frame_set(CLIP_SECONDS * FPS)
-    bpy.ops.export_scene.gltf(
-        filepath=str(raw), export_format='GLB', export_yup=True,
-        export_apply=False, export_cameras=False, export_lights=False,
-        export_extras=False, export_tangents=False, export_vertex_color='NONE',
-        export_texcoords=False, export_materials='EXPORT',
-        export_animations=True, export_animation_mode='ACTIONS',
-        export_force_sampling=False, export_frame_range=False, export_current_frame=True,
-        export_anim_slide_to_zero=False, export_optimize_animation_size=False)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(['bunx', GLTF_TRANSFORM, 'meshopt', str(raw), str(target),
-                    '--level', 'medium'], check=True)
-    print(f'RAW {raw.stat().st_size} bytes, PACKED {target.stat().st_size} bytes')
-    shutil.rmtree(raw.parent)
+def view(shot):
+    position, target, up, *lens = shot
+    return (F(*position), F(*target), D(*up), *lens)
 
 
-# ──── Stills ────
-
-def look_at(obj, position, target, up):
-    forward = (Vector(target) - Vector(position)).normalized()
-    right = forward.cross(Vector(up)).normalized()
-    true_up = right.cross(forward)
-    obj.matrix_world = Matrix.Translation(position) @ Matrix(
-        (right, true_up, -forward)).transposed().to_4x4()
-
-
-def setup_lighting(scene):
-    scene.render.engine = 'CYCLES'
-    scene.cycles.use_denoising = True
-    scene.cycles.use_adaptive_sampling = True
-    scene.render.film_transparent = True
-    scene.render.image_settings.file_format = 'PNG'
-    scene.render.image_settings.color_mode = 'RGBA'
-    scene.render.image_settings.color_depth = '8'
-    scene.view_settings.view_transform = 'AgX'
-    try:
-        scene.view_settings.look = 'AgX - Medium High Contrast'
-    except TypeError:
-        pass
-    world = bpy.data.worlds.new('Space')
-    world.use_nodes = True
-    background = world.node_tree.nodes['Background']
-    background.inputs['Color'].default_value = (0.02, 0.03, 0.06, 1)
-    background.inputs['Strength'].default_value = 0.3
-    scene.world = world
-
-    def sun(name, toward, energy, color, angle):
-        light = bpy.data.lights.new(name, 'SUN')
-        light.energy = energy
-        light.color = color
-        light.angle = math.radians(angle)
-        obj = bpy.data.objects.new(name, light)
-        scene.collection.objects.link(obj)
-        look_at(obj, D(*toward) * -1, (0, 0, 0), D(0.3, 0, 1))
-        return obj
-
-    # `toward` is the direction the light travels, in NASA's frame. The real
-    # Sun only ever lights the underside of the shield; the telescope side is
-    # lit here by a second lamp so the mirror can be seen at all.
-    sun('Sun', (-0.25, 0.35, 1.0), 5.0, (1.0, 0.96, 0.9), 0.6)
-    sun('Key', (-0.8, 0.45, -0.55), 3.0, (1.0, 0.97, 0.93), 2)
-    sun('Fill', (-0.3, -0.8, -0.3), 0.35, (0.55, 0.7, 1.0), 20)
-
-
-def star_field(width, height, seed):
-    rng = random.Random(seed)
-    sky = np.empty((height, width, 3), dtype=np.float32)
-    sky[:] = np.array([0x05, 0x08, 0x10], dtype=np.float32) / 255
-    ys, xs = np.mgrid[0:height, 0:width]
-    for _ in range(int(width * height / 3200)):
-        x, y = rng.uniform(0, width), rng.uniform(0, height)
-        brightness = 0.12 + 0.88 * rng.random() ** 4
-        radius = (0.55 + 1.0 * brightness) * width / 1200
-        tint = rng.choice(((1.0, 0.96, 0.9), (0.86, 0.92, 1.0), (1.0, 1.0, 1.0)))
-        x0, x1 = max(0, int(x - 6)), min(width, int(x + 7))
-        y0, y1 = max(0, int(y - 6)), min(height, int(y + 7))
-        glow = np.exp(-((xs[y0:y1, x0:x1] - x) ** 2 + (ys[y0:y1, x0:x1] - y) ** 2)
-                      / (2 * radius * radius)) * brightness
-        sky[y0:y1, x0:x1] += glow[..., None] * np.array(tint, dtype=np.float32)
-    return np.clip(sky, 0, 1)
-
-
-def save_pixels(pixels, path, file_format, quality=90):
-    height, width = pixels.shape[:2]
-    image = bpy.data.images.new('still', width, height, alpha=False)
-    image.colorspace_settings.name = 'Non-Color'
-    rgba = np.ones((height, width, 4), dtype=np.float32)
-    rgba[..., :3] = pixels
-    image.pixels.foreach_set(rgba.ravel())
-    image.file_format = file_format
-    image.filepath_raw = str(path)
-    image.save(quality=quality)
-    bpy.data.images.remove(image)
-
-
-def halve(pixels):
-    h, w = pixels.shape[0] // 2, pixels.shape[1] // 2
-    return pixels[:h * 2, :w * 2].reshape(h, 2, w, 2, 3).mean(axis=(1, 3))
-
-
-def render_still(scene, camera, shot, width, height, samples, seed, second=CLIP_SECONDS):
-    """Render the telescope over the star field; returns bottom-up sRGB pixels."""
-    position, target, up, lens, shift_x, shift_y = shot
+def render_at(scene, camera, shot, second, *still):
     scene.frame_set(int(second * FPS))
-    look_at(camera, F(*position), F(*target), D(*up))
-    camera.data.lens = lens
-    camera.data.shift_x, camera.data.shift_y = shift_x, shift_y
-    scene.render.resolution_x, scene.render.resolution_y = width, height
-    scene.render.resolution_percentage = 100
-    scene.cycles.samples = samples
-    path = Path(tempfile.mkdtemp(prefix='webb-still-')) / 'webb.png'
-    scene.render.filepath = str(path)
-    bpy.ops.render.render(write_still=True)
-    image = bpy.data.images.load(str(path))
-    image.colorspace_settings.name = 'Non-Color'
-    image.alpha_mode = 'CHANNEL_PACKED'
-    craft = np.empty(width * height * 4, dtype=np.float32)
-    image.pixels.foreach_get(craft)
-    craft = craft.reshape(height, width, 4)
-    bpy.data.images.remove(image)
-    shutil.rmtree(path.parent)
-    alpha = craft[..., 3:4]
-    return craft[..., :3] * alpha + star_field(width, height, seed) * (1 - alpha)
+    return kit.render_still(scene, camera, view(shot), *still)
 
+
+# name, direction the light travels (NASA frame), energy, colour, angular
+# size. The real Sun only ever lights the underside of the shield; the
+# telescope side is lit here by a second lamp so the mirror can be seen at all.
+LAMPS = [
+    ('Sun', (-0.25, 0.35, 1.0), 5.0, (1.0, 0.96, 0.9), 0.6),
+    ('Key', (-0.8, 0.45, -0.55), 3.0, (1.0, 0.97, 0.93), 2),
+    ('Fill', (-0.3, -0.8, -0.3), 0.35, (0.55, 0.7, 1.0), 20),
+]
 
 # position, target, up (NASA frame: +X boresight, +Z cold side), lens mm,
 # shift x, shift y
@@ -701,49 +554,40 @@ PREVIEW_SIDE = ((0.0, -44.0, 5.0), (-0.6, 0.0, 4.5), (0, 0, 1), 42, 0, 0)
 
 
 def main():
-    args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    if not args or args[0].startswith('--'):
-        sys.exit(__doc__)
-    source = Path(args[0]).resolve()
-    samples = int(args[args.index('--samples') + 1]) if '--samples' in args else 160
-    previews = Path(args[args.index('--previews') + 1]) if '--previews' in args else None
-
-    parts = build_parts(source)
+    opts = kit.options(__doc__, 'webb')
+    parts = build_parts(opts.source)
     pivots = build_rig(parts)
     add_hotspots(parts, pivots)
-    total = 0
-    for part in PARTS:
-        count = triangles(parts[part])
-        total += count
+    counts = {part: kit.triangles(parts[part]) for part in PARTS}
+    for part, count in counts.items():
         print(f'PART {part}: {count} triangles')
-    print(f'TOTAL {total} triangles')
-
-    if '--no-glb' not in args:
-        export_glb(OUT / 'webb.glb')
+    print(f'TOTAL {sum(counts.values())} triangles')
 
     scene = bpy.context.scene
-    if previews or '--no-renders' not in args:
-        setup_lighting(scene)
-        camera = bpy.data.objects.new('Camera', bpy.data.cameras.new('Camera'))
-        camera.data.sensor_width = 36
-        camera.data.clip_end = 500
-        scene.collection.objects.link(camera)
-        scene.camera = camera
-        for empty in [o for o in scene.objects if o.type == 'EMPTY']:
-            empty.hide_render = True
-    if previews:
-        previews.mkdir(parents=True, exist_ok=True)
+    if opts.glb:
+        # Node rest transforms are the open telescope; the clip folds it.
+        scene.frame_set(CLIP_SECONDS * FPS)
+        kit.export_glb(
+            opts.out / 'webb.glb', export_texcoords=False, export_materials='EXPORT',
+            export_animations=True, export_animation_mode='ACTIONS',
+            export_force_sampling=False, export_frame_range=False, export_current_frame=True,
+            export_anim_slide_to_zero=False, export_optimize_animation_size=False)
+
+    if opts.previews or opts.renders:
+        lamps = [(name, D(*toward), *rest) for name, toward, *rest in LAMPS]
+        camera = kit.stage(scene, lamps, D(0.3, 0, 1), sky_strength=0.3)
+    if opts.previews:
+        opts.previews.mkdir(parents=True, exist_ok=True)
         for second in (0, 1, 2, 2.5, 3, 4, 5, 6, 7, 7.5, 8, 9, 10):
-            for view, shot in (('top', PREVIEW_SHOT), ('side', PREVIEW_SIDE)):
-                pixels = render_still(scene, camera, shot, 800, 560, 12, 1, second)
-                save_pixels(pixels, previews / f'{view}-{second}.png', 'PNG')
-        save_pixels(render_still(scene, camera, PREVIEW_UNDER, 800, 560, 12, 1), previews / 'under.png', 'PNG')
-    if '--no-renders' not in args:
-        cover = render_still(scene, camera, SHOT_COVER, 1200, 630, samples, 2021)
-        save_pixels(cover, OUT / 'og-cover.png', 'PNG')
-        poster = render_still(scene, camera, SHOT_POSTER, 1600, 1000, samples, 2021)
-        save_pixels(poster, OUT / 'poster.webp', 'WEBP', quality=82)
-        save_pixels(halve(poster), OUT / 'poster-800.webp', 'WEBP', quality=84)
+            for name, shot in (('top', PREVIEW_SHOT), ('side', PREVIEW_SIDE)):
+                pixels = render_at(scene, camera, shot, second, 800, 560, 12, 1)
+                kit.save_pixels(pixels, opts.previews / f'{name}-{second}.png', 'PNG')
+        pixels = render_at(scene, camera, PREVIEW_UNDER, CLIP_SECONDS, 800, 560, 12, 1)
+        kit.save_pixels(pixels, opts.previews / 'under.png', 'PNG')
+    if opts.renders:
+        scene.frame_set(CLIP_SECONDS * FPS)
+        kit.render_finals(scene, camera, opts.out, view(SHOT_COVER), view(SHOT_POSTER),
+                          opts.samples, 2021)
 
 
 main()

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { equatorialToEcliptic, sampleRows } from "./public/mission-orbits.js";
+import { equatorialToEcliptic, sampleRows, unpackRows } from "./public/mission-orbits.js";
 
 const root = fileURLToPath(new URL("./public/", import.meta.url));
 const read = (path: string) => readFileSync(root + path, "utf8");
@@ -17,20 +17,8 @@ const dayOf = (utc: string) => (Date.parse(utc) - Date.parse(data.epoch)) / DAY;
 const norm = (p: number[]) => Math.hypot(p[0], p[1], p[2]);
 const POLE = equatorialToEcliptic(40.589, 83.537);
 
-// tour.bin as the page reads it: [day, x, y, z] in km.
-function track(meta: { byteOffset: number; count: number; unitKm: number; stepSeconds: number; startDay: number }) {
-  const view = new DataView(bin.buffer, bin.byteOffset + meta.byteOffset, meta.count * 8);
-  const rows: number[][] = [];
-  let tick = 0;
-  for (let i = 0; i < meta.count; i++) {
-    tick += view.getUint16(i * 8 + 6, true);
-    rows.push([
-      meta.startDay + (tick * meta.stepSeconds) / 86400,
-      view.getInt16(i * 8, true) * meta.unitKm, view.getInt16(i * 8 + 2, true) * meta.unitKm, view.getInt16(i * 8 + 4, true) * meta.unitKm,
-    ]);
-  }
-  return rows;
-}
+// tour.bin: [day, x, y, z] in km.
+const track = (meta: { byteOffset: number }) => unpackRows(bin.buffer, { ...meta, byteOffset: bin.byteOffset + meta.byteOffset });
 const tour = track(data.tour);
 const finale = track(data.finale);
 
@@ -222,13 +210,13 @@ test("every chapter in the markup has a scene, a rail link, and a known set", ()
   expect(chapters.map((m) => m[1])).toEqual([
     "hero", "craft", "cruise", "arrival", "release", "titan", "tour", "enceladus", "finale", "legacy",
   ]);
-  const handlers = script.slice(script.indexOf("const CHAPTERS = {"), script.indexOf("function enterStage"));
-  const stages = script.slice(script.indexOf("function enterStage"), script.indexOf("kit.run({"));
+  const handlers = script.slice(script.indexOf("const CHAPTERS = {"), script.indexOf("const PHONE_STEP_BACK"));
+  const sets = script.match(/\n    sets: \{([^}]+)\}/)![1];
   const stepBack = script.match(/const PHONE_STEP_BACK = \{([^}]+)\}/)![1];
   for (const [, id, stage] of chapters) {
     expect(handlers, `no scene for chapter ${id}`).toMatch(new RegExp(`\\n    ${id}\\(`));
     expect(["craft", "system", "soi", "titan", "tour", "enceladus", "finale"], `${id} names an unknown set`).toContain(stage);
-    expect(stages + script, `enterStage does not know ${stage}`).toContain(`'${stage}'`);
+    expect(sets, `no set for ${stage}`).toMatch(new RegExp(`\\b${stage}: \\[`));
     expect(page, `no rail link for ${id}`).toContain(`<a href="#${id}">`);
     expect(stepBack, `no phone framing for ${id}`).toMatch(new RegExp(`\\b${id}: [\\d.]+`));
   }
@@ -236,10 +224,6 @@ test("every chapter in the markup has a scene, a rail link, and a known set", ()
   const stageOf = Object.fromEntries(chapters.map((m) => [m[1], m[2]]));
   for (const [a, b] of [["cruise", "arrival"], ["arrival", "release"], ["release", "titan"], ["titan", "tour"], ["tour", "enceladus"], ["enceladus", "finale"], ["finale", "legacy"]]) {
     expect(stageOf[a], `${a} and ${b} share a set`).not.toBe(stageOf[b]);
-  }
-  // Chapters that cut play inside the lit part of their scroll.
-  for (const id of ["cruise", "arrival", "release", "titan", "tour", "enceladus", "finale"]) {
-    expect(handlers, `${id} plays in the dimmed margin`).toMatch(new RegExp(`\\n    ${id}\\(raw\\) \\{\\n      const p = lit\\(raw`));
   }
 });
 
@@ -253,7 +237,7 @@ test("the story is readable and the live figures run without the 3D scene", () =
   const scene = script.indexOf("createMissionKit()");
   expect(scene).toBeGreaterThan(0);
   expect(script.indexOf("setInterval(tickLive, 1000)")).toBeLessThan(scene);
-  expect(script.indexOf("$('parts').appendChild(btn)")).toBeLessThan(scene);
+  expect(script.indexOf("createPartPicker(PARTS)")).toBeLessThan(scene);
   expect(script.indexOf("drawCruiseChart(data.speed[0][0])")).toBeLessThan(scene);
   expect(script).toContain("if (kit) startScene(kit);");
   // The markup ships a plain-words figure; only the script writes the exact
@@ -271,7 +255,7 @@ test("the story is readable and the live figures run without the 3D scene", () =
 });
 
 test("the page shares Voyager's module URLs, so each loads once", () => {
-  const imports = (source: string) => [...source.matchAll(/from '(\/[^']+)'/g)].map((m) => m[1]).sort();
+  const imports = (source: string) => [...source.matchAll(/from '(\/(?!missions\/)[^']+)'/g)].map((m) => m[1]).sort();
   expect(imports(script)).toEqual(imports(voyagerScript));
   for (const asset of ["/scene-load-failure.js", "/chrome.js", "/common.css", "/mission-page.css"]) {
     const url = new RegExp(asset.replace(/[./]/g, "\\$&") + "(\\?v=[\\w-]+)?\"");

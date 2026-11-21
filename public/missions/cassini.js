@@ -13,10 +13,10 @@
 import { SPACE } from '/common.bundle.js?v=20260909-2';
 import {
   AU_KM, DAY_MS, LIGHT_KM_PER_SEC, equatorialToEcliptic, formatDate,
-  formatLightTime, planetOrbit, planetPosition, sampleRows,
+  formatLightTime, lerp, planetOrbit, planetPosition, sampleRows, smooth,
 } from '/mission-orbits.js?v=20261121-1';
-import { createMissionKit, lerp, smooth } from '/mission-scene.js?v=20261121-1';
-import { createChart } from '/mission-story.js?v=20261121-1';
+import { createMissionKit } from '/mission-scene.js?v=20261121-1';
+import { createChart, createPartPicker } from '/mission-story.js?v=20261121-1';
 
 const ASSETS = '/assets/missions/cassini/';
 const $ = (id) => document.getElementById(id);
@@ -81,54 +81,11 @@ const PARTS = [
   { key: 'Bus', label: 'Body', title: 'The body',
     text: 'A stack nearly 7 metres tall: computers and radios in the ring under the dish, then the fuel tanks, wrapped in gold-coloured blankets against the cold.' },
 ];
-let selectedPart = null;
-const partButtons = new Map();
-function selectPart(key) {
-  selectedPart = selectedPart === key ? null : key;
-  for (const [k, btn] of partButtons) btn.setAttribute('aria-pressed', String(k === selectedPart));
-  const part = PARTS.find((p) => p.key === selectedPart);
-  if (part) {
-    $('part-title').textContent = part.title;
-    $('part-text').textContent = part.text;
-  }
-}
-for (const part of PARTS) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'part-btn';
-  btn.textContent = part.label;
-  btn.setAttribute('aria-pressed', 'false');
-  btn.addEventListener('click', () => selectPart(part.key));
-  $('parts').appendChild(btn);
-  partButtons.set(part.key, btn);
-}
+const picker = createPartPicker(PARTS);
 
 /* ──── Speed chart: one trace, four flybys ──── */
 const FLYBYS = ['venus1', 'venus2', 'earth', 'jupiter'].map((key) => ({ key, ...data.flybys[key] }));
-const chartCanvas = $('chart-cruise');
-const drawSpeed = createChart(chartCanvas, data.speed, FLYBYS[3].day, { eventLabel: '' });
-// The shared chart labels one event. Mark all four on top of it, using the
-// same horizontal scale (30 px of axis on the left, 4 px on the right).
-let chartKey = '';
-function drawCruiseChart(day) {
-  drawSpeed(day);
-  const w = chartCanvas.clientWidth, h = chartCanvas.clientHeight;
-  const key = w + ':' + h + ':' + day.toFixed(3);
-  if (!w || !h || key === chartKey) return;
-  chartKey = key;
-  const ctx = chartCanvas.getContext('2d');
-  const t0 = data.speed[0][0], t1 = data.speed[data.speed.length - 1][0];
-  ctx.font = '10px "Fragment Mono", monospace';
-  ctx.textAlign = 'center';
-  for (const flyby of FLYBYS) {
-    const x = 30 + ((flyby.day - t0) / (t1 - t0)) * (w - 34);
-    const passed = day >= flyby.day;
-    ctx.fillStyle = passed ? '#f4c560' : 'rgba(232,236,244,0.5)';
-    ctx.fillRect(Math.round(x), h - 17, 1, 4);
-    ctx.fillText(flyby.name[0], x, h - 3);
-  }
-  ctx.textAlign = 'left';
-}
+const drawCruiseChart = createChart($('chart-cruise'), data.speed, { events: FLYBYS.map((flyby) => ({ day: flyby.day, label: flyby.name[0] })) });
 drawCruiseChart(data.speed[0][0]);
 
 /* ──── 3D scene ──── */
@@ -136,7 +93,7 @@ const kit = createMissionKit();
 if (kit) startScene(kit);
 
 function startScene(kit) {
-  const { THREE, scene, renderer, E, addGlow, fatLine, setSegment, thinLoop, sunLight, skyLight, fill, place, anchors, setClock, pose, orbit, drag } = kit;
+  const { THREE, scene, renderer, E, addGlow, fatLine, setSegment, thinLoop, sunLight, place, anchors, setClock, pose, orbit, drag } = kit;
   const GOLD = new THREE.Color(0xf4c560);
   const bright = (color) => new THREE.Color(color).multiplyScalar(1.5);
   const scratch = new THREE.Vector3(), scratch2 = new THREE.Vector3();
@@ -245,8 +202,8 @@ function startScene(kit) {
       const anchor = gltf.scene.getObjectByName('Hotspot_HuygensProbe');
       if (anchor) probe.attach(anchor);
     }
-    kit.addHotspots(gltf.scene, PARTS, selectPart);
-  }, { tracked: true });
+    kit.addHotspots(gltf.scene, picker);
+  });
   // Where the probe sits `metres` out along its own axis (the model's -Y),
   // after `turns` of spin.
   function setProbe(metres, turns, visible = true) {
@@ -284,35 +241,9 @@ function startScene(kit) {
   /* ════ Set 3: Saturn ════ */
   const sat = new THREE.Group();
   scene.add(sat);
-  const saturnTilt = new THREE.Group(), saturnSpin = new THREE.Group();
-  saturnTilt.quaternion.setFromUnitVectors(UP, SATURN_POLE);
-  saturnTilt.add(saturnSpin);
-  sat.add(saturnTilt);
-  const saturnStand = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), new THREE.MeshStandardMaterial({ color: 0xd8c690, roughness: 0.9, metalness: 0 }));
-  saturnStand.scale.y = 0.902;
-  saturnSpin.add(saturnStand);
-  let saturnRequested = false;
-  function loadSaturn() {
-    if (saturnRequested) return;
-    saturnRequested = true;
-    kit.loadPlanet('saturn', (root) => {
-      // The kit sizes a planet by its mean radius. The dives of the Grand
-      // Finale clear the equator by a few per cent of it, so here one unit
-      // has to be the equatorial radius exactly.
-      const body = root.children.find((child) => !/ring/i.test(child.name)) || root;
-      root.updateMatrixWorld(true);
-      const k = 2 / new THREE.Box3().setFromObject(body).getSize(scratch).x;
-      root.scale.multiplyScalar(k);
-      root.position.multiplyScalar(k);
-      root.traverse((node) => {
-        if (!node.isMesh || !/ring/i.test(node.name)) return;
-        node.material.side = THREE.DoubleSide;
-        node.material.depthWrite = false;
-      });
-      saturnSpin.remove(saturnStand);
-      saturnSpin.add(root);
-    });
-  }
+  // The dives of the Grand Finale clear the equator by a few per cent of
+  // Saturn's radius, so one unit has to be the equatorial radius exactly.
+  const saturn = kit.globe(sat, { key: 'saturn', color: 0xd8c690, pole: [40.589, 83.537], periodDays: 0.44401, radius: 'equatorial' });
   const SATURN_KM = data.saturnKm;
   // Height above the level where Saturn's air is as thick as Earth's at the
   // sea, which is what "the cloud tops" means; Saturn bulges at its equator.
@@ -583,11 +514,6 @@ function startScene(kit) {
     return lerp(lastDive + 0.6, DAYS.end, 1 - Math.pow(1 - (p - 0.7) / 0.3, 3));
   }
 
-  // The picture dims at each change of set, over the first and last fifteenth
-  // or so of a chapter. Play the chapter inside what is left, so nothing
-  // happens in the dark.
-  const lit = (p, margin = 0.07) => clamp01((p - margin) / (1 - 2 * margin));
-
   const CHAPTERS = {
     hero(p) {
       setProbe(0, 0);
@@ -595,7 +521,7 @@ function startScene(kit) {
     },
     craft(p) {
       setProbe(0, 0);
-      const anchor = selectedPart && anchors.get(selectedPart);
+      const anchor = anchors.get(picker.selected);
       if (anchor) {
         anchor.getWorldPosition(scratch);
         const out = scratch.clone().setY(0);
@@ -604,10 +530,9 @@ function startScene(kit) {
       } else {
         orbit(scratch.set(1.2, 0, 0), 0.5 + p * 2.6 + drag.yaw, 0.2 + drag.pitch, 24);
       }
-      kit.showHotspots(selectedPart);
+      kit.showHotspots();
     },
-    cruise(raw) {
-      const p = lit(raw);
+    cruise(p) {
       const day = cruiseDay(p), ms = msOf(day);
       cruiseTrail.update(day);
       cassini.copy(cruiseTrail.here);
@@ -617,25 +542,24 @@ function startScene(kit) {
       orbit(scratch.copy(cassini).multiplyScalar(0.42), -0.5 + p * 0.9, lerp(1.05, 0.72, p), 3.6 + reach * 2.3);
       const row = sampleRows(data.cruise, day);
       setClock(formatDate(ms), '<b>' + reach.toFixed(2) + '</b> AU from the Sun', '<b>' + row[4].toFixed(1) + '</b> km/s');
-      place('cassini', 'Cassini', cassini, 'is-craft', 10, -18);
-      place('earth', 'Earth', planetDots.get('earth').position, 'is-home');
-      place('venus', 'Venus', planetDots.get('venus').position, '', 10, 8);
+      place('cassini', 'Cassini', cassini, { cls: 'is-craft', dy: -18 });
+      place('earth', 'Earth', planetDots.get('earth').position, { cls: 'is-home' });
+      place('venus', 'Venus', planetDots.get('venus').position, { dy: 8 });
       if (reach > 2.2) {
         place('jupiter', 'Jupiter', planetDots.get('jupiter').position);
         place('saturn', 'Saturn', planetDots.get('saturn').position);
       }
       for (const mark of flybyMarks) {
         mark.dot.visible = day >= mark.day;
-        if (day >= mark.day && (reach < 2.2 || mark.key === 'jupiter')) place('fly-' + mark.key, mark.text, mark.dot.position, 'is-event', 12, mark.dy);
+        if (day >= mark.day && (reach < 2.2 || mark.key === 'jupiter')) place('fly-' + mark.key, mark.text, mark.dot.position, { cls: 'is-event', dx: 12, dy: mark.dy });
       }
       drawCruiseChart(day);
     },
-    arrival(raw) {
-      const p = lit(raw);
+    arrival(p) {
       const day = lerp(DAYS.soi - 0.34, DAYS.soi + 0.3, smooth(0, 1, p) * 0.4 + p * 0.6);
       const here = soiTrail.update(day);
       soiDot.position.copy(here);
-      saturnSpin.rotation.y = (day / 0.44401) * Math.PI * 2;
+      saturn.turnTo(day);
       aimSun(soiSun);
       const burnIndex = soiTrack.indexAt(day);
       burnLine.geometry.instanceCount = Math.max(0, Math.min(burnTo, burnIndex) - burnFrom);
@@ -650,22 +574,20 @@ function startScene(kit) {
       const ms = msOf(day);
       setClock(formatDate(ms), clockTime(ms), '<b>' + km(here.length() * SATURN_KM) + '</b> km from Saturn’s centre');
       const burning = day >= DAYS.burnStart && day <= DAYS.burnEnd;
-      place('soi-cassini', burning ? 'Cassini · engine firing' : 'Cassini', here, 'is-craft', 12, -18);
+      place('soi-cassini', burning ? 'Cassini · engine firing' : 'Cassini', here, { cls: 'is-craft', dx: 12, dy: -18 });
       data.soi.crossings.forEach((crossing, i) => {
-        if (day >= crossing.day - 0.05) place('cross' + i, 'Through the ring plane', crossings[i], 'is-event', 12, 8);
+        if (day >= crossing.day - 0.05) place('cross' + i, 'Through the ring plane', crossings[i], { cls: 'is-event', dx: 12, dy: 8 });
       });
     },
-    release(raw) {
-      const p = lit(raw, 0.1);
+    release(p) {
       // Illustration: Huygens left at about a third of a metre per second,
       // turning seven times a minute to stay steady.
       const out = smooth(0.18, 1, p);
       setProbe(out * 11, p * 5);
       orbit(scratch.set(1.5, -0.6, 1 + out * 4.5), lerp(-0.7, -1.0, p) + drag.yaw, 0.14 + drag.pitch * 0.5, 21 + out * 9);
-      if (probe.userData.home && out > 0.04) place('probe', 'Huygens', probe.getWorldPosition(scratch2), 'is-craft', kit.wide ? 64 : -24, kit.wide ? -6 : 44);
+      if (probe.userData.home && out > 0.04) place('probe', 'Huygens', probe.getWorldPosition(scratch2), { cls: 'is-craft', dx: kit.wide ? 64 : -24, dy: kit.wide ? -6 : 44 });
     },
-    titan(raw) {
-      const p = lit(raw);
+    titan(p) {
       aimSun(titanSun);
       const falling = clamp01(p / 0.46), descent = clamp01((p - 0.46) / 0.32), after = clamp01((p - 0.78) / 0.22);
       const day = p < 0.46 ? lerp(DAYS.entry - 0.22, DAYS.entry, 1 - Math.pow(1 - falling, 1.6))
@@ -692,12 +614,11 @@ function startScene(kit) {
       const ms = msOf(day), heightKm = Math.max(0, reach * TITAN_KM - TITAN_KM);
       setClock(formatDate(ms), clockTime(ms), day >= DAYS.landed ? 'Huygens is <b>on the ground</b>'
         : '<b>' + km(heightKm) + '</b> km above Titan');
-      place('huygens', day >= DAYS.landed ? 'Huygens · landed' : 'Huygens', here, 'is-craft', 12, -18);
-      if (p >= 0.78 || reach > 12) place('titan-cassini', 'Cassini', ship, 'is-craft', 12, 10);
-      if (p >= 0.78 && after > 0.3) place('titan-name', 'Titan', scratch2.set(0, 0, 0), '', 16, 16);
+      place('huygens', day >= DAYS.landed ? 'Huygens · landed' : 'Huygens', here, { cls: 'is-craft', dx: 12, dy: -18 });
+      if (p >= 0.78 || reach > 12) place('titan-cassini', 'Cassini', ship, { cls: 'is-craft', dx: 12, dy: 10 });
+      if (p >= 0.78 && after > 0.3) place('titan-name', 'Titan', scratch2.set(0, 0, 0), { dx: 16, dy: 16 });
     },
-    tour(raw) {
-      const p = lit(raw);
+    tour(p) {
       const day = lerp(data.tour.startDay, DAYS.end, smooth(0, 1, p) * 0.3 + p * 0.7);
       aimSun(toSunAt(msOf(day), scratch2));
       if (tourTrack) {
@@ -712,12 +633,11 @@ function startScene(kit) {
       const passes = data.periapses.filter((d) => d <= day).length;
       const ms = msOf(day);
       setClock(formatDate(ms), '<b>' + Math.max(0, passes - 1) + '</b> orbits completed', phaseAt(day).name);
-      place('tour-cassini', 'Cassini', tourPos, 'is-craft', 10, -18);
-      place('tour-titan', 'Titan', titanPos, '', 10, 8);
-      if (tourPos.length() > 14) place('tour-saturn', 'Saturn', scratch2.set(0, 0, 0), 'is-dim', 10, 12);
+      place('tour-cassini', 'Cassini', tourPos, { cls: 'is-craft', dy: -18 });
+      place('tour-titan', 'Titan', titanPos, { dy: 8 });
+      if (tourPos.length() > 14) place('tour-saturn', 'Saturn', scratch2.set(0, 0, 0), { cls: 'is-dim', dy: 12 });
     },
-    enceladus(raw) {
-      const p = lit(raw);
+    enceladus(p) {
       aimSun(plumeSun);
       const day = lerp(DAYS.plume - 0.0028, DAYS.plume + 0.0028, p);
       const here = plumeTrail.update(day);
@@ -730,14 +650,13 @@ function startScene(kit) {
       pose.fov = 35;
       const ms = msOf(day);
       setClock(formatDate(ms), clockTime(ms, true), '<b>' + km(here.length() * ENCELADUS_KM - enceladusGround(here)) + '</b> km above the ice');
-      place('plume-cassini', 'Cassini', here, 'is-craft', 12, -18);
-      place('plume-pole', 'South pole', scratch2.copy(southPole).multiplyScalar(0.99), 'is-dim', -84, -16);
+      place('plume-cassini', 'Cassini', here, { cls: 'is-craft', dx: 12, dy: -18 });
+      place('plume-pole', 'South pole', scratch2.copy(southPole).multiplyScalar(0.99), { cls: 'is-dim', dx: -84, dy: -16 });
     },
-    finale(raw) {
-      const p = lit(raw);
+    finale(p) {
       const day = finaleDay(p), ms = msOf(day);
       aimSun(finaleSun);
-      saturnSpin.rotation.y = (day / 0.44401) * Math.PI * 2;
+      saturn.turnTo(day);
       if (!finaleTrack) return orbit(scratch.set(0, 0, 0), 0.6, 0.3, 8);
       const here = finaleTrail.update(day);
       finaleDot.position.copy(here);
@@ -758,9 +677,9 @@ function startScene(kit) {
       const dive = dives.filter((d) => d.day - 0.5 <= day).length;
       setClock(formatDate(ms), day > lastDive + 0.6 ? clockTime(ms) + ' · final approach' : dive ? 'Dive <b>' + dive + '</b> of 22' : 'Lining up',
         reach < 2.6 ? '<b>' + km(Math.max(0, aboveClouds(here))) + '</b> km above the cloud tops' : '<b>' + km(reach * SATURN_KM) + '</b> km from Saturn');
-      if (!over && reach < 9) place('finale-cassini', 'Cassini', here, 'is-craft', 12, -18);
-      if (p > 0.97) place('finale-end', 'Signal lost · 15 Sep 2017', finaleEnd, 'is-event', kit.wide ? -238 : -150, kit.wide ? -4 : -34, smooth(0.97, 0.995, p));
-      else place('finale-gap', 'The gap', scratch2.copy(finaleGap).multiplyScalar(finaleGapRadius), 'is-event', -76, -4, 1 - smooth(0.6, 0.7, p));
+      if (!over && reach < 9) place('finale-cassini', 'Cassini', here, { cls: 'is-craft', dx: 12, dy: -18 });
+      if (p > 0.97) place('finale-end', 'Signal lost · 15 Sep 2017', finaleEnd, { cls: 'is-event', dx: kit.wide ? -238 : -150, dy: kit.wide ? -4 : -34, alpha: smooth(0.97, 0.995, p) });
+      else place('finale-gap', 'The gap', scratch2.copy(finaleGap).multiplyScalar(finaleGapRadius), { cls: 'is-event', dx: -76, dy: -4, alpha: 1 - smooth(0.6, 0.7, p) });
     },
     legacy(p) {
       // Cassini flew its last twelve years without the probe.
@@ -769,58 +688,35 @@ function startScene(kit) {
     },
   };
 
-  const SATURN_STAGES = ['soi', 'tour', 'finale'];
-  function enterStage(next) {
-    craft.visible = next === 'craft';
-    sys.visible = next === 'system';
-    sat.visible = SATURN_STAGES.includes(next);
-    soiSet.visible = next === 'soi';
-    tourSet.visible = next === 'tour';
-    finaleSet.visible = next === 'finale';
-    titanSet.visible = next === 'titan';
-    enceladusSet.visible = next === 'enceladus';
-    kit.clock.classList.toggle('is-on', next !== 'craft');
-    // The planet and moons keep their true night side: no fill light there.
-    fill.visible = next === 'craft';
-    skyLight.intensity = next === 'craft' ? 0.9 : 0.08;
-    if (next === 'craft') {
-      sunLight.position.set(-10, 20, 18);
-      sunLight.target.position.set(0, 0, 0);
-    }
-  }
-
   // A phone held upright sees a much narrower slice of the scene than a
-  // laptop does. Step the camera back along its own line of sight there, by
-  // however much each chapter's subject needs to fit.
+  // laptop does, so each chapter's camera steps back there by however much
+  // its subject needs to fit.
   const PHONE_STEP_BACK = { hero: 1.5, craft: 1.5, cruise: 1.6, arrival: 2.2, release: 1.8, titan: 1.7, tour: 2, enceladus: 1.7, finale: 1.9, legacy: 1 };
-  const framed = {};
+  const chapters = {};
   for (const [id, play] of Object.entries(CHAPTERS)) {
-    framed[id] = (progress, state) => {
-      play(progress, state);
-      if (!kit.wide) pose.position.sub(pose.target).multiplyScalar(PHONE_STEP_BACK[id]).add(pose.target);
+    chapters[id] = {
+      phoneBack: PHONE_STEP_BACK[id],
+      play(progress) {
+        finaleDot.visible = true;
+        finaleFlash.material.opacity = 0;
+        relay.visible = false;
+        play(progress);
+      },
     };
   }
 
   kit.run({
-    chapters: framed,
-    enterStage,
-    canDrag: () => kit.stage === 'craft',
+    sets: {
+      craft: [craft], system: [sys], titan: [titanSet], enceladus: [enceladusSet],
+      soi: [sat, soiSet], tour: [sat, tourSet], finale: [sat, finaleSet],
+    },
+    chapters,
+    studio: { sun: [-10, 20, 18] },
     onChapter(chapter) {
       // Fetch Saturn a chapter early so it is there when the cut lands.
-      if (chapter.id !== 'hero' && chapter.id !== 'craft') loadSaturn();
+      if (chapter.id !== 'hero' && chapter.id !== 'craft') saturn.load();
     },
-    // Keep the subject clear of the card: beside it on wide screens, above
-    // it on phones.
-    offset(state, wide) {
-      const cardOnRight = state.id === 'arrival' || state.id === 'titan' || state.id === 'enceladus';
-      return wide ? [cardOnRight ? -0.18 : 0.15, 0] : [0, 0.2];
-    },
-    before() {
-      finaleDot.visible = true;
-      finaleFlash.material.opacity = 0;
-      relay.visible = false;
-    },
-    after() {
+    frame() {
       plumeUniforms.uTime.value = kit.time;
       plumeUniforms.uPixel.value = renderer.getPixelRatio();
     },

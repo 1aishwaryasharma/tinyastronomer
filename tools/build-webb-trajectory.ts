@@ -1,12 +1,14 @@
 // Builds public/assets/missions/webb/trajectory.json from JPL Horizons.
 //
-//   bun tools/build-webb-trajectory.ts
+//   bun tools/build-webb-trajectory.ts [--cache DIR]
 //
 // Everything the Webb page draws about where the telescope was and is comes
 // from this file, so the page never invents a path. Horizons target -170 is
 // the James Webb Space Telescope: the as-flown trajectory from the Goddard
 // Flight Dynamics Facility, starting about forty minutes after launch on
 // 2021-12-25, followed by Goddard's own prediction for the next five years.
+// Times are UTC (see tools/horizons.ts). `--cache DIR` keeps the raw replies
+// so a second run does not ask again.
 //
 // Positions are in the frame that turns with the Sun-Earth line, centred on
 // Earth, in kilometres:
@@ -31,54 +33,14 @@
 
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { dot, horizons, kmRow, norm, round, speed, utc, type State, type Vec } from "./horizons.ts";
 
-const API = "https://ssd.jpl.nasa.gov/api/horizons.api";
-const EPOCH = Date.UTC(2021, 11, 25);
-const DAY = 86400000;
+const EPOCH = "2021-12-25T00:00:00Z";
 const WEBB = "-170";
+const { dayOf, vectors, stateAt } = horizons(EPOCH);
 
-type Vec = [number, number, number];
-type State = { t: number; p: Vec; v: Vec };
-
-async function vectors(target: string, center: string, start: string, stop: string, step: string): Promise<State[]> {
-  const params = new URLSearchParams({
-    format: "text",
-    COMMAND: `'${target}'`,
-    OBJ_DATA: "'NO'",
-    MAKE_EPHEM: "'YES'",
-    EPHEM_TYPE: "'VECTORS'",
-    CENTER: `'${center}'`,
-    START_TIME: `'${start}'`,
-    STOP_TIME: `'${stop}'`,
-    STEP_SIZE: `'${step}'`,
-    VEC_TABLE: "'2'",
-    REF_PLANE: "'ECLIPTIC'",
-    OUT_UNITS: "'KM-S'",
-    CSV_FORMAT: "'YES'",
-  });
-  const response = await fetch(`${API}?${params}`);
-  if (!response.ok) throw new Error(`Horizons ${response.status} for ${target} ${start}`);
-  const text = await response.text();
-  const body = text.match(/\$\$SOE\n([\s\S]*?)\$\$EOE/)?.[1];
-  if (!body) throw new Error(`Horizons returned no table for ${target} ${start}:\n${text.slice(0, 600)}`);
-  return body
-    .trim()
-    .split("\n")
-    .map((line) => {
-      const cells = line.split(",").map((cell) => cell.trim());
-      const jd = Number(cells[0]);
-      const n = cells.slice(2, 8).map(Number);
-      // JD 2440587.5 is the Unix epoch. TDB and UTC differ by about a minute,
-      // far below anything this page resolves.
-      const ms = (jd - 2440587.5) * DAY;
-      return { t: (ms - EPOCH) / DAY, p: [n[0], n[1], n[2]], v: [n[3], n[4], n[5]] } as State;
-    });
-}
-
-const round = (value: number, digits: number) => Number(value.toFixed(digits));
-const dot = (a: Vec, b: Vec) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Vec, b: Vec): Vec => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const unit = (a: Vec): Vec => { const n = Math.hypot(...a); return [a[0] / n, a[1] / n, a[2] / n]; };
+const unit = (a: Vec): Vec => { const n = norm(a); return [a[0] / n, a[1] / n, a[2] / n]; };
 
 // A body seen from Earth, turned into the Sun-Earth frame. `earth` is Earth
 // seen from the Sun at the same instants.
@@ -89,10 +51,10 @@ function rotating(body: State[], earth: State[]) {
     const x = unit(e.p);
     const z = unit(cross(e.p, e.v));
     const y = cross(z, x);
-    return { t: s.t, r: [dot(s.p, x), dot(s.p, y), dot(s.p, z)] as Vec, speed: Math.hypot(...s.v), sunKm: Math.hypot(...e.p) };
+    return { t: s.t, p: [dot(s.p, x), dot(s.p, y), dot(s.p, z)] as Vec, speed: speed(s), sunKm: norm(e.p) };
   });
 }
-async function inFrame(target: string, start: string, stop: string, step: string) {
+async function inFrame(target: string, start: number, stop: number, step: string) {
   const body = await vectors(target, "500@399", start, stop, step);
   const earth = await vectors("399", "500@10", start, stop, step);
   return rotating(body, earth);
@@ -112,43 +74,35 @@ function l2Ratio() {
 }
 const L2 = l2Ratio();
 
-// The file starts at 13:01:09 TDB on launch day; the first whole step after
+// The file starts at 13:00 UTC on launch day; the first whole step after
 // that is 13:20.
-const early = await inFrame(WEBB, "2021-12-25 13:20", "2021-12-27 00:00", "20m");
-const later = await inFrame(WEBB, "2021-12-27 00:00", "2022-01-27 00:00", "2h");
+const early = await inFrame(WEBB, utc(2021, 12, 25, 13, 20), utc(2021, 12, 27), "20m");
+const later = await inFrame(WEBB, utc(2021, 12, 27), utc(2022, 1, 27), "2h");
 const transfer = early.concat(later.slice(1));
-const halo = await inFrame(WEBB, "2022-01-25 00:00", "2031-11-15 00:00", "2d");
-const moon = await inFrame("301", "2021-12-25 12:00", "2022-01-27 00:00", "4h");
+const halo = await inFrame(WEBB, utc(2022, 1, 25), utc(2031, 11, 15), "2d");
+const moon = await inFrame("301", utc(2021, 12, 25, 12), utc(2022, 1, 27), "4h");
 
-const dayOf = (utc: string) => (Date.parse(utc) - EPOCH) / DAY;
 // Horizons lists where the tracked solution hands over to prediction; this is
 // the date printed in the object header when the file was built.
-const MEASURED_UNTIL = "2026-11-16T00:00:00Z";
+const MEASURED_UNTIL = dayOf(utc(2026, 11, 16));
 
-const kmRow = (s: { t: number; r: Vec }) => [round(s.t, 4), ...s.r.map((km) => Math.round(km))];
-const fromL2 = (s: { r: Vec; sunKm: number }): Vec => [s.r[0] - s.sunKm * L2, s.r[1], s.r[2]];
-const flown = halo.filter((s) => s.t <= dayOf(MEASURED_UNTIL));
+const fromL2 = (s: { p: Vec; sunKm: number }): Vec => [s.p[0] - s.sunKm * L2, s.p[1], s.p[2]];
+const flown = halo.filter((s) => s.t <= MEASURED_UNTIL);
 const reach = (axis: number) => Math.round(Math.max(...flown.map((s) => Math.abs(fromL2(s)[axis]))));
-const range = flown.map((s) => Math.hypot(...s.r));
+const range = flown.map((s) => norm(s.p));
 
-const checkDates = ["2022-01-24 19:00", "2022-07-12 00:00", "2024-06-01 00:00", "2026-11-21 00:00", "2028-03-01 00:00"];
 const checks = [];
-for (const date of checkDates) {
-  const stop = date.replace(/(\d\d):(\d\d)$/, (_, h, m) => `${h}:${String(Number(m) + 1).padStart(2, "0")}`);
-  const [fromEarth] = await vectors(WEBB, "500@399", date, stop, "1d");
-  const [earth] = await vectors("399", "500@10", date, stop, "1d");
-  checks.push({
-    utc: date.replace(" ", "T") + "Z",
-    earthKm: Math.round(Math.hypot(...fromEarth.p)),
-    sunEarthKm: Math.round(Math.hypot(...earth.p)),
-  });
+for (const at of ["2022-01-24T19:00Z", "2022-07-12T00:00Z", "2024-06-01T00:00Z", "2026-11-21T00:00Z", "2028-03-01T00:00Z"]) {
+  const fromEarth = await stateAt(WEBB, "500@399", Date.parse(at));
+  const earth = await stateAt("399", "500@10", Date.parse(at));
+  checks.push({ utc: at, earthKm: Math.round(norm(fromEarth.p)), sunEarthKm: Math.round(norm(earth.p)) });
 }
 
 const out = {
-  source: "NASA/JPL Horizons, target -170 (James Webb Space Telescope), geometric states, turned into the Sun-Earth rotating frame",
+  source: "NASA/JPL Horizons, target -170 (James Webb Space Telescope), geometric states, turned into the Sun-Earth rotating frame, times in UTC",
   generated: new Date().toISOString().slice(0, 10),
-  epoch: "2021-12-25T00:00:00Z",
-  measuredUntil: round(dayOf(MEASURED_UNTIL), 4),
+  epoch: EPOCH,
+  measuredUntil: round(MEASURED_UNTIL, 4),
   l2Ratio: round(L2, 7),
   transfer: transfer.map((s) => [...kmRow(s), round(s.speed, 3)]),
   halo: halo.map(kmRow),
