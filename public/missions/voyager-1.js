@@ -8,9 +8,9 @@
 import { SPACE } from '/common.bundle.js?v=20261121-3';
 import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-2';
 import { createMissionKit } from '/mission-scene.js?v=20261121-4';
-import { mountMissionSound } from '/mission-audio.js?v=20261121-7';
+import { mountMissionSound } from '/mission-audio.js?v=20261121-8';
 import { createChart, createPartPicker, followStory } from '/mission-story.js?v=20261121-3';
-import { BEDS, PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-6';
+import { PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-7';
 
 const ASSETS = '/assets/missions/voyager-1/';
 const $ = (id) => document.getElementById(id);
@@ -48,7 +48,7 @@ $('hello-btn').addEventListener('click', () => {
 
 const picker = createPartPicker(PARTS);
 
-const sound = mountMissionSound({ beds: BEDS, recordings: RECORDINGS, assets: ASSETS });
+const sound = mountMissionSound({ recordings: RECORDINGS, assets: ASSETS });
 
 const drawJupiterChart = createChart($('chart-jupiter'), data.speed.jupiter, { events: [{ day: DAYS.jupiter, label: 'closest approach' }] });
 drawJupiterChart(data.speed.jupiter[0][0]);

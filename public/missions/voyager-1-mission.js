@@ -67,26 +67,6 @@ export const RECORDINGS = {
   })),
 };
 
-// The hum under each chapter, as mission-audio.js takes it: pitch and filter
-// in hertz, `air` the hiss of wind, `swell` how hard the chapter's event
-// presses as the reader scrolls. The launch roars and falls away, each giant
-// planet swells to its closest approach, the wind rises where the Sun's
-// bubble ends, and the last chapter dies away as the spacecraft does.
-const pass = (p) => smooth(0, 1, 1 - Math.abs(p - 0.5) * 2);
-export const BEDS = {
-  hero: { root: 110, bright: 500, air: 0.01, level: 0.6 },
-  craft: { root: 110, bright: 700, air: 0.01, level: 0.5 },
-  launch: { root: 61.7, bright: 350, air: 0.06, level: 0.7, swell: (p) => 1 - smooth(0, 0.45, p) },
-  jupiter: { root: 82.4, bright: 300, air: 0.02, level: 0.6, swell: pass },
-  cruise: { root: 98, bright: 600, air: 0.02, level: 0.5 },
-  saturn: { root: 73.4, bright: 320, air: 0.02, level: 0.6, swell: pass },
-  portrait: { root: 196, bright: 1600, air: 0, level: 0.45 },
-  edge: { root: 98, bright: 400, air: 0.04, level: 0.6, swell: (p) => smooth(0.6, 0.85, p) },
-  lightday: { root: 130.8, bright: 900, air: 0.02, level: 0.4 },
-  record: { root: 110, bright: 700, air: 0, level: 0.25 },
-  future: { root: 82.4, bright: 500, air: 0.04, level: 0.7, fades: true },
-};
-
 // `data` is trajectory.json.
 export function createFlight(data) {
   const calendar = missionCalendar(data.epoch);

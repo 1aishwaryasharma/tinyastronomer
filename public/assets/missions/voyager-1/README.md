@@ -200,5 +200,5 @@ folder outside the repository, under the names the script lists:
     bun tools/build-voyager-audio.ts /tmp/voyager-audio
 
 The fifteen files total about 690 KB. None is fetched until it plays: on its
-button, or, with Sound on, when the story reaches its moment. The hum behind
-the story is not a file: `mission-audio.js` makes it in the browser.
+button, or, with Sound on, when the story reaches its moment. The page makes
+no sound of its own: there is no background track.
