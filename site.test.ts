@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { moduleHash, VERSIONED_MODULES } from "./tools/stamp-module-versions.ts";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { handleRequest } from "./dev-server.ts";
 import {
@@ -373,6 +373,11 @@ test('Grand Tour uses traceable scientific surface assets', () => {
   expect(earthVisuals).toContain('assets/earth/day-4k.jpg');
   expect(earthVisuals).toContain('assets/earth/lights-2k.webp');
   expect(textures).toContain("p.key === 'eris'");
+  // No spacecraft has mapped these: a plain colour, never an invented surface.
+  for (const key of ['eris', 'haumea', 'makemake']) {
+    expect(models).not.toContain(`${key}.glb`);
+    expect(statSync(`assets/teaching-textures/${key}.webp`).size).toBeLessThan(6 * 1024);
+  }
   for (const key of ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'ceres', 'pluto']) {
     expect(models).toContain(`assets/planet-models/${key}.glb`);
     expect(existsSync(`assets/planet-models/${key}.glb`)).toBe(true);
@@ -2227,4 +2232,27 @@ describe("scene keyboard shortcuts", () => {
     }
     expect(readFileSync("scale-walk.html", "utf8")).not.toContain("plus and minus to zoom");
   });
+});
+
+test('Haumea and Makemake join the dwarf planets with sourced values', async () => {
+  // data.js also publishes the catalog on window for the classic scripts.
+  (globalThis as { window?: unknown }).window ??= {};
+  const { SPACE_DATA } = await import('./public/data.js');
+  expect(SPACE_DATA.DWARF_ORDER).toEqual(['ceres', 'pluto', 'haumea', 'makemake', 'eris']);
+  const distances = SPACE_DATA.dwarfs().map((body: { au: number }) => body.au);
+  expect(distances).toEqual([...distances].sort((a, b) => a - b));
+
+  const { haumea, makemake } = SPACE_DATA.BODIES;
+  for (const body of [haumea, makemake]) {
+    // Kepler's third law ties the JPL period to the JPL mean distance.
+    expect(Math.abs(body.periodDays / 365.25 - body.au ** 1.5)).toBeLessThan(1.5);
+    expect(body.dwarf).toBe(true);
+    // Neither spin-axis tilt is measured, so neither is drawn.
+    expect(body.tiltDeg).toBe(0);
+  }
+  // Haumea is drawn as its measured ellipsoid at the volume of radiusKm.
+  const [long, short, polar] = haumea.axesKm;
+  expect(Math.abs(Math.cbrt(long * short * polar) - haumea.radiusKm)).toBeLessThan(1);
+  expect(makemake.axesKm).toBeUndefined();
+  expect(readFileSync('solar-system.html', 'utf8')).toContain('fallbackMesh.scale.set(longKm / w.radiusKm, polarKm / w.radiusKm, shortKm / w.radiusKm)');
 });
