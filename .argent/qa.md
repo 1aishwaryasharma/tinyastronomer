@@ -36,8 +36,10 @@ Every flow proves the arrival header, then one piece of content only the scene s
 | `qa-home-open-seasons` | Home deck opens Seasons | `picker` lists the four stops in order |
 | `qa-home-open-grand-tour` | Home deck opens Grand Tour | `info-title` equals "Meet the neighbourhood" |
 | `qa-home-open-scale-walk` | Home deck opens Scale Walk | `stops` runs from The Sun to Neptune |
-| `qa-home-open-missions` | Home deck opens Missions | `voyager-dist` is a live km figure |
-| `qa-home-open-voyager` | Home deck opens the Voyager 1 deep dive | `hero-earth-km` is a live km figure; `hero-light` gains its seconds |
+| `qa-home-open-missions` | Home deck opens Missions | `dive-voyager-km` is a live km figure |
+| `qa-home-open-cassini` | Home deck, Missions deep dives, then Cassini | `hero-signal` is a live signal delay |
+| `qa-home-open-webb` | Home deck, Missions deep dives, then James Webb | `hero-asof` names the date the figures were worked out for |
+| `qa-home-open-voyager` | Home deck, Missions deep dives, then Voyager 1 | `hero-earth-km` is a live km figure; `hero-light` gains its seconds |
 | `qa-home-open-sky-tonight` | Home deck opens Sky Tonight | `location-source` is time-zone based; `moon-summary` shows the phase and % lit |
 | `qa-sky-tonight-manual-location` | Sky Tonight accepts a private manual London location | `meta-location`, `location-source`, `moon-summary` re-rendered for London |
 | `qa-explore-next-stop` | Light Study Explore menu goes to Seasons | Seasons `picker` lists the four stops |

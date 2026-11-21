@@ -1,8 +1,14 @@
 steps:
   - run: ../fragments/boot-electron.yaml
-  - echo: On launch deck. Open the Voyager 1 deep dive.
+  - echo: On launch deck. Open the mission deep dives, then Voyager 1.
   - tap:
-      id: launch-voyager
+      id: launch-deep-dives
+  - await:
+      timeout: 20000
+      visible:
+        id: dive-voyager
+  - tap:
+      id: dive-voyager
   - await:
       timeout: 20000
       visible:

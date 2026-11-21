@@ -1,0 +1,30 @@
+steps:
+  - run: ../fragments/boot-electron.yaml
+  - echo: On launch deck. Open the mission deep dives, then James Webb.
+  - tap:
+      id: launch-deep-dives
+  - await:
+      timeout: 20000
+      visible:
+        id: dive-webb
+  - tap:
+      id: dive-webb
+  - await:
+      timeout: 20000
+      visible:
+        id: mission-header
+  - await:
+      idle: true
+  - echo: The dateline is empty in the markup; only the script fills it.
+  - assert:
+      text:
+        in:
+          id: hero-asof
+        matches: '^Worked out for \d{1,2} [A-Z][a-z]{2} \d{4} from JPL Horizons data$'
+  - assert:
+      visible:
+        id: scene-nav-btn
+  - await:
+      hidden:
+        id: launch-title
+      timeout: 10000

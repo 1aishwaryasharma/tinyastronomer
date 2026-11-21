@@ -26,3 +26,7 @@
 # Mission deep dives live under /missions/.
 /missions/voyager-1.html https://tinyastronomer.com/missions/voyager-1 301
 /missions/voyager-1/     https://tinyastronomer.com/missions/voyager-1 301
+/missions/cassini.html   https://tinyastronomer.com/missions/cassini   301
+/missions/cassini/       https://tinyastronomer.com/missions/cassini   301
+/missions/webb.html      https://tinyastronomer.com/missions/webb      301
+/missions/webb/          https://tinyastronomer.com/missions/webb      301

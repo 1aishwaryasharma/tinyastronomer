@@ -244,8 +244,13 @@ test("the spacecraft model keeps its named parts and stays within the phone budg
 });
 
 test("the page is reachable from the home deck and the Missions card", () => {
-  expect(read("index.html")).toContain('href="/missions/voyager-1" id="launch-voyager"');
-  expect(read("missions.html")).toContain('<a class="go" href="/missions/voyager-1">');
+  expect(read("index.html")).toContain('href="/missions#deep-dives" id="launch-deep-dives"');
+  const missions = read("missions.html");
+  for (const [id, path] of [["dive-voyager", "voyager-1"], ["dive-cassini", "cassini"], ["dive-webb", "webb"]]) {
+    expect(missions).toContain(`<a class="dive" id="${id}" href="/missions/${path}">`);
+    expect(missions).toContain(`<a class="go" href="/missions/${path}">`);
+    expect(statSync(`${root}missions/${path}.html`).isFile()).toBe(true);
+  }
   expect(page).toContain('<a class="crumb" href="/missions">');
   expect(script).toContain("SPACE.buildNav('missions')");
 });

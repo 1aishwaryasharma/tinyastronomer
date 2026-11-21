@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>James Webb Space Telescope for Kids: Unfold It in 3D | tinyastronomer</title>
+<meta name="description" content="The James Webb Space Telescope flew folded up, opened in space and sees heat from the first galaxies. Unfold it and fly its real path in a free 3D story.">
+<script type="importmap">
+{
+  "imports": {
+    "three": "/vendor/three/three.module.min.js",
+    "three/addons/": "/vendor/three/addons/"
+  }
+}
+</script>
+<script type="module" src="/scene-load-failure.js"></script>
+<script type="module" async src="/chrome.js?v=20261008-1"></script>
+<meta name="theme-color" content="#050810">
+<link rel="canonical" href="https://tinyastronomer.com/missions/webb">
+<link rel="icon" href="/favicon.svg?v=20260816-20" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260816-20">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="tinyastronomer">
+<meta property="og:title" content="James Webb Space Telescope for Kids: Unfold It in 3D | tinyastronomer">
+<meta property="og:description" content="The James Webb Space Telescope flew folded up, opened in space and sees heat from the first galaxies. Unfold it and fly its real path in a free 3D story.">
+<meta property="og:url" content="https://tinyastronomer.com/missions/webb">
+<meta property="og:image" content="https://tinyastronomer.com/assets/missions/webb/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="James Webb Space Telescope for Kids: Unfold It in 3D | tinyastronomer">
+<meta name="twitter:description" content="The James Webb Space Telescope flew folded up, opened in space and sees heat from the first galaxies. Unfold it and fly its real path in a free 3D story.">
+<meta name="twitter:image" content="https://tinyastronomer.com/assets/missions/webb/og-cover.png">
+<link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/common.css?v=20261018-1">
+<link rel="stylesheet" href="/mission-page.css?v=20261121-1">
+<style>
+  #canvas-container { --mission-poster: url('/assets/missions/webb/poster.webp'); }
+  .hero h2 { font-size: clamp(40px, 5.4vw, 66px); }
+
+  /* The unfolding steps: the whole list for readers without the 3D scene,
+     the step in play once the scene is driving it on a phone. */
+  .steps { list-style: none; margin: 12px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); }
+  .steps li { display: flex; gap: 10px; padding: 2px 0; font-size: 13.5px; line-height: 1.45; color: var(--ink-faint); transition: color 0.2s; }
+  .steps time { flex: none; width: 5.6em; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1.95; }
+  .steps li.is-done { color: var(--ink-dim); }
+  .steps li.is-on { color: var(--accent); }
+
+  .readout { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .readout-value { font-size: 34px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 4.4em; }
+  .readout-label { font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); }
+
+  .slide { display: block; margin-top: 14px; }
+  .slide input[type="range"] { display: block; width: 100%; height: 30px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+  .slide-ends { display: flex; justify-content: space-between; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); }
+  .slide-out { margin-top: 8px; font-size: 14px; line-height: 1.5; color: var(--ink); min-height: 3em; }
+  .align { display: block; width: 100%; height: 150px; margin-top: 12px; background: #03050b; border: 1px solid var(--line); border-radius: 2px; }
+  .picture-note { margin-top: 8px; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); }
+  .found { margin: 10px 0 0; padding-left: 1.1em; }
+  .found li { font-size: 14.5px; line-height: 1.5; color: var(--ink-dim); font-weight: 300; margin-top: 6px; }
+
+  @media (max-width: 860px) {
+    #canvas-container { --mission-poster: url('/assets/missions/webb/poster-800.webp'); }
+    .hero h2 { font-size: 38px; }
+    .steps.is-live li:not(.is-on) { display: none; }
+    .steps.is-live li { font-size: 14.5px; }
+    .align { height: 110px; }
+    .readout-value { font-size: 28px; }
+    .slide-out { min-height: 0; }
+    /* The title wraps to two lines here, so the clock sits lower than the shared layout puts it. */
+    .mission-clock { top: calc(150px + env(safe-area-inset-top, 0px)); }
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+<div class="scene-labels" id="scene-labels" aria-hidden="true"></div>
+<div class="loader mission-loader" id="loader" role="status" aria-live="polite">
+  <div class="loader-inner">
+    <div class="loader-text">Unpacking the telescope…</div>
+    <div class="loader-bar" role="progressbar" aria-label="Loading the 3D scene" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="loader-bar-fill"></span></div>
+  </div>
+</div>
+
+<header class="header" id="mission-header" aria-label="James Webb Space Telescope">
+  <div>
+    <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
+    <h1 class="title">James Webb Space Telescope: The Folding Giant</h1>
+    <a class="crumb" href="/missions">← All missions</a>
+  </div>
+</header>
+
+<div class="mission-clock" id="clock" aria-hidden="true">
+  <div class="clock-date" id="clock-date">25 Dec 2021</div>
+  <div id="clock-a"></div>
+  <div id="clock-b"></div>
+</div>
+
+<nav class="chapter-rail" aria-label="Chapters">
+  <a href="#hero"><span>Start</span></a>
+  <a href="#telescope"><span>The telescope</span></a>
+  <a href="#unfold"><span>Unfolding</span></a>
+  <a href="#journey"><span>A million miles</span></a>
+  <a href="#halo"><span>Orbiting nothing</span></a>
+  <a href="#sunshield"><span>Hot and cold</span></a>
+  <a href="#mirror"><span>The golden eye</span></a>
+  <a href="#infrared"><span>Seeing heat</span></a>
+  <a href="#future"><span>Discoveries</span></a>
+</nav>
+
+<main class="story" id="story">
+
+  <section class="chapter hero short" id="hero" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">Mission deep dive · Launched 2021</div>
+      <h2>James Webb Space Telescope</h2>
+      <p class="lede">The biggest telescope ever sent into space was too wide for its rocket. It flew folded up and opened itself on the way. Scroll to unfold it and follow its real path to a lonely spot far beyond the Moon.</p>
+      <div class="stats">
+        <div><span class="stat-label">From Earth right now</span><span class="stat-value live"><span id="hero-earth-km">1,686,000</span> <small>km</small></span></div>
+        <div><span class="stat-label">Its radio signal takes</span><span class="stat-value live" id="hero-light">5.6 seconds</span></div>
+        <p class="stat-note" id="hero-asof"></p>
+      </div>
+      <p class="hero-scroll">Scroll to begin</p>
+    </div>
+  </section>
+
+  <section class="chapter long" id="telescope" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">The telescope</div>
+      <h2>A telescope on a sunshade</h2>
+      <p>Webb is a gold mirror 6.5 metres wide standing on a silver sunshield as long as a tennis court. At launch it had a mass of about 6,200 kilograms.</p>
+      <p id="parts-hint">Pick a part to look closer. Drag the telescope to turn it.</p>
+      <div class="parts" id="parts" role="group" aria-label="Parts of the telescope"></div>
+      <div class="part-detail" id="part-detail" aria-live="polite">
+        <h3 id="part-title">Built to stay cold</h3>
+        <p id="part-text">Webb looks for faint heat from far away, so nearly every part has one job: keep the mirror and its cameras dark, steady and very, very cold.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter long" id="unfold" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">25 December 2021 – 8 January 2022</div>
+      <h2>Folded like origami</h2>
+      <p>Webb left Earth on an Ariane 5 rocket with its mirror and sunshield folded to fit inside the nose cone. Then it spent two weeks opening itself, with nobody near enough to help. Scroll to run it.</p>
+      <ol class="steps" id="steps">
+        <li><time datetime="2021-12-25">25 Dec</time>Launch. The solar panel opens.</li>
+        <li><time datetime="2021-12-26">26 Dec</time>The antenna swings out.</li>
+        <li><time datetime="2021-12-28">28 Dec</time>Two sunshield pallets fold down.</li>
+        <li><time datetime="2021-12-29">29 Dec</time>A tower lifts the telescope 1.2 m.</li>
+        <li><time datetime="2021-12-30">30 Dec</time>The trim flap springs open.</li>
+        <li><time datetime="2021-12-31">31 Dec</time>Two booms pull the shield wide.</li>
+        <li><time datetime="2022-01-04">3–4 Jan</time>Five layers are pulled tight.</li>
+        <li><time datetime="2022-01-05">5 Jan</time>The small mirror swings out.</li>
+        <li><time datetime="2022-01-07">7 Jan</time>The first mirror wing locks.</li>
+        <li><time datetime="2022-01-08">8 Jan</time>The second wing locks. Done.</li>
+      </ol>
+      <details class="science-note">
+        <summary><span class="science-kind">Simplified model</span><span>Accuracy &amp; sources</span></summary>
+        <p>The order and dates are NASA's. The motion is simplified: the real sunshield unrolls from folded stacks and the solar panel opens like a fan, while here they stretch into place. The telescope is NASA's own 3D model, with fine detail removed. On this page it is lit from the front so you can see it; in space the mirror side is always in shadow.</p>
+        <p class="science-sources"><span>Sources</span>
+          <a href="https://science.nasa.gov/mission/webb/deployment-explorer/">NASA Webb deployment</a>
+          <a href="https://science.nasa.gov/blogs/webb/2022/01/08/primary-mirror-wings-deployed-all-major-deployments-complete/">NASA Webb blog, 8 Jan 2022</a>
+          <a href="https://science.nasa.gov/3d-resources/james-webb-space-telescope-a/">NASA 3D model</a>
+          <span>Reviewed Nov 21, 2026</span>
+        </p>
+      </details>
+    </div>
+  </section>
+
+  <section class="chapter long" id="journey" data-stage="l2">
+    <div class="card">
+      <div class="card-kicker">25 December 2021 – 24 January 2022</div>
+      <h2>A million miles uphill</h2>
+      <p>Webb does not circle Earth. The rocket threw it toward a point 1.5 million km away, four times as far as the Moon. Like a ball rolled up a hill, it slowed all the way: from 6.7 km/s an hour after launch to 0.2 km/s a month later.</p>
+      <canvas class="chart" id="chart-speed" role="img" aria-label="Chart: Webb's speed relative to Earth falls from 6.7 kilometres per second an hour after launch to about 0.2 on arrival thirty days later."></canvas>
+      <p class="chart-caption">Speed relative to Earth, from JPL's trajectory.</p>
+      <p>The throw was a little too gentle on purpose. Webb can push itself faster, but it can never turn around to brake: that would point its cold mirror at the Sun.</p>
+      <details class="science-note">
+        <summary><span class="science-kind">Measured path</span><span>Accuracy &amp; sources</span></summary>
+        <p>Webb's path, speed and the dates on screen are its as-flown trajectory from NASA/JPL Horizons. The view turns once a year with the line from the Sun through Earth, so the L2 point stays still. Earth, the Moon and Webb are drawn as enlarged dots. L2 is placed with the standard formula for the Sun and Earth, 1.0 % of the Sun's distance beyond Earth.</p>
+        <p class="science-sources"><span>Sources</span>
+          <a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a>
+          <a href="https://science.nasa.gov/mission/webb/orbit/">NASA Webb orbit</a>
+          <a href="https://science.nasa.gov/blogs/webb/2022/01/24/orbital-insertion-burn-a-success-webb-arrives-at-l2/">NASA Webb blog, 24 Jan 2022</a>
+          <span>Reviewed Nov 21, 2026</span>
+        </p>
+      </details>
+    </div>
+  </section>
+
+  <section class="chapter long" id="halo" data-stage="l2">
+    <div class="card">
+      <div class="card-kicker">24 January 2022 – today</div>
+      <h2>Orbiting nothing</h2>
+      <p>There is nothing at L2. It is a balance point, where the pull of the Sun and Earth together carries a spacecraft around the Sun in step with Earth. From there the Sun, Earth and Moon are always on the same side, behind the sunshield.</p>
+      <p>Webb loops around that empty point about twice a year. The balance is like a ball on a hilltop, so about every three weeks it fires small thrusters to keep from rolling off.</p>
+      <div class="stats">
+        <div><span class="stat-label">From Earth right now</span><span class="stat-value live"><span id="halo-earth-km">1,686,000</span> <small>km</small></span></div>
+        <div><span class="stat-label">Laps of L2 so far</span><span class="stat-value" id="halo-laps">9</span></div>
+        <p class="stat-note">The loop swings up to 800,000 km to either side of L2, wider than the Moon's whole orbit. The bright line is where Webb has been; the faint line is NASA's forecast.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter long" id="sunshield" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">The sunshield</div>
+      <h2>Hot side, cold side</h2>
+      <p>Warm things glow in infrared, and that includes telescopes. To see faint heat from space, Webb has to be far colder than the coldest place on Earth.</p>
+      <p>Its sunshield is five sheets, each about as thin as a hair. Each one is cooler than the one below, and heat escapes sideways through the gaps.</p>
+      <div class="readout" aria-live="off">
+        <span class="readout-value" id="temp-value">+85 °C</span>
+        <span class="readout-label" id="temp-side">Sun side</span>
+      </div>
+      <div class="stats">
+        <div><span class="stat-label">Sun side</span><span class="stat-value">+85 °C <small>hot enough to nearly boil water</small></span></div>
+        <div><span class="stat-label">Mirror side</span><span class="stat-value">−233 °C <small>far colder than Antarctica</small></span></div>
+        <p class="stat-note">The two end temperatures are NASA's. The numbers the big readout passes through on the way are a smooth blend, not measurements.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter long" id="mirror" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">The golden eye</div>
+      <h2>Eighteen mirrors acting as one</h2>
+      <p>Each hexagon is 1.32 metres across, made of light, stiff beryllium and coated in gold a thousand times thinner than a hair. Together they catch about six times as much light as Hubble's 2.4-metre mirror.</p>
+      <p>After unfolding, the 18 pieces pointed slightly different ways, so one star looked like 18 blurry dots. Motors behind each piece nudged them into line. Try it:</p>
+      <canvas class="align" id="align-canvas" role="img" aria-label="Illustration: eighteen blurry dots of light from one star slide together into a single sharp star with eight spikes."></canvas>
+      <label class="slide">
+        <input type="range" id="align-slider" min="0" max="100" value="0" aria-label="Align Webb's mirror segments">
+        <span class="slide-ends"><span>Feb 2022</span><span>11 Mar 2022</span></span>
+      </label>
+      <p class="slide-out" id="align-out" aria-live="polite">Eighteen separate pictures of the same star.</p>
+      <p class="picture-note">Illustration, not a Webb image</p>
+    </div>
+  </section>
+
+  <section class="chapter long" id="infrared" data-stage="nebula">
+    <div class="card">
+      <div class="card-kicker">Seeing heat</div>
+      <h2>Light your eyes cannot see</h2>
+      <p>Infrared is light with longer waves than red. Dust clouds block ordinary light, but infrared slips through, so Webb can watch stars being born inside them.</p>
+      <label class="slide">
+        <input type="range" id="ir-slider" min="0" max="100" value="0" aria-label="Slide from visible light to infrared">
+        <span class="slide-ends"><span>Visible light</span><span>Infrared</span></span>
+      </label>
+      <p class="slide-out" id="ir-out" aria-live="polite">Visible light: the dust cloud is a dark wall, and the stars behind it are hidden.</p>
+      <p>Infrared also shows the distant past. Light from the first galaxies set out more than 13 billion years ago, and the stretching of space has stretched it from visible light into infrared.</p>
+      <details class="science-note">
+        <summary><span class="science-kind">Illustration</span><span>Accuracy &amp; sources</span></summary>
+        <p>The picture behind this card is drawn by this page, not taken by Webb. It shows one true idea: dust dims short waves of light far more than long ones, so the same cloud that hides stars in visible light is nearly clear in infrared. The cloud, the stars and the colours are made up, and infrared has no colour of its own.</p>
+        <p class="science-sources"><span>Sources</span>
+          <a href="https://science.nasa.gov/mission/webb/science-overview/science-explainers/infrared-astronomy/">NASA infrared astronomy</a>
+          <a href="https://webbtelescope.org/contents/articles/why-infrared">STScI Why infrared?</a>
+          <span>Reviewed Nov 21, 2026</span>
+        </p>
+      </details>
+    </div>
+  </section>
+
+  <section class="chapter" id="future" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">12 July 2022 – today</div>
+      <h2>What it has found so far</h2>
+      <p>Webb's first pictures were shown to the world on 12 July 2022. Since then it has:</p>
+      <ul class="found">
+        <li>found <strong>carbon dioxide</strong> in the air of a planet around another star (2022);</li>
+        <li>measured a galaxy as it was only about <strong>290 million years</strong> after the Big Bang (2024);</li>
+        <li>shown newborn stars and planet-forming discs hidden inside dust clouds.</li>
+      </ul>
+      <p>It was built to work for at least five years. After launch, NASA worked out that its fuel should last much longer than ten.</p>
+    </div>
+  </section>
+
+</main>
+
+<div class="after-story">
+  <section aria-labelledby="timeline-title">
+    <div class="card-kicker">— The short version —</div>
+    <h2 id="timeline-title" class="info-title">James Webb Space Telescope timeline</h2>
+    <ol class="timeline">
+      <li><time datetime="2021-12-25">25 December 2021</time>Launch on an Ariane 5 rocket from Kourou, French Guiana. The solar panel opens half an hour later.</li>
+      <li><time datetime="2021-12-28">28 December 2021</time>The two pallets that hold the folded sunshield are lowered.</li>
+      <li><time datetime="2022-01-04">4 January 2022</time>The last of the sunshield's five layers is pulled tight.</li>
+      <li><time datetime="2022-01-05">5 January 2022</time>The secondary mirror swings out on its three legs.</li>
+      <li><time datetime="2022-01-08">8 January 2022</time>The second mirror wing locks. Webb is fully unfolded.</li>
+      <li><time datetime="2022-01-24">24 January 2022</time>A five-minute thruster burn puts Webb into its orbit around L2.</li>
+      <li><time datetime="2022-03-11">11 March 2022</time>The 18 mirror segments are lined up to make one sharp image.</li>
+      <li><time datetime="2022-07-12">12 July 2022</time>The first full-colour pictures and measurements are released.</li>
+    </ol>
+  </section>
+
+  <section class="guide guide-inline" id="guide" aria-labelledby="guide-title">
+    <div class="info-label">— Guide for kids, parents &amp; teachers —</div>
+    <h2 id="guide-title">James Webb Space Telescope for kids: how it works and where it is</h2>
+    <p class="guide-lede">The James Webb Space Telescope, often just called Webb or JWST, is a space telescope built by NASA with the European and Canadian space agencies. It launched on 25 December 2021 and studies the universe in infrared light from about 1.5 million kilometres away.</p>
+
+    <h3>Where is the Webb telescope?</h3>
+    <p>Webb is not in orbit around Earth like the Hubble Space Telescope. It circles the Sun alongside Earth, near a place called the second Lagrange point, or L2. L2 lies about 1.5 million kilometres from Earth on the side facing away from the Sun, roughly four times as far as the Moon. Webb does not sit still there. It follows a wide loop around L2 about once every six months, and its distance from Earth swings between about 1.2 and 1.75 million kilometres.</p>
+
+    <h3>Why did Webb have to unfold?</h3>
+    <p>Its mirror is 6.5 metres across and its sunshield is 21 metres long, but the nose cone of its Ariane 5 rocket was only about 5 metres wide. So the telescope was designed to fold. Over the two weeks after launch it opened in steps: the sunshield pallets, a tower that lifts the telescope, the five sunshield layers, the secondary mirror, and finally two wings of the main mirror. A total of 178 release devices had to let go, and all of them did.</p>
+
+    <h3>What are the parts of the telescope?</h3>
+    <ul>
+      <li><strong>Primary mirror.</strong> Eighteen hexagonal segments of beryllium, each 1.32 metres across and coated with a layer of gold 100 nanometres thick. Gold reflects infrared light very well.</li>
+      <li><strong>Secondary mirror.</strong> A round mirror 74 centimetres wide on three long legs. It sends the gathered light back through the middle of the main mirror.</li>
+      <li><strong>Sunshield.</strong> Five thin layers of a plastic called Kapton, 21 by 14 metres. It keeps the heat of the Sun, Earth and Moon off the telescope.</li>
+      <li><strong>Science instruments.</strong> Four of them, behind the mirror: cameras, and spectrographs that spread light into its colours to show what things are made of.</li>
+      <li><strong>Spacecraft bus.</strong> The warm side below the sunshield, with the computers, radio, fuel and thrusters.</li>
+      <li><strong>Solar panel and antenna.</strong> The panel makes electricity. The dish sends at least 28.6 gigabytes of data to Earth twice a day.</li>
+    </ul>
+
+    <h3>How cold is Webb?</h3>
+    <p>The Sun-facing side reaches about 85 °C. The mirror side stays near −233 °C, only 40 degrees above the coldest temperature possible. One instrument, which sees the longest waves, is chilled even further by a special refrigerator, to about −266 °C.</p>
+
+    <h3>Why infrared?</h3>
+    <p>Infrared light passes through dust that blocks visible light, so Webb can see into the clouds where stars and planets form. Cool objects, such as planets, glow mostly in infrared. And light from the earliest galaxies has been stretched by the expansion of space until it arrives as infrared, which is why a telescope built to see the young universe must see heat.</p>
+
+    <section class="guide-teach" aria-labelledby="guide-teach-title">
+      <h3 id="guide-teach-title">For teachers</h3>
+      <dl class="guide-meta">
+        <div><dt>Ages</dt><dd>8–14 (grades 3–8)</dd></div>
+        <div><dt>Time</dt><dd>30–45 minutes</dd></div>
+        <div><dt>Standards</dt><dd>NGSS MS-ESS1-2, MS-PS4-2, MS-ETS1-1</dd></div>
+      </dl>
+      <h4>Learning goals</h4>
+      <ul>
+        <li>Explain why Webb had to fold, and name the main steps of its unfolding.</li>
+        <li>Describe where L2 is and why Webb's sunshield works there.</li>
+        <li>Explain why infrared light shows things visible light cannot.</li>
+      </ul>
+      <h4>Try this in class</h4>
+      <ol>
+        <li>Scroll through the unfolding together. Pause before each step and ask what students think has to move next, and what would go wrong if it stuck.</li>
+        <li>Mirror maths: Webb's mirror is 6.5 m across and Hubble's is 2.4 m. How many times wider is Webb? (About 2.7.) Why does it collect about six times the light? (Area grows with the square of the width, less the gaps.)</li>
+        <li>Origami challenge: fold a sheet of paper so it fits in a matchbox and opens flat in one pull. Compare designs.</li>
+        <li>Use the infrared slider, then ask what a firefighter's heat camera and Webb have in common.</li>
+      </ol>
+      <h4>Discussion questions</h4>
+      <ul>
+        <li>Hubble was repaired by astronauts. Why can nobody repair Webb?</li>
+        <li>Why must the telescope itself be cold to see heat?</li>
+        <li>When Webb shows a galaxy 13 billion light-years away, are we seeing it as it is now?</li>
+      </ul>
+    </section>
+
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://science.nasa.gov/mission/webb/">NASA Webb</a>
+      <a href="https://science.nasa.gov/mission/webb/orbit/">NASA Webb orbit</a>
+      <a href="https://science.nasa.gov/mission/webb/webbs-mirrors/">NASA Webb mirrors</a>
+      <a href="https://science.nasa.gov/mission/webb/webbs-sunshield/">NASA Webb sunshield</a>
+      <a href="https://science.nasa.gov/mission/webb/science-overview/science-explainers/how-does-webb-stay-cold/">NASA How Webb stays cold</a>
+      <a href="https://science.nasa.gov/blogs/webb/">NASA Webb blog</a>
+      <a href="https://www.esa.int/Science_Exploration/Space_Science/Webb">ESA Webb</a>
+      <a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a>
+      <span>Reviewed Nov 21, 2026</span>
+    </p>
+  </section>
+  <div class="foot">Every position on this page comes from NASA/JPL's trajectory for Webb<br>
+    <a class="foot-next" href="/missions">More missions →</a> · <a class="foot-next" href="/sky-tonight">See tonight&rsquo;s sky yourself →</a></div>
+</div>
+
+<script type="module" src="/missions/webb.js?v=20261121-1"></script>
+</body>
+</html>

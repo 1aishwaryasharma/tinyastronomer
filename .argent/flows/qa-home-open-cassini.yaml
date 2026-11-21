@@ -1,0 +1,30 @@
+steps:
+  - run: ../fragments/boot-electron.yaml
+  - echo: On launch deck. Open the mission deep dives, then Cassini.
+  - tap:
+      id: launch-deep-dives
+  - await:
+      timeout: 20000
+      visible:
+        id: dive-cassini
+  - tap:
+      id: dive-cassini
+  - await:
+      timeout: 20000
+      visible:
+        id: mission-header
+  - await:
+      idle: true
+  - echo: The markup ships "about 80 minutes"; only the script writes the live delay.
+  - assert:
+      text:
+        in:
+          id: hero-signal
+        matches: '^\d h \d{2} min \d{2} s$'
+  - assert:
+      visible:
+        id: scene-nav-btn
+  - await:
+      hidden:
+        id: launch-title
+      timeout: 10000

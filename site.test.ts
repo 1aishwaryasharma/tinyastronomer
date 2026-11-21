@@ -1135,6 +1135,8 @@ test('indexing signals use directly served canonical URLs', () => {
     'sky-tonight.html': 'https://tinyastronomer.com/sky-tonight',
     'missions.html': 'https://tinyastronomer.com/missions',
     'missions/voyager-1.html': 'https://tinyastronomer.com/missions/voyager-1',
+    'missions/cassini.html': 'https://tinyastronomer.com/missions/cassini',
+    'missions/webb.html': 'https://tinyastronomer.com/missions/webb',
   };
   expect(Object.keys(canonicalUrls).sort(), 'every page needs a canonical URL').toEqual([...pages].sort());
 
