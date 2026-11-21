@@ -445,9 +445,11 @@ function systemChapters(kit, system) {
           place('voyager', 'Voyager 1', voyager, { ...VOYAGER, alpha: 1 - eye * 2 });
         } else {
           const alpha = smooth(0.6, 0.68, p);
-          for (const name of ['venus', 'jupiter', 'saturn', 'uranus', 'neptune']) place(name, titled(name), dot(name), { cls: 'is-dim', alpha });
-          place('earth', 'Earth · less than one pixel', dot('earth'), { cls: 'is-home', dx: 12, alpha });
-          place('sun', 'The Sun', ORIGIN, { cls: 'is-dim', dx: 14, dy: 16, alpha });
+          // Earth is the point of the picture: where names would print over
+          // each other near the Sun, the others give way to it.
+          for (const name of ['venus', 'jupiter', 'saturn', 'uranus', 'neptune']) place(name, titled(name), dot(name), { cls: 'is-dim', alpha, rank: 1 });
+          place('earth', 'Earth · less than one pixel', dot('earth'), { cls: 'is-home', dx: 12, alpha, rank: 3 });
+          place('sun', 'The Sun', ORIGIN, { cls: 'is-dim', dx: 14, dy: 16, alpha, rank: 2 });
         }
       },
     },
