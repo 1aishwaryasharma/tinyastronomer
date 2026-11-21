@@ -104,7 +104,6 @@ html { scroll-padding-top: 0; }
 .stat-value small { font-size: 12px; color: var(--ink-dim); }
 .stat-value.live { color: var(--accent); }
 .stat-note { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); font-weight: 300; }
-.stat-note a { color: var(--accent); text-underline-offset: 2px; }
 
 /* Part picker (spacecraft anatomy) */
 .parts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
