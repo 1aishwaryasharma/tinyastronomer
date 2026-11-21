@@ -157,9 +157,8 @@ changed but length, level and encoding (mono MP3).
     `72e19421515a4ee1debbd5595c90140a739e300805443303d1b485be73cd3630`).
     NASA also offers the English greeting as a download:
     <https://science.nasa.gov/resource/sounds-of-mars-hello-from-the-children-of-planet-earth/>.
-  - Credit on the page: NASA/JPL-Caltech, 1977. The greetings were organised
-    by Linda Salzman Sagan and recorded at Cornell University by volunteer
-    speakers; the English one is Nick Sagan.
+  - Credit on the page: NASA/JPL-Caltech, 1977. The greetings were recorded
+    at Cornell University by volunteer speakers.
   - Each cut was checked by transcribing it and comparing the words with the
     greeting the record's documentation gives for that language.
   - **Rights: used on NASA's terms, not as proven public domain.** Commons

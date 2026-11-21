@@ -386,7 +386,7 @@ test("every recording the page offers is shipped, small, and credited", () => {
   expect(readme).toContain("https://space-audio.org/");
   expect(readme).toContain("Creative Commons Attribution 4.0");
   // NASA's own translations, word for word apart from one capital.
-  expect(RECORDINGS.record[0]).toMatchObject({ key: "greeting-english", text: "“Hello from the children of planet Earth.” <strong>English</strong>, spoken by Nick Sagan, aged six" });
+  expect(RECORDINGS.record[0]).toMatchObject({ key: "greeting-english", text: "“Hello from the children of planet Earth.” <strong>English</strong>" });
   expect(RECORDINGS.record.find((r) => r.key === "greeting-hindi")!.text).toContain("Greetings from the inhabitants of this world.");
   expect(readme).toContain("https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/");
   expect(readme).toContain("PIA17045");
