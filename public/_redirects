@@ -22,3 +22,7 @@
 /seasons/          https://tinyastronomer.com/seasons        301
 /sky-tonight/      https://tinyastronomer.com/sky-tonight    301
 /solar-system/     https://tinyastronomer.com/solar-system   301
+
+# Mission deep dives live under /missions/.
+/missions/voyager-1.html https://tinyastronomer.com/missions/voyager-1 301
+/missions/voyager-1/     https://tinyastronomer.com/missions/voyager-1 301

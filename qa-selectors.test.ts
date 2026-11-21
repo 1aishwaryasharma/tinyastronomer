@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 process.chdir(fileURLToPath(new URL('./public', import.meta.url)));
 
-const pages = readdirSync('.').filter((file) => file.endsWith('.html'));
+const pages = (readdirSync('.', { recursive: true }) as string[])
+  .filter((file) => file.endsWith('.html') && !file.startsWith('vendor'));
 
 const requiredIds: Record<string, string[]> = {
   '404.html': ['not-found-title', 'not-found-home'],
@@ -24,6 +25,7 @@ const requiredIds: Record<string, string[]> = {
     'save-view-btn',
   ],
   'missions.html': ['missions-header', 'voyager-dist'],
+  'missions/voyager-1.html': ['mission-header', 'story', 'parts', 'chart-jupiter', 'ld-earth-km', 'ld-light', 'hello-btn', 'guide'],
   'scale-walk.html': ['scale-walk-header', 'stops'],
   'seasons.html': ['seasons-header', 'picker', 'seasons-controls'],
   'sky-tonight.html': [

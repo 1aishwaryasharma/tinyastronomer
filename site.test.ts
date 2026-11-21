@@ -22,8 +22,14 @@ process.chdir(fileURLToPath(new URL("./public", import.meta.url)));
 // 404.html is served for unknown paths with a 404 status. It is a page in the
 // markup sense (metadata, local assets, the wordmark) but not a stop on the
 // journey: no canonical URL, no redirect rules, no guide, and noindex.
-const allPages = readdirSync(".").filter((file) => file.endsWith(".html"));
+// Mission deep dives sit in folders (missions/voyager-1.html). They are pages
+// in every sense below except one: they are chapters of the Missions stop, not
+// stops on the journey, so the shared navigation does not list them.
+const allPages = (readdirSync(".", { recursive: true }) as string[])
+  .filter((file) => file.endsWith(".html") && !file.startsWith("vendor"))
+  .sort((a, b) => Number(a.includes("/")) - Number(b.includes("/")) || a.localeCompare(b));
 const pages = allPages.filter((file) => file !== "404.html");
+const stops = pages.filter((file) => !file.includes("/"));
 const teachingRadius = (radiusKm: number) =>
   Math.max(0.30, Math.min(0.55 * Math.pow(radiusKm / 6371, 0.4), 1.55));
 
@@ -240,7 +246,7 @@ describe.each(allPages)("%s", (file) => {
 
 test("shared scene navigation points to every live page", () => {
   const chrome = readFileSync("chrome.js", "utf8");
-  for (const page of pages) {
+  for (const page of stops) {
     const route = page === "index.html" ? "/" : `/${page.replace(/\.html$/, "")}`;
     expect(chrome, `navigation does not include ${route}`).toContain(`href: '${route}`);
   }
@@ -1128,7 +1134,9 @@ test('indexing signals use directly served canonical URLs', () => {
     'scale-walk.html': 'https://tinyastronomer.com/scale-walk',
     'sky-tonight.html': 'https://tinyastronomer.com/sky-tonight',
     'missions.html': 'https://tinyastronomer.com/missions',
+    'missions/voyager-1.html': 'https://tinyastronomer.com/missions/voyager-1',
   };
+  expect(Object.keys(canonicalUrls).sort(), 'every page needs a canonical URL').toEqual([...pages].sort());
 
   for (const [file, canonicalUrl] of Object.entries(canonicalUrls)) {
     const html = readFileSync(file, 'utf8');

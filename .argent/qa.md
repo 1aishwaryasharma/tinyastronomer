@@ -37,6 +37,7 @@ Every flow proves the arrival header, then one piece of content only the scene s
 | `qa-home-open-grand-tour` | Home deck opens Grand Tour | `info-title` equals "Meet the neighbourhood" |
 | `qa-home-open-scale-walk` | Home deck opens Scale Walk | `stops` runs from The Sun to Neptune |
 | `qa-home-open-missions` | Home deck opens Missions | `voyager-dist` is a live km figure |
+| `qa-home-open-voyager` | Home deck opens the Voyager 1 deep dive | `hero-earth-km` is a live km figure; `hero-light` gains its seconds |
 | `qa-home-open-sky-tonight` | Home deck opens Sky Tonight | `location-source` is time-zone based; `moon-summary` shows the phase and % lit |
 | `qa-sky-tonight-manual-location` | Sky Tonight accepts a private manual London location | `meta-location`, `location-source`, `moon-summary` re-rendered for London |
 | `qa-explore-next-stop` | Light Study Explore menu goes to Seasons | Seasons `picker` lists the four stops |
@@ -62,6 +63,7 @@ Use this to pick what to replay locally and to read the CI table. The flows mark
 | `public/solar-system.html`, `planet-models.js`, `tour-*.js` | Grand Tour | `qa-home-open-grand-tour` | body deep link and framing tests |
 | `public/scale-walk.html` | Scale Walk | `qa-home-open-scale-walk` | Scale Walk texture test in `startup.test.ts` |
 | `public/missions.html` | Missions | `qa-home-open-missions` | missions cross-link test |
+| `public/missions/**`, `mission-*.js`, `mission-page.css` | Mission deep dives | `qa-home-open-voyager` | `missions.test.ts` |
 | `public/sky-tonight.html`, `sky-forecast.js`, `sky-location.js`, `sky-places.js`, `tz-coords.js` | Sky Tonight | `qa-home-open-sky-tonight`, `qa-sky-tonight-manual-location` | `sky-forecast.test.ts`, `sky-location.test.ts` |
 | `public/chrome.js`, `common.js`, `common.css`, `tokens.css`, `_headers`, `_redirects`, `wrangler.jsonc`, `dev-server.ts` | Shared | the whole directory | CSP hash test, routing tests |
 | `public/teachers.html` (planned) | Teachers | planned `qa-home-open-teachers` | new-page checklist tests |

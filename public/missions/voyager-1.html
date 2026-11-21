@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Voyager 1 for Kids: The Farthest Spacecraft, in 3D | tinyastronomer</title>
+<meta name="description" content="Voyager 1 is the farthest spacecraft from Earth, now a full light-day away. Fly its real path past Jupiter and Saturn in a free 3D story for kids.">
+<script type="importmap">
+{
+  "imports": {
+    "three": "/vendor/three/three.module.min.js",
+    "three/addons/": "/vendor/three/addons/"
+  }
+}
+</script>
+<script type="module" src="/scene-load-failure.js"></script>
+<script type="module" async src="/chrome.js?v=20261008-1"></script>
+<meta name="theme-color" content="#050810">
+<link rel="canonical" href="https://tinyastronomer.com/missions/voyager-1">
+<link rel="icon" href="/favicon.svg?v=20260816-20" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260816-20">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="tinyastronomer">
+<meta property="og:title" content="Voyager 1 for Kids: The Farthest Spacecraft, in 3D | tinyastronomer">
+<meta property="og:description" content="Voyager 1 is the farthest spacecraft from Earth, now a full light-day away. Fly its real path past Jupiter and Saturn in a free 3D story for kids.">
+<meta property="og:url" content="https://tinyastronomer.com/missions/voyager-1">
+<meta property="og:image" content="https://tinyastronomer.com/assets/missions/voyager-1/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Voyager 1 for Kids: The Farthest Spacecraft, in 3D | tinyastronomer">
+<meta name="twitter:description" content="Voyager 1 is the farthest spacecraft from Earth, now a full light-day away. Fly its real path past Jupiter and Saturn in a free 3D story for kids.">
+<meta name="twitter:image" content="https://tinyastronomer.com/assets/missions/voyager-1/og-cover.png">
+<link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/common.css?v=20261018-1">
+<link rel="stylesheet" href="/mission-page.css?v=20261121-1">
+<style>
+  #canvas-container { --mission-poster: url('/assets/missions/voyager-1/poster.webp'); }
+  @media (max-width: 860px) {
+    #canvas-container { --mission-poster: url('/assets/missions/voyager-1/poster-800.webp'); }
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+<div class="sunbeams" id="sunbeams" aria-hidden="true"></div>
+<div class="scene-labels" id="scene-labels" aria-hidden="true"></div>
+<div class="loader mission-loader" id="loader" role="status" aria-live="polite">
+  <div class="loader-inner">
+    <div class="loader-text">Waking the spacecraft…</div>
+    <div class="loader-bar" role="progressbar" aria-label="Loading the 3D scene" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="loader-bar-fill"></span></div>
+  </div>
+</div>
+
+<header class="header" id="mission-header" aria-label="Voyager 1">
+  <div>
+    <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
+    <h1 class="title">Voyager 1: The Farthest Spacecraft</h1>
+    <a class="crumb" href="/missions">← All missions</a>
+  </div>
+</header>
+
+<div class="mission-clock" id="clock" aria-hidden="true">
+  <div class="clock-date" id="clock-date">5 Sep 1977</div>
+  <div id="clock-a"></div>
+  <div id="clock-b"></div>
+</div>
+
+<nav class="chapter-rail" aria-label="Chapters">
+  <a href="#hero"><span>Start</span></a>
+  <a href="#craft"><span>The spacecraft</span></a>
+  <a href="#launch"><span>Launch</span></a>
+  <a href="#jupiter"><span>Jupiter</span></a>
+  <a href="#cruise"><span>To Saturn</span></a>
+  <a href="#saturn"><span>Saturn &amp; Titan</span></a>
+  <a href="#portrait"><span>Pale Blue Dot</span></a>
+  <a href="#edge"><span>The Sun's bubble</span></a>
+  <a href="#lightday"><span>One light-day</span></a>
+  <a href="#record"><span>Golden Record</span></a>
+  <a href="#future"><span>What's next</span></a>
+</nav>
+
+<main class="story" id="story">
+
+  <section class="chapter hero short" id="hero" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">Mission deep dive · Launched 1977</div>
+      <h2>Voyager 1</h2>
+      <p class="lede">The farthest thing people have ever made. Scroll to fly its real path: past Jupiter and Saturn, out of the Sun's bubble, and on to a full day of light-travel from home.</p>
+      <div class="stats">
+        <div><span class="stat-label">From Earth right now</span><span class="stat-value live"><span id="hero-earth-km">25,908,000,000</span> <small>km</small></span></div>
+        <div><span class="stat-label">A radio signal takes</span><span class="stat-value live" id="hero-light">24 h 00 min</span></div>
+      </div>
+      <p class="hero-scroll">Scroll to begin</p>
+    </div>
+  </section>
+
+  <section class="chapter long" id="craft" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">The spacecraft</div>
+      <h2>A robot the size of a small car</h2>
+      <p>Voyager 1 has a mass of about 800 kilograms. It has no solar panels, because sunlight is far too weak where it travels. Its electricity comes from the heat of slowly decaying plutonium.</p>
+      <p id="parts-hint">Pick a part to look closer. Drag the spacecraft to turn it.</p>
+      <div class="parts" id="parts" role="group" aria-label="Parts of the spacecraft"></div>
+      <div class="part-detail" id="part-detail" aria-live="polite">
+        <h3 id="part-title">Built to last five years</h3>
+        <p id="part-text">The mission was planned to study Jupiter and Saturn and then end. Its builders gave every important system a spare. Nearly fifty years later, it is still reporting back.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="launch" data-stage="system">
+    <div class="card">
+      <div class="card-kicker">5 September 1977</div>
+      <h2>Aim for where Jupiter will be</h2>
+      <p>Voyager 1 left Florida on a Titan-Centaur rocket, moving fast enough to escape Earth. It did not fly straight at Jupiter. It was thrown onto a long curve to meet the planet eighteen months later, <strong>where Jupiter was going to be</strong>.</p>
+      <p>Its twin, Voyager 2, had launched sixteen days earlier on a slower path. Voyager 1 overtook it on the way, which is how it earned the “1”.</p>
+      <details class="science-note">
+        <summary><span class="science-kind">Measured path</span><span>Accuracy &amp; sources</span></summary>
+        <p>Voyager's path, speed and the dates on screen come from NASA/JPL's reconstructed trajectory (Horizons). Planet positions use JPL's approximate orbital elements. The Sun, planets and spacecraft are drawn as enlarged dots: at this scale every one of them would be far smaller than a pixel.</p>
+        <p class="science-sources"><span>Sources</span>
+          <a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a>
+          <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">JPL planet positions</a>
+          <a href="https://science.nasa.gov/mission/voyager/">NASA Voyager</a>
+          <span>Reviewed Nov 21, 2026</span>
+        </p>
+      </details>
+    </div>
+  </section>
+
+  <section class="chapter long right" id="jupiter" data-stage="jupiter">
+    <div class="card">
+      <div class="card-kicker">5 March 1979 · Jupiter</div>
+      <h2>Stealing speed from a giant</h2>
+      <p>Voyager 1 swung around Jupiter 349,000 km from its centre. Jupiter races around the Sun at 13 km every second, and its gravity towed the little spacecraft along with it. Voyager arrived moving about 13 km/s and left at about 24. This trick is called a <strong>gravity assist</strong>.</p>
+      <canvas class="chart" id="chart-jupiter" role="img" aria-label="Chart: Voyager 1's speed relative to the Sun rises from about 13 to about 24 kilometres per second as it passes Jupiter, with a brief peak of 37 at closest approach."></canvas>
+      <p class="chart-caption">Speed relative to the Sun, from JPL's trajectory. The spike is Voyager falling toward Jupiter and climbing back out.</p>
+      <div class="fact-callout"><span class="fact-tag">✦ Discovery</span>Its cameras caught volcanoes erupting on the moon <strong>Io</strong>: the first active volcanoes ever seen beyond Earth.</div>
+    </div>
+  </section>
+
+  <section class="chapter short" id="cruise" data-stage="system">
+    <div class="card">
+      <div class="card-kicker">1979 – 1980</div>
+      <h2>Twenty months to Saturn</h2>
+      <p>Coasting uphill against the Sun's pull, Voyager slowed from 24 km/s to 20. Even so, it crossed the gap between Jupiter and Saturn, wider than the whole distance it had flown so far, in under two years.</p>
+    </div>
+  </section>
+
+  <section class="chapter long right" id="saturn" data-stage="saturn">
+    <div class="card">
+      <div class="card-kicker">12 November 1980 · Saturn</div>
+      <h2>One close look, and no way back</h2>
+      <p>Scientists had a choice. Voyager 1 could go on to more planets, or pass very close to <strong>Titan</strong>, the only moon with a thick atmosphere. They chose Titan.</p>
+      <p>The spacecraft skimmed past the orange moon, dipped under Saturn's south pole, and was flung upward, out of the flat plane where the planets orbit. It has not visited a world since.</p>
+      <div class="fact-callout"><span class="fact-tag">✦ Discovery</span>Titan's air is mostly <strong>nitrogen</strong>, like Earth's, and so hazy that the cameras could not see the ground.</div>
+    </div>
+  </section>
+
+  <section class="chapter long" id="portrait" data-stage="system">
+    <div class="card">
+      <div class="card-kicker">14 February 1990 · 6 billion km out</div>
+      <h2>The Pale Blue Dot</h2>
+      <p>High above the planets, Voyager 1 turned its camera around one last time and took a family portrait of the solar system: sixty frames, six planets.</p>
+      <p>In one frame, in a beam of scattered sunlight, is a speck smaller than a single pixel. <strong>That speck is Earth.</strong> Every person who has ever lived, lived there.</p>
+      <p>Minutes later the cameras were switched off for good, to save power for the long trip ahead.</p>
+    </div>
+  </section>
+
+  <section class="chapter long" id="edge" data-stage="system">
+    <div class="card">
+      <div class="card-kicker">2004 – 2012</div>
+      <h2>Leaving the Sun's bubble</h2>
+      <p>The Sun blows a thin wind of charged particles in every direction, puffing up a huge bubble called the <strong>heliosphere</strong>. Outside it is the even thinner gas that drifts between the stars.</p>
+      <div class="stats">
+        <div><span class="stat-label">Wind suddenly slows</span><span class="stat-value">16 Dec 2004 <small>· 94 AU</small></span></div>
+        <div><span class="stat-label">Edge of the bubble</span><span class="stat-value">25 Aug 2012 <small>· 122 AU</small></span></div>
+        <p class="stat-note">One AU is the distance from Earth to the Sun. Crossing that edge, the heliopause, made Voyager 1 the first human-made object in <strong>interstellar space</strong>. Nobody knows the bubble's true shape; the one drawn here is a simple guess.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter long" id="lightday" data-stage="system">
+    <div class="card">
+      <div class="card-kicker">18 November 2026</div>
+      <h2>One light-day from home</h2>
+      <p>Light is the fastest thing there is: it reaches the Moon in just over a second. On 18 November 2026 Voyager 1 became the first spacecraft so far away that light, and every radio message, needs <strong>a whole day</strong> to get there.</p>
+      <div class="stats">
+        <div><span class="stat-label">From Earth</span><span class="stat-value live"><span id="ld-earth-km">25,908,000,000</span> <small>km</small></span></div>
+        <div><span class="stat-label">From the Sun</span><span class="stat-value"><span id="ld-sun-km">25,793,000,000</span> <small>km</small></span></div>
+        <div><span class="stat-label">Signal travel time</span><span class="stat-value live" id="ld-light">24 h 00 min 21 s</span></div>
+        <div><span class="stat-label">Speed</span><span class="stat-value"><span id="ld-speed">16.9</span> <small>km/s</small></span></div>
+        <p class="stat-note">These are worked out on your device from JPL's trajectory. The distance from Earth wobbles: for a few months each year Earth's own orbit carries us toward Voyager faster than it flies away.</p>
+      </div>
+      <button type="button" class="hello-btn" id="hello-btn">Say hello to Voyager</button>
+      <p class="hello-out" id="hello-out" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="chapter right" id="record" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">A message in a bottle</div>
+      <h2>The Golden Record</h2>
+      <p>Bolted to Voyager's side is a gold-plated copper record, made in case anyone ever finds it. A team led by Carl Sagan filled it with the sights and sounds of Earth.</p>
+      <div class="stats">
+        <div><span class="stat-label">Pictures</span><span class="stat-value">115</span></div>
+        <div><span class="stat-label">Spoken greetings</span><span class="stat-value">55 <small>languages</small></span></div>
+        <div><span class="stat-label">Music</span><span class="stat-value">90 <small>minutes</small></span></div>
+        <div><span class="stat-label">Also aboard</span><span class="stat-value"><small>whale song, thunder, a kiss, laughter</small></span></div>
+        <p class="stat-note">The cover is engraved with picture instructions for playing it, and a map that points to our Sun using fourteen flashing stars called pulsars.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="future" data-stage="craft">
+    <div class="card">
+      <div class="card-kicker">What's next</div>
+      <h2>Going quiet, going on</h2>
+      <p>Voyager's nuclear batteries make a little less power every year. Engineers have switched off instruments one by one; as of November 2026 two are still listening. Some time in the 2030s the last one will fall silent.</p>
+      <p>The spacecraft will keep coasting. In about 300 years it reaches the Oort Cloud, a swarm of icy comets around the Sun. In about <strong>40,000 years</strong> it drifts past another star, Gliese 445, still carrying its record.</p>
+    </div>
+  </section>
+
+</main>
+
+<div class="after-story">
+  <section aria-labelledby="timeline-title">
+    <div class="card-kicker">— The short version —</div>
+    <h2 id="timeline-title" class="info-title">Voyager 1 timeline</h2>
+    <ol class="timeline">
+      <li><time datetime="1977-09-05">5 September 1977</time>Launch from Cape Canaveral, Florida.</li>
+      <li><time datetime="1979-03-05">5 March 1979</time>Closest approach to Jupiter. Volcanoes found on Io and a faint ring around the planet.</li>
+      <li><time datetime="1980-11-12">12 November 1980</time>Close flyby of Titan, then Saturn. The path bends up and out of the plane of the planets.</li>
+      <li><time datetime="1990-02-14">14 February 1990</time>The solar system family portrait, including the Pale Blue Dot. Cameras switched off.</li>
+      <li><time datetime="1998-02-17">17 February 1998</time>Passes Pioneer 10 to become the most distant spacecraft.</li>
+      <li><time datetime="2004-12-16">16 December 2004</time>Crosses the termination shock, where the solar wind abruptly slows.</li>
+      <li><time datetime="2012-08-25">25 August 2012</time>Crosses the heliopause into interstellar space.</li>
+      <li><time datetime="2026-11-18">18 November 2026</time>Reaches one light-day from Earth.</li>
+    </ol>
+  </section>
+
+  <section class="guide guide-inline" id="guide" aria-labelledby="guide-title">
+    <div class="info-label">— Guide for kids, parents &amp; teachers —</div>
+    <h2 id="guide-title">Voyager 1 for kids: the farthest spacecraft from Earth</h2>
+    <p class="guide-lede">Voyager 1 is a robot spacecraft that NASA launched in 1977. It flew past Jupiter and Saturn, kept going, and is now farther from Earth than anything else people have built: more than 25 billion kilometres away.</p>
+
+    <h3>How far away is Voyager 1?</h3>
+    <p>So far that kilometres stop being useful. Astronomers measure it in light-travel time instead. Light crosses 299,792 kilometres every second, and it still needs a full day to reach Voyager 1. When engineers send a command, they wait a day for it to arrive and another day for the answer. The spacecraft adds about 1.46 million kilometres to its distance from the Sun every day.</p>
+
+    <h3>How does a gravity assist work?</h3>
+    <p>A planet is moving around the Sun. A spacecraft that passes behind a planet is pulled forward by the planet's gravity and leaves with some of the planet's motion added to its own. Seen from Jupiter, Voyager 1 arrived and left at the same speed. Seen from the Sun, it left nearly twice as fast. Jupiter slowed down in exchange, by an amount far too small to measure.</p>
+
+    <h3>What are the parts of the spacecraft?</h3>
+    <ul>
+      <li><strong>High-gain antenna.</strong> The white dish is 3.7 metres across and always points at Earth. Its transmitter is about as strong as a refrigerator light bulb.</li>
+      <li><strong>Nuclear batteries.</strong> Three generators turn the heat of decaying plutonium-238 into electricity. They made about 470 watts at launch and lose a few watts each year.</li>
+      <li><strong>Magnetometer boom.</strong> A 13-metre arm holds magnetic sensors far from the spacecraft's own electronics.</li>
+      <li><strong>Scan platform.</strong> A turning mount for the two cameras and other light-measuring instruments. All of them are now switched off.</li>
+      <li><strong>Plasma wave antennas.</strong> Two 10-metre rods that sense vibrations in the thin electrified gas around the spacecraft.</li>
+      <li><strong>The bus.</strong> The ten-sided body holds the computers, a digital tape recorder and the fuel tank for its small thrusters.</li>
+    </ul>
+
+    <h3>Has Voyager 1 left the solar system?</h3>
+    <p>Not yet, and it depends what you mean. In 2012 it left the heliosphere, the bubble blown by the solar wind, so it is now in the space between the stars. But the Sun's gravity still holds a vast, distant swarm of comets called the Oort Cloud. Voyager 1 will need about 300 years to reach its inner edge and perhaps 30,000 years to fly through it.</p>
+
+    <h3>What is the Golden Record?</h3>
+    <p>Each Voyager carries a 30-centimetre gold-plated copper disc with 115 pictures, greetings in 55 languages, natural sounds and 90 minutes of music from many cultures. Its cover shows how to play it. Space is so empty that the record should last for more than a billion years.</p>
+
+    <section class="guide-teach" aria-labelledby="guide-teach-title">
+      <h3 id="guide-teach-title">For teachers</h3>
+      <dl class="guide-meta">
+        <div><dt>Ages</dt><dd>8–14 (grades 3–8)</dd></div>
+        <div><dt>Time</dt><dd>30–45 minutes</dd></div>
+        <div><dt>Standards</dt><dd>NGSS MS-ESS1-2, MS-ESS1-3, MS-PS2-4</dd></div>
+      </dl>
+      <h4>Learning goals</h4>
+      <ul>
+        <li>Describe Voyager 1's route and explain why it visited only two planets.</li>
+        <li>Explain a gravity assist as a transfer of motion from a moving planet.</li>
+        <li>Use light-travel time to compare very large distances.</li>
+      </ul>
+      <h4>Try this in class</h4>
+      <ol>
+        <li>Scroll to the Jupiter flyby together. Before it plays, ask students to predict whether the spacecraft will end up faster or slower, then read the speed chart.</li>
+        <li>Light-time maths: light takes about 8 minutes from the Sun to Earth and 24 hours to Voyager 1. How many times farther is Voyager? (About 173 times.)</li>
+        <li>Press “Say hello to Voyager” and work out when a reply could come back. Compare it with a message to the Moon, which takes 1.3 seconds each way.</li>
+        <li>Make a class Golden Record: each student chooses one picture, one sound and one greeting, and explains the choice.</li>
+      </ol>
+      <h4>Discussion questions</h4>
+      <ul>
+        <li>Why can't Voyager 1 use solar panels?</li>
+        <li>Was choosing Titan over more planets the right decision? What was gained and lost?</li>
+        <li>How would you explain Earth to someone who has never seen it?</li>
+      </ul>
+    </section>
+
+    <p class="science-sources"><span>Sources</span>
+      <a href="https://science.nasa.gov/mission/voyager/">NASA Voyager</a>
+      <a href="https://science.nasa.gov/mission/voyager/spacecraft/">NASA Voyager spacecraft</a>
+      <a href="https://science.nasa.gov/mission/voyager/golden-record/">NASA Golden Record</a>
+      <a href="https://science.nasa.gov/mission/voyager/voyager-1s-pale-blue-dot/">NASA Pale Blue Dot</a>
+      <a href="https://science.nasa.gov/mission/voyager/voyager-1/voyager-1-what-is-a-light-day/">NASA What is a light-day?</a>
+      <a href="https://science.nasa.gov/blogs/voyager/">NASA Voyager blog</a>
+      <a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a>
+      <span>Reviewed Nov 21, 2026</span>
+    </p>
+  </section>
+  <div class="foot">Every position on this page comes from NASA/JPL's trajectory for Voyager 1<br>
+    <a class="foot-next" href="/missions">More missions →</a> · <a class="foot-next" href="/sky-tonight">See tonight&rsquo;s sky yourself →</a></div>
+</div>
+
+<script type="module" src="/missions/voyager-1.js?v=20261121-1"></script>
+</body>
+</html>
