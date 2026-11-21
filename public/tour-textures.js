@@ -26,9 +26,7 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
   function planetTexture(p) {
     if (p.type === 'earth') return earthDay;
     if (!planetTextures.has(p.key)) {
-      // Eris has no resolved global map: its baked image is a plain color.
-      const path = p.key === 'eris' ? 'eris' : p.key;
-      const tex = textureLoader.load(`assets/teaching-textures/${path}.webp`);
+      const tex = textureLoader.load(`assets/teaching-textures/${p.key}.webp`);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -38,7 +36,14 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
     return planetTextures.get(p.key);
   }
 
+  // A featureless globe in the catalog colour.
+  function plainGlobeMaterial(p) {
+    return new THREE.MeshStandardMaterial({ color: p.dot, roughness: 1, metalness: 0 });
+  }
+
   function planetMaterial(p) {
+    // No spacecraft has mapped this world, so nothing is painted on it.
+    if (p.surfaceMap === false) return plainGlobeMaterial(p);
     if (p.type !== 'earth') {
       return new THREE.MeshStandardMaterial({ map: planetTexture(p), roughness: 1, metalness: 0 });
     }
@@ -113,7 +118,7 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
     return tex;
   }
 
-  return { loadingManager, loadEarthDetails, makeRingTexture, planetMaterial, planetTexture, updateEarthLighting };
+  return { loadingManager, loadEarthDetails, makeRingTexture, plainGlobeMaterial, planetMaterial, planetTexture, updateEarthLighting };
 }
 
 window.createTourTextures = createTourTextures;

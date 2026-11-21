@@ -49,6 +49,28 @@ test('Scale Walk loads only its day map and reuses pre-rendered planet textures'
   expect(requests).toEqual(['assets/teaching-textures/mars.webp']);
 });
 
+test('a world no spacecraft has mapped is a plain globe in its catalog colour', () => {
+  const requests: string[] = [];
+  const THREE = {
+    LoadingManager: class {},
+    TextureLoader: class { load(path: string) { requests.push(path); return {}; } },
+    Vector3: class {},
+    MeshStandardMaterial: class { constructor(public options: Record<string, unknown>) {} },
+  };
+  const source = read('tour-textures.js').replace(/^import .*;$/gm, '').replace('export function', 'function');
+  const factory = new Function('THREE', 'SPACE', 'loadEarthTextureSet', 'window',
+    source + ';return createTourTextures;')(THREE, {}, () => ({ day: {} }), {});
+  const textures = factory({ capabilities: { getMaxAnisotropy: () => 16 } }, { earthDetails: false });
+
+  const haumea = textures.planetMaterial({ key: 'haumea', type: 'rock', surfaceMap: false, dot: '#dcdfe0' });
+  expect(haumea.options).toEqual({ color: '#dcdfe0', roughness: 1, metalness: 0 });
+  expect(requests).toEqual([]);
+
+  const mars = textures.planetMaterial({ key: 'mars', type: 'rock', dot: '#d0674a' });
+  expect(mars.options.map).toBeDefined();
+  expect(requests).toEqual(['assets/teaching-textures/mars.webp']);
+});
+
 test('every page uses local fonts instead of a third-party stylesheet chain', () => {
   for (const name of ['index', 'solar-system', 'seasons', 'scale-walk', 'sky-tonight', 'missions']) {
     expect(read(name + '.html')).not.toContain('https://fonts.googleapis.com');

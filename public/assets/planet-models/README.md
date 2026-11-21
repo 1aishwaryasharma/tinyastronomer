@@ -26,6 +26,8 @@ files total 1.92 MB instead of 2.57 MB; `planet-models.js` loads the vendored
 the GLTF loader. Mercury's 493 KB surface composite dominates its file and
 does not compress further without visible loss, so it was left as is.
 
-No speculative Eris surface map is included. Spacecraft have not resolved its
-surface well enough for a truthful global map, so the application renders it
-as a deliberately detail-free, mean-color globe.
+No speculative Eris, Haumea or Makemake surface map is included. No spacecraft
+has resolved their surfaces well enough for a truthful global map, so the
+application renders each as a deliberately detail-free, mean-color globe.
+Haumea's globe is stretched to its occultation-measured ellipsoid.
+None of the three has a texture file; their color is the catalog's `dot`.
