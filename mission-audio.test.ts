@@ -387,7 +387,8 @@ test("every recording the page offers is shipped, small, and credited", () => {
   expect(readme).toContain("PIA17045");
   expect(page).toContain('<span class="clip-credit">NASA/JPL-Caltech · 1977</span>');
   // The notes say what is known about the greetings' rights, and what is not.
-  expect(readme).toContain("not as proven public domain");
+  expect(readme).toContain("Creative Commons Attribution-NonCommercial");
+  expect(page).toContain("Greetings audio: NASA, Creative Commons BY-NC, shortened here");
   expect(page).toContain('<span class="clip-credit">NASA/JPL-Caltech/University of Iowa</span>');
   expect(page).toContain('<span class="clip-credit">NASA/University of Iowa</span>');
 });

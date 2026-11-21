@@ -161,24 +161,28 @@ changed but length, level and encoding (mono MP3).
     at Cornell University by volunteer speakers.
   - Each cut was checked by transcribing it and comparing the words with the
     greeting the record's documentation gives for that language.
-  - **Rights: used on NASA's terms, not as proven public domain.** Commons
-    tags the track public domain as a NASA work, but that tag is a community
-    classification, and who owns the 1977 recordings has not been
-    established: the speakers were not federal employees, and no release or
-    assignment is published. What is known: NASA publishes the greetings and
-    says it obtained releases for what it presents online
-    (<https://science.nasa.gov/mission/voyager/frequently-asked-questions/>);
-    NASA's media guidelines allow its audio to be used for education,
-    including on web pages, with NASA acknowledged and no endorsement implied,
-    while noting that its use of third-party material gives others no rights
-    (<https://www.nasa.gov/nasa-brand-center/images-and-media/>); and the
-    Library of Congress presents the same recordings "courtesy of the NASA
-    Jet Propulsion Laboratory". The site's use is ten clips of one to six
-    seconds, unaltered, each with its translation, on a free educational
-    page. If a rights holder objects, remove `greeting-*.mp3`, the
-    `record` entry of `RECORDINGS` and the greeting assertions in
-    `mission-audio.test.ts`; the page's Sources list still links to NASA's
-    greetings page.
+  - **Rights: used under the licence NASA publishes them with.** NASA's
+    verified SoundCloud account offers each greeting as its own track,
+    marked Creative Commons Attribution-NonCommercial (`cc-by-nc`) and
+    downloadable: <https://soundcloud.com/nasa/sets/golden-record-greetings-to-the>.
+    All ten languages used here were checked on 2026-11-21. That licence
+    asks for three things, and the site meets them: credit (NASA/JPL-Caltech
+    beside the buttons), a pointer to the licence with a note that the audio
+    was changed (the page's Sources list says "shortened here"; the clips are
+    trimmed and re-encoded, nothing else), and non-commercial use (the site
+    is free, with no advertising or sales; if that ever changes, this needs
+    looking at again).
+  - What that does not settle: who owned the 1977 recordings. The speakers
+    were not federal employees and no release or assignment is published, so
+    this is not relied on as public domain, whatever the Commons tag says.
+    Also on record: NASA says it obtained releases for what it presents
+    online (<https://science.nasa.gov/mission/voyager/frequently-asked-questions/>),
+    and the Library of Congress presents the same recordings "courtesy of
+    the NASA Jet Propulsion Laboratory". The file the clips were cut from is
+    the Commons copy of the same NASA track, not a SoundCloud download.
+  - If a rights holder objects, remove `greeting-*.mp3`, the `record` entry
+    of `RECORDINGS` and the greeting assertions in `mission-audio.test.ts`;
+    the page's Sources list still links to NASA's greetings page.
 - `plasma-waves.mp3`: twelve seconds from the soundtrack of PIA17045, "Voyager
   Captures Sounds of Interstellar Space",
   <https://science.nasa.gov/photojournal/voyager-captures-sounds-of-interstellar-space>.
