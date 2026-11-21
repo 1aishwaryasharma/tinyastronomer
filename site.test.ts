@@ -590,7 +590,7 @@ test('attaching a shadow light does not clear or reallocate the live canvas', ()
 function sceneNoticePage(loaded = true) {
   const common = readFileSync('common.js', 'utf8');
   const source = common.slice(
-    common.indexOf('function showSceneNotice'),
+    common.indexOf('let clearPassingNotice'),
     common.indexOf('function createRenderer')
   );
   const loaderSource = common.slice(

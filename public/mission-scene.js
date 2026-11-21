@@ -46,7 +46,7 @@
    State, read-only: kit.time, kit.stage, kit.wide, kit.reduced
    kit.run({ sets, chapters, studio, frame, onChapter })   start the story; see below */
 import * as THREE from 'three';
-import { SPACE } from './common.bundle.js?v=20261121-2';
+import { SPACE } from './common.bundle.js?v=20261121-3';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';

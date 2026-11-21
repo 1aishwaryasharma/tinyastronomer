@@ -735,9 +735,10 @@ float fbm(vec3 p) {
   // itself down): that one gives way to any later notice.
   // scene-load-failure.js honours the same marker. Returns a function that
   // takes the notice down again, or null if none was shown.
+  let clearPassingNotice = null;
   function showSceneNotice(message, opts) {
     const loader = document.getElementById('loader');
-    if (showSceneNotice.clearPassing) showSceneNotice.clearPassing();
+    if (clearPassingNotice) clearPassingNotice();
     if (!loader || loader.classList.contains('loader-failed')) return null;
     const text = loader.querySelector('.loader-text');
     const bar = loader.querySelector('.loader-bar');
@@ -760,7 +761,7 @@ float fbm(vec3 p) {
     const clear = () => {
       if (!up) return;
       up = false;
-      if (showSceneNotice.clearPassing === clear) showSceneNotice.clearPassing = null;
+      if (clearPassingNotice === clear) clearPassingNotice = null;
       if (reload) reload.remove();
       if (text) text.textContent = before;
       if (bar) bar.hidden = false;
@@ -768,7 +769,7 @@ float fbm(vec3 p) {
       loader.classList.remove('loader-failed');
       if (loader.classList.contains('hidden')) loader.setAttribute('aria-hidden', 'true');
     };
-    if (opts && opts.passing) showSceneNotice.clearPassing = clear;
+    if (opts && opts.passing) clearPassingNotice = clear;
     return clear;
   }
 

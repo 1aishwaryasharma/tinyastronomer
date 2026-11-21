@@ -55,7 +55,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 test("nothing sounds, and no audio is set up, until the reader asks", () => {
   const { env, button, contexts, store } = browser();
   const audio = createMissionAudio({ beds: BEDS, clips, button, env });
-  audio.follow({ id: "hero", progress: 0.5, dim: 0, past: false });
+  audio.track({ id: "hero", progress: 0.5, dim: 0, past: false });
   expect(contexts).toHaveLength(0);
   expect(button).toMatchObject({ hidden: false, textContent: "Sound off", pressed: "false" });
   button.click();
@@ -119,7 +119,7 @@ test("a recording plays on its button whatever the switch says, one at a time", 
   const { env, button, fetched, played } = browser();
   const audio = createMissionAudio({ beds: BEDS, clips, button, env });
   const heard: (string | null)[] = [];
-  audio.listen((key: string | null) => heard.push(key));
+  audio.listen(() => heard.push(audio.playing));
   const first = audio.play("hello");
   expect(audio.playing).toBe("hello");
   expect(audio.on).toBe(false);
@@ -173,6 +173,20 @@ test("a touch starts remembered sound when the finger lifts, not when it lands",
   expect(listeners.size).toBe(0);
 });
 
+test("after a scroll has woken a silent context, pressing the waiting switch still starts the sound", () => {
+  const { env, button, contexts, listeners, policy, store } = browser({ stored: "on" });
+  createMissionAudio({ beds: BEDS, clips, button, env });
+  // A touch that turns into a scroll: the finger lands, and never "lifts" as far as the page is told.
+  policy.gesture = false;
+  listeners.get("pointerdown")!({ target: {} });
+  expect(contexts[0].state).toBe("suspended");
+  expect(button.textContent).toBe("Tap for sound");
+  policy.gesture = true;
+  button.click();
+  expect(button).toMatchObject({ textContent: "Sound on", pressed: "true" });
+  expect(store.get(SOUND_KEY)).toBe("on");
+});
+
 test("sound off stops a recording too, and a browser that refuses audio leaves the switch usable", async () => {
   const { env, button, played } = browser();
   const audio = createMissionAudio({ beds: BEDS, clips, button, env });
@@ -209,12 +223,12 @@ test("the hum is not built for a reader who only plays a recording", async () =>
   context.createOscillator = () => { made.push("oscillator"); return { connect: (to: unknown) => to, start() {}, frequency: { setTargetAtTime() {}, setValueAtTime() {} }, type: "" }; };
   await settle();
   expect(made).toHaveLength(0);
-  audio.follow({ id: "hero", progress: 0, dim: 0, past: false });
+  audio.track({ id: "hero", progress: 0, dim: 0, past: false });
   button.click();
   expect(made.length).toBeGreaterThan(0);
   // A chapter with no bed is silent, not an error.
-  audio.follow({ id: "jupiter", progress: 0.5, dim: 0, past: false });
-  audio.follow({ id: "nowhere", progress: 0.5, dim: 0, past: false });
+  audio.track({ id: "jupiter", progress: 0.5, dim: 0, past: false });
+  audio.track({ id: "nowhere", progress: 0.5, dim: 0, past: false });
 });
 
 // The page around the player: just enough DOM for mountMissionSound.
@@ -289,6 +303,38 @@ test("leaving a chapter stops its recording, and a press takes the chapter over 
   sound.follow(at("hall", 0.9));
   await settle();
   expect(fetched).toEqual(["/assets/x/audio/d.mp3", "/assets/x/audio/c.mp3"]);
+});
+
+test("turning sound on mid-chapter plays what is due without waiting for a scroll", async () => {
+  const { env, button, fetched, played } = browser();
+  page_(env, button);
+  const sound = mountMissionSound({ beds: {}, recordings: story, assets: "/assets/x/", env });
+  sound.follow(at("hall", 0.9));
+  button.click();
+  await settle();
+  expect(fetched).toEqual(["/assets/x/audio/a.mp3"]);
+  // One that fails to load does not hold up the next.
+  const failing = browser();
+  page_(failing.env, failing.button);
+  const other = mountMissionSound({ beds: {}, recordings: { hall: [{ key: "missing", label: "M", text: "M", at: 0 }, { key: "b", label: "B", text: "B", at: 0 }] }, assets: "/x/", env: failing.env });
+  failing.button.click();
+  other.follow(at("hall", 0.5));
+  await settle();
+  await settle();
+  expect(failing.fetched).toEqual(["/x/audio/missing.mp3", "/x/audio/b.mp3"]);
+  expect(played()).toHaveLength(1);
+});
+
+test("a recording the reader pressed plays on into the next chapter", async () => {
+  const { env, button, played } = browser();
+  const nodes = page_(env, button);
+  const sound = mountMissionSound({ beds: {}, recordings: story, assets: "/assets/x/", env });
+  sound.follow(at("hall", 0.1));
+  nodes.get("hall-sounds").children[2].click();
+  await settle();
+  sound.follow(at("yard", 0.1));
+  expect(played()[0].stopped).toBe(false);
+  expect(nodes.get("hall-sounds").children[2].pressed).toBe("true");
 });
 
 test("without Web Audio the page keeps its recordings hidden", () => {

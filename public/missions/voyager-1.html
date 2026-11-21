@@ -34,20 +34,12 @@
 <link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/common.css?v=20261018-1">
-<link rel="stylesheet" href="/mission-page.css?v=20261121-4">
+<link rel="stylesheet" href="/mission-page.css?v=20261121-5">
 <style>
   #canvas-container { --mission-poster: url('/assets/missions/voyager-1/poster.webp'); }
   @media (max-width: 860px) {
     #canvas-container { --mission-poster: url('/assets/missions/voyager-1/poster-800.webp'); }
   }
-  .hello-btn {
-    margin-top: 14px; min-height: 44px; padding: 0 16px; cursor: pointer;
-    font-family: 'Fragment Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--bg); background: var(--accent); border: 0; border-radius: 2px;
-  }
-  .hello-btn:hover { background: #ffd47a; }
-  .hello-out { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--ink-dim); min-height: 3em; }
-  .hello-out strong { color: var(--ink); font-weight: 500; }
   /* Light scattered inside Voyager's camera when it looked back at the Sun. */
   .sunbeams {
     position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; mix-blend-mode: screen;
@@ -348,6 +340,6 @@
     <a class="foot-next" href="/missions">More missions →</a> · <a class="foot-next" href="/sky-tonight">See tonight&rsquo;s sky yourself →</a></div>
 </div>
 
-<script type="module" src="/missions/voyager-1.js?v=20261121-9"></script>
+<script type="module" src="/missions/voyager-1.js?v=20261121-10"></script>
 </body>
 </html>

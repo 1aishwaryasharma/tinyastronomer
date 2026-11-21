@@ -7,9 +7,9 @@
    each chapter turns progress into a date, a pose of the telescope and a
    camera. Every position Webb takes on the l2 set comes from
    trajectory.json (JPL Horizons). */
-import { SPACE } from '/common.bundle.js?v=20261121-2';
+import { SPACE } from '/common.bundle.js?v=20261121-3';
 import { clamp01, formatDate, lerp, smooth } from '/mission-orbits.js?v=20261121-2';
-import { createMissionKit } from '/mission-scene.js?v=20261121-3';
+import { createMissionKit } from '/mission-scene.js?v=20261121-4';
 import { createChart, createPartPicker } from '/mission-story.js?v=20261121-3';
 import {
   CLIP, PARTS, SHIELD_C, alignmentCaption, celsius, createFlight, infraredCaption,

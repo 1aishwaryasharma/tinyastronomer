@@ -5,8 +5,9 @@
    is all a page calls: it finds the page's sound controls, and the page
    passes it the story's state as that changes. Underneath:
 
-     createMissionAudio({ beds, clips, button, start })   the player
      bedLevel(bed, state)                                 how loud the hum is
+     createMissionAudio({ beds, clips, button, start })   the player, exported
+                                                          for the tests
 
    Two kinds of sound, kept apart because one is real and one is not:
 
@@ -108,11 +109,17 @@ function createBed(ctx) {
 export function createMissionAudio({ beds = {}, clips = {}, button = null, start = null, env = globalThis } = {}) {
   const Context = env.AudioContext || env.webkitAudioContext;
   const listeners = new Set();
+  // `listen(fn)`: fn runs whenever what is playing, or whether sound can
+  // play, has changed.
   const audio = { supported: Boolean(Context), on: false, playing: null, listen: (fn) => void listeners.add(fn) };
-  if (!Context) return Object.assign(audio, { setSound() {}, follow() {}, play: async () => 'failed', cue: () => null, stop() {} });
+  if (!Context) return Object.assign(audio, { setSound() {}, track() {}, play: async () => 'failed', cue: () => null, stop() {} });
+  const changed = () => { for (const fn of listeners) fn(); };
 
   let ctx = null, bed = null, clipGain = null;
   let bedId = null, level = 0, current = null, press = 0;
+  // True once a press on the waiting switch has asked for sound and the
+  // browser has not delivered it.
+  let refused = false;
   // The clip in hand: { key, source, resolve }. `source` is null while the
   // recording is still downloading.
   let inHand = null;
@@ -130,7 +137,10 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, start
       try { ctx = new Context(); } catch { return false; }
       clipGain = ctx.createGain();
       clipGain.connect(ctx.destination);
-      ctx.onstatechange = () => { if (ctx.state === 'running') disarm(); show(); };
+      ctx.onstatechange = () => {
+        if (ctx.state === 'running') { refused = false; disarm(); }
+        show();
+      };
     }
     if (ctx.state === 'suspended' && !env.document?.hidden) unheard(ctx.resume());
     return true;
@@ -160,6 +170,7 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, start
     button.setAttribute('aria-label', waiting ? 'Sound, waiting for a tap' : 'Sound');
     button.textContent = !audio.on ? 'Sound off' : waiting ? 'Tap for sound' : 'Sound on';
   }
+  const report = () => { show(); changed(); };
 
   // Start the remembered sound on the reader's first touch of the page. A
   // touch only counts with the browser once the finger lifts, so listen for
@@ -168,7 +179,7 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, start
   const wake = (event) => {
     if (button && event?.target === button) return;
     if (!audio.on) return disarm();
-    if (ensure()) { mix(); show(); }
+    if (ensure()) { mix(); report(); }
     if (ctx?.state === 'running') disarm();
   };
   const GESTURES = ['pointerdown', 'pointerup', 'keydown'];
@@ -181,11 +192,11 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, start
     // Off means off, for a recording the story started as much as the hum.
     if (!audio.on) audio.stop();
     mix();
-    show();
+    report();
   };
 
   // Call with the story's state whenever it changes; cheap when it has not.
-  audio.follow = (state) => {
+  audio.track = (state) => {
     const spec = beds[state.id] ?? null;
     const pressing = clamp01(spec?.swell?.(state.progress) ?? 0);
     const next = bedLevel(spec, state) * (1 + 0.8 * pressing);
@@ -215,7 +226,7 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, start
   function setPlaying(key) {
     audio.playing = key;
     mix();
-    for (const fn of listeners) fn(key);
+    changed();
   }
 
   function finish(ticket, how) {
@@ -265,17 +276,26 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, start
 
   env.document?.addEventListener('visibilitychange', () => {
     if (!ctx) return;
-    if (env.document.hidden) unheard(ctx.suspend());
-    else if (audio.on || audio.playing) unheard(ctx.resume());
+    if (env.document.hidden) return unheard(ctx.suspend());
+    if (audio.on || audio.playing) unheard(ctx.resume());
+    // Some phones will not resume without a fresh touch.
+    if (audio.on) arm();
   });
 
   audio.on = stored();
   if (audio.on) arm();
-  // The first press on a switch remembered as on starts the sound, rather
-  // than turning off what the reader has not heard yet. After that it is a
-  // plain switch, so a browser that will not run the sound can still be
-  // told to stop asking.
-  if (button) button.addEventListener('click', () => { const on = audio.on && !ctx ? true : !audio.on; disarm(); audio.setSound(on); });
+  // A press on the switch while it waits for a touch starts the sound, rather
+  // than turning off what the reader has not heard yet. If the browser still
+  // will not run it, the next press is a plain "off", so the switch can
+  // always be told to stop asking.
+  if (button) {
+    button.addEventListener('click', () => {
+      const ask = isWaiting() && !refused;
+      refused = ask;
+      disarm();
+      audio.setSound(ask || !audio.on);
+    });
+  }
   if (start) start.addEventListener('click', () => { disarm(); audio.setSound(true); });
   show();
   return audio;
@@ -295,7 +315,7 @@ function createClipButtons(container, items, audio, onPress, doc) {
     container.appendChild(btn);
     buttons.set(item.key, btn);
   }
-  audio.listen((key) => { for (const [k, btn] of buttons) btn.setAttribute('aria-pressed', String(k === key)); });
+  audio.listen(() => { for (const [key, btn] of buttons) btn.setAttribute('aria-pressed', String(key === audio.playing)); });
 }
 
 // Everything a mission page needs for sound.
@@ -309,7 +329,8 @@ function createClipButtons(container, items, audio, onPress, doc) {
 // With the sound switch on, a chapter's recordings play in the order listed,
 // one at a time, each once per visit, as the reader passes their `at`. The
 // reader pressing a recording's button takes over that chapter from the
-// story. A recording stops when the reader leaves its chapter.
+// story. A recording the story started stops when the reader leaves its
+// chapter; one the reader pressed plays out.
 export function mountMissionSound({ beds, recordings, assets, env = globalThis }) {
   const doc = env.document;
   const byKey = new Map(), queued = new Map();
@@ -328,30 +349,31 @@ export function mountMissionSound({ beds, recordings, assets, env = globalThis }
       doc.getElementById(chapter + '-sounds-box').hidden = false;
       createClipButtons(doc.getElementById(chapter + '-sounds'), list, audio, () => queued.set(chapter, []), doc);
     }
-    audio.listen((key) => {
-      const recording = byKey.get(key);
-      if (recording) doc.getElementById(recording.chapter + '-heard').innerHTML = recording.text;
-    });
   }
 
-  let last = null;
+  let last = null, cued = null;
   function offer() {
-    const queue = queued.get(last.id);
+    const queue = last && queued.get(last.id);
     if (!queue?.length || last.progress < queue[0].at) return;
-    const played = audio.cue(queue[0].key);
-    if (!played) return;
-    queue.shift();
-    // The next one may already be due, and nothing else will ask while the
-    // reader sits still.
-    played.then((how) => { if (how === 'ended') offer(); });
+    if (audio.cue(queue[0].key)) cued = queue.shift().key;
   }
+  let captioned = null;
+  audio.listen(() => {
+    const recording = byKey.get(audio.playing);
+    if (recording && recording !== captioned) doc.getElementById(recording.chapter + '-heard').innerHTML = recording.text;
+    if (recording) captioned = recording;
+    // A recording has ended, or sound has just come on: the next one may
+    // already be due, and nothing else will ask while the reader sits still.
+    // Wait a beat, so a recording the reader has just pressed starts first.
+    else Promise.resolve().then(offer);
+  });
 
   return {
     supported: audio.supported,
     follow(state) {
-      if (last && state.id !== last.id) audio.stop();
+      if (last && state.id !== last.id && audio.playing === cued) audio.stop();
       last = state;
-      audio.follow(state);
+      audio.track(state);
       offer();
     },
   };

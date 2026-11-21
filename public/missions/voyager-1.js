@@ -5,10 +5,10 @@
    Scroll position picks the chapter and its progress (mission-story.js);
    each chapter turns progress into a mission date and a camera pose. Every
    position Voyager takes comes from trajectory.json (JPL Horizons). */
-import { SPACE } from '/common.bundle.js?v=20261121-2';
+import { SPACE } from '/common.bundle.js?v=20261121-3';
 import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-2';
-import { createMissionKit } from '/mission-scene.js?v=20261121-3';
-import { mountMissionSound } from '/mission-audio.js?v=20261121-5';
+import { createMissionKit } from '/mission-scene.js?v=20261121-4';
+import { mountMissionSound } from '/mission-audio.js?v=20261121-6';
 import { createChart, createPartPicker, followStory } from '/mission-story.js?v=20261121-3';
 import { BEDS, PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-6';
 
