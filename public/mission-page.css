@@ -32,6 +32,9 @@ html { scroll-padding-top: 0; }
 }
 .sound-toggle:hover { color: var(--ink); border-color: var(--ink-dim); }
 .sound-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+/* Remembered as on, but silent until the reader touches the page. */
+.sound-toggle[data-waiting="true"] { color: var(--bg); background: var(--accent); animation: sound-waiting 1.6s ease-in-out infinite; }
+@keyframes sound-waiting { 50% { box-shadow: 0 0 0 5px rgba(244, 197, 96, 0.25); } }
 
 /* The loader is a chip, not a curtain: the story is readable while the
    scene downloads, and a failure notice must not hide it either. */
@@ -101,6 +104,7 @@ html { scroll-padding-top: 0; }
 .stat-value small { font-size: 12px; color: var(--ink-dim); }
 .stat-value.live { color: var(--accent); }
 .stat-note { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); font-weight: 300; }
+.stat-note a { color: var(--accent); text-underline-offset: 2px; }
 
 /* Part picker (spacecraft anatomy) */
 .parts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
@@ -230,4 +234,5 @@ html { scroll-padding-top: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   #canvas-container, .mission-clock { transition: none; }
+  .sound-toggle[data-waiting="true"] { animation: none; }
 }

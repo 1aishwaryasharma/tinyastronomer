@@ -8,7 +8,7 @@
 import { SPACE } from '/common.bundle.js?v=20261121-1';
 import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-1';
 import { createMissionKit } from '/mission-scene.js?v=20261121-2';
-import { createClipButtons, createMissionAudio } from '/mission-audio.js?v=20261121-2';
+import { createClipButtons, createMissionAudio } from '/mission-audio.js?v=20261121-4';
 import { createChart, createPartPicker, createStory } from '/mission-story.js?v=20261121-2';
 import { BEDS, GREETINGS, PARTS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-3';
 
@@ -56,6 +56,7 @@ const sound = createMissionAudio({
     ...Object.fromEntries(GREETINGS.map((g) => [g.key, { url: ASSETS + 'audio/greeting-' + g.key + '.mp3' }])),
   },
   button: $('sound-toggle'),
+  start: $('sound-start'),
 });
 $('greetings-box').hidden = $('plasma-box').hidden = !sound.supported;
 createClipButtons($('plasma'), [{ key: 'plasma', label: 'Hear interstellar space' }], sound);

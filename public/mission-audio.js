@@ -1,6 +1,6 @@
 /* Sound for a mission page.
 
-     createMissionAudio({ beds, clips, button })   → audio
+     createMissionAudio({ beds, clips, button, start })   → audio
      createClipButtons(container, items, audio, onPlay)
 
    Two kinds of sound, kept apart because one is real and one is not:
@@ -13,12 +13,13 @@
              only while the sound switch is on.
 
    The switch starts off and is remembered. Browsers let a page make sound
-   only after the reader has touched it, so a remembered "on" waits for the
-   first tap or key press of the visit. */
+   only after the reader has touched it, and scrolling does not count, so a
+   remembered "on" waits for the first tap or key press of the visit and the
+   switch asks for one until then. */
 import { clamp01 } from './mission-orbits.js?v=20261121-1';
 
 export const SOUND_KEY = 'ta-sound';
-const BED_GAIN = 0.16, DUCKED = 0.25;
+const BED_GAIN = 0.2, DUCKED = 0.25;
 
 // How loud a chapter's bed is at a point in the story, 0 to 1. `fades` beds
 // die away across their chapter.
@@ -32,8 +33,9 @@ export function bedLevel(bed, state) {
 // hiss of "wind" rides on it, 0 to 1. `swell(progress)`, 0 to 1, is how hard
 // the chapter's event is pressing at that point of the scroll: it opens the
 // filter, adds wind and lifts the level, so the sound moves with the reader. `clips` are { url } by key. `button` is the
-// sound switch. `env` is the browser, or a stand-in for the tests.
-export function createMissionAudio({ beds = {}, clips = {}, button = null, env = globalThis } = {}) {
+// sound switch and `start` the opening card's invitation to turn it on, which
+// goes once sound is playing. `env` is the browser, or a stand-in for the tests.
+export function createMissionAudio({ beds = {}, clips = {}, button = null, start = null, env = globalThis } = {}) {
   const Context = env.AudioContext || env.webkitAudioContext;
   const audio = { supported: Boolean(Context), on: false, playing: null, onClip: null };
   if (!Context) return Object.assign(audio, { setSound() {}, follow() {}, play: async () => 'failed', cue: () => null, stop() {} });
@@ -52,9 +54,11 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, env =
     filter.type = 'lowpass';
     filter.Q.value = 0.4;
     filter.connect(out);
-    // A root, the fifth above it and a slightly sharp octave: the mistuning
-    // makes the hum beat slowly, so it never sounds like a held test tone.
-    const voices = [[1, 'sine', 0.5], [1.498, 'sine', 0.22], [2.007, 'triangle', 0.1]].map(([ratio, type, gain]) => {
+    // A root, the fifth above it and two slightly sharp overtones: the
+    // mistuning makes the hum beat slowly, so it never sounds like a held test
+    // tone, and the overtones carry it on small speakers that cannot play the
+    // root.
+    const voices = [[1, 'sine', 0.5], [1.498, 'sine', 0.22], [2.007, 'triangle', 0.12], [3.01, 'sine', 0.07]].map(([ratio, type, gain]) => {
       const osc = ctx.createOscillator(), amp = ctx.createGain();
       osc.type = type;
       amp.gain.value = gain;
@@ -116,16 +120,21 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, env =
     glide(bed.air.gain, (spec.air ?? 0) + 0.2 * swell, seconds);
   }
 
+  const isWaiting = () => audio.on && (!ctx || ctx.state !== 'running');
   function show() {
+    const waiting = isWaiting();
+    if (start) start.hidden = audio.on && !waiting;
     if (!button) return;
-    const waiting = audio.on && (!ctx || ctx.state !== 'running');
     button.hidden = false;
     button.setAttribute('aria-pressed', String(audio.on));
-    button.textContent = !audio.on ? 'Sound off' : waiting ? 'Sound on · tap to start' : 'Sound on';
+    button.setAttribute('data-waiting', String(waiting));
+    button.textContent = !audio.on ? 'Sound off' : waiting ? 'Tap for sound' : 'Sound on';
   }
 
   // Start the remembered sound on the reader's first touch of the page.
-  const wake = () => {
+  // A press on the switch itself is the switch's to handle.
+  const wake = (event) => {
+    if (button && event?.target === button) return;
     disarm();
     if (audio.on) { ensure(); mix(); show(); }
   };
@@ -234,7 +243,10 @@ export function createMissionAudio({ beds = {}, clips = {}, button = null, env =
 
   audio.on = stored();
   if (audio.on) arm();
-  if (button) button.addEventListener('click', () => { disarm(); audio.setSound(!audio.on); });
+  // Pressing the switch while it waits for a touch starts the sound, rather
+  // than turning off what the reader has not heard yet.
+  if (button) button.addEventListener('click', () => { const on = isWaiting() || !audio.on; disarm(); audio.setSound(on); });
+  if (start) start.addEventListener('click', () => { disarm(); audio.setSound(true); });
   show();
   return audio;
 }

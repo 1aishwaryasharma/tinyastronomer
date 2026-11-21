@@ -29,8 +29,8 @@ function browser({ stored = null as string | null, hasAudio = true } = {}) {
   }
   const store = new Map<string, string>(stored ? [[SOUND_KEY, stored]] : []);
   const button = {
-    hidden: true, textContent: "Sound off", pressed: "false", click: () => {},
-    setAttribute(_: string, value: string) { this.pressed = value; },
+    hidden: true, textContent: "Sound off", pressed: "false", waiting: "false", click: () => {},
+    setAttribute(name: string, value: string) { if (name === "aria-pressed") this.pressed = value; else this.waiting = value; },
     addEventListener(_: string, handler: () => void) { this.click = handler; },
   };
   const env = {
@@ -70,12 +70,37 @@ test("a remembered 'on' waits for the first touch of the visit", () => {
   const { env, button, contexts, listeners } = browser({ stored: "on" });
   createMissionAudio({ beds: BEDS, clips, button, env });
   expect(contexts).toHaveLength(0);
-  expect(button).toMatchObject({ textContent: "Sound on · tap to start", pressed: "true" });
+  expect(button).toMatchObject({ textContent: "Tap for sound", pressed: "true", waiting: "true" });
   expect([...listeners.keys()].sort()).toEqual(["keydown", "pointerdown"]);
-  listeners.get("pointerdown")!();
+  listeners.get("pointerdown")!({ target: {} });
   expect(contexts).toHaveLength(1);
-  expect(button.textContent).toBe("Sound on");
+  expect(button).toMatchObject({ textContent: "Sound on", waiting: "false" });
   expect(listeners.size).toBe(0);
+});
+
+test("pressing the waiting switch starts the sound instead of turning it off", () => {
+  const { env, button, contexts, listeners, store } = browser({ stored: "on" });
+  createMissionAudio({ beds: BEDS, clips, button, env });
+  // A real press arrives as a pointerdown on the switch, then its click.
+  listeners.get("pointerdown")!({ target: button });
+  button.click();
+  expect(contexts).toHaveLength(1);
+  expect(button).toMatchObject({ textContent: "Sound on", pressed: "true" });
+  expect(store.get(SOUND_KEY)).toBe("on");
+  button.click();
+  expect(button.textContent).toBe("Sound off");
+});
+
+test("the opening card offers sound until it is playing", () => {
+  const { env, button } = browser();
+  const start = { hidden: true, click: () => {}, addEventListener(_: string, handler: () => void) { this.click = handler; } };
+  createMissionAudio({ beds: BEDS, clips, button, start, env });
+  expect(start.hidden).toBe(false);
+  start.click();
+  expect(start.hidden).toBe(true);
+  expect(button.textContent).toBe("Sound on");
+  button.click();
+  expect(start.hidden).toBe(false);
 });
 
 test("a browser without Web Audio never shows the switch", async () => {
