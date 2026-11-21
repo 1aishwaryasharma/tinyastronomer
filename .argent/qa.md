@@ -62,10 +62,11 @@ Use this to pick what to replay locally and to read the CI table. The flows mark
 | `public/index.html` deck markup, `home.css`, `home-launch.js` | Home | every `qa-home-open-*`, `qa-explore-next-stop` | `site.test.ts` home assertions, `qa-selectors.test.ts` |
 | `public/index.html` scene script, `earth-visuals.js`, `capture.js` | Light Study | `qa-home-open-light-study`, `qa-explore-next-stop`; planned `qa-light-study-presets` | `startup.test.ts`, tides and aurora tests |
 | `public/seasons.html` | Seasons | `qa-home-open-seasons`, `qa-explore-next-stop`; planned `qa-seasons-stops` | seasons tests in `site.test.ts` |
-| `public/solar-system.html`, `planet-models.js`, `tour-*.js` | Grand Tour | `qa-home-open-grand-tour` | body deep link and framing tests |
+| `public/solar-system.html`, `tour-*.js` | Grand Tour | `qa-home-open-grand-tour` | body deep link and framing tests |
 | `public/scale-walk.html` | Scale Walk | `qa-home-open-scale-walk` | Scale Walk texture test in `startup.test.ts` |
 | `public/missions.html` | Missions | `qa-home-open-missions` | missions cross-link test |
-| `public/missions/**`, `mission-*.js`, `mission-page.css` | Mission deep dives | `qa-home-open-voyager` | `missions.test.ts` |
+| `public/missions/**`, `mission-*.js`, `mission-page.css` | Mission deep dives | `qa-home-open-voyager`, `qa-home-open-cassini`, `qa-home-open-webb` | `missions.test.ts`, `missions-cassini.test.ts`, `missions-webb.test.ts` |
+| `public/planet-models.js` | Grand Tour and mission deep dives | `qa-home-open-grand-tour` plus the three mission flows | body deep link and framing tests |
 | `public/sky-tonight.html`, `sky-forecast.js`, `sky-location.js`, `sky-places.js`, `tz-coords.js` | Sky Tonight | `qa-home-open-sky-tonight`, `qa-sky-tonight-manual-location` | `sky-forecast.test.ts`, `sky-location.test.ts` |
 | `public/chrome.js`, `common.js`, `common.css`, `tokens.css`, `_headers`, `_redirects`, `wrangler.jsonc`, `dev-server.ts` | Shared | the whole directory | CSP hash test, routing tests |
 | `public/teachers.html` (planned) | Teachers | planned `qa-home-open-teachers` | new-page checklist tests |

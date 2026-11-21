@@ -420,7 +420,11 @@ function buildTitan(kit, pole) {
       cassini.position.copy(ship);
       const reach = here.length();
       if (landed) {
-        orbit(focus.copy(ship).multiplyScalar(0.42), azimuth - 0.05 + after * 0.15, 0.3, lerp(3.4, 62, smooth(0, 0.75, after)));
+        // Pull back from the landing site to take in Cassini, which is far
+        // off by now: the aim and the distance have to move together.
+        const out = smooth(0, 0.75, after);
+        focus.copy(here).multiplyScalar(0.75).lerp(above.copy(ship).multiplyScalar(0.42), out);
+        orbit(focus, azimuth - 0.05 + after * 0.15, lerp(0.22, 0.3, out), lerp(5.4, 62, out));
       } else {
         orbit(focus.copy(here).multiplyScalar(reach > 2 ? 0.5 : 0.75), azimuth - falling * 0.25 + descent * 0.2, 0.22, Math.max(4.6 - descent * 1.2, 3 + reach * 2.4));
       }

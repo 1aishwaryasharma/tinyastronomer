@@ -292,21 +292,19 @@ function buildNebula(kit) {
           rays *= 0.5 * spikes;
         }
         vec3 tint = mix(vec3(1.0, 0.72, 0.5), vec3(0.72, 0.84, 1.0), hash(id + 9.7));
-        // 1.2 cells is as far as the nine cells in stars() are sure to
-        // cover, so the glow is gone by there and never ends at an edge.
-        float reach = 1.0 - smoothstep(0.6, 1.2, length(d) * cells);
+        // A star sits at least 0.2 of a cell inside its own cell, so any
+        // star outside the four cells stars() adds up is 0.7 cells away or
+        // more: the glow is gone by there and never ends at an edge.
+        float reach = 1.0 - smoothstep(0.35, 0.7, length(d) * cells);
         return tint * bright * (core * 5.0 + rays * 2.2) * reach;
       }
       // One star per grid cell: xyz colour, scaled by brightness. A bright
       // star's glow and spikes spill past its own cell, so each point adds
-      // up its cell and the eight around it.
+      // up the four cells nearest to it (nine cost a third of the frame).
       vec3 stars(vec2 p, float cells, float seed, float spikes) {
-        vec2 g = p * cells; vec2 cell = floor(g);
-        vec3 sum = vec3(0.0);
-        for (int i = -1; i <= 1; i++) {
-          for (int j = -1; j <= 1; j++) sum += star(g, cell + vec2(float(i), float(j)), cells, seed, spikes);
-        }
-        return sum;
+        vec2 g = p * cells; vec2 cell = floor(g) + step(0.5, fract(g)) - 1.0;
+        return star(g, cell, cells, seed, spikes) + star(g, cell + vec2(1.0, 0.0), cells, seed, spikes)
+          + star(g, cell + vec2(0.0, 1.0), cells, seed, spikes) + star(g, cell + vec2(1.0, 1.0), cells, seed, spikes);
       }
       void main() {
         vec2 p = vec2((vUv.x - 0.5) * uAspect, vUv.y - 0.5) + uShift;
