@@ -217,7 +217,7 @@ function startScene(kit) {
         void main() {
           // Added in linear light, where a little goes a long way: keep the
           // face of the bubble almost clear and let only its edge glow.
-          float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 3.4);
+          float rim = pow(max(0.0, 1.0 - abs(dot(normalize(vN), normalize(vV)))), 3.4);
           float shimmer = 0.75 + 0.25 * fbm(vP * 0.035 + vec3(uTime * 0.05));
           gl_FragColor = vec4(uColor * (0.004 + rim * shimmer * 0.4) * uStrength * uOpacity, 1.0);
         }`,
@@ -333,7 +333,8 @@ function startScene(kit) {
         moonHere.copy(toScene(sampleRows(cfg.moon.rows, day)));
         marker.position.copy(here);
         moon.position.copy(moonHere);
-        const index = Math.max(0, cfg.path.findIndex((row) => row[0] > day) - 1);
+        const next = cfg.path.findIndex((row) => row[0] > day);
+        const index = next === -1 ? cfg.path.length - 1 : Math.max(0, next - 1);
         done.geometry.instanceCount = index;
         setSegment(lead, toScene(cfg.path[index]), here);
         spin.rotation.y = (day / cfg.periodDays) * Math.PI * 2;
@@ -388,7 +389,8 @@ function startScene(kit) {
     for (const name of PLANETS) planetDots.get(name).position.copy(E(planetPosition(name, ms)));
     earth.copy(planetDots.get('earth').position);
     voyagerDot.position.copy(voyager);
-    const index = Math.max(0, traj.rows.findIndex((r) => r[0] > day) - 1);
+    const next = traj.rows.findIndex((r) => r[0] > day);
+    const index = next === -1 ? traj.rows.length - 1 : Math.max(0, next - 1);
     path.geometry.instanceCount = index;
     const start = traj.rows[index];
     E([start[1], start[2], start[3]], scratch);

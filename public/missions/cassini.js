@@ -441,7 +441,7 @@ function startScene(kit) {
           // Seen from inside-out (back faces): brightest where the line of
           // sight grazes the shell, and only on the sunlit side.
           float facing = abs(dot(normalize(vN), normalize(vV)));
-          float rim = pow(1.0 - facing, uPower) * smoothstep(0.0, 0.3, facing);
+          float rim = pow(max(0.0, 1.0 - facing), uPower) * smoothstep(0.0, 0.3, facing);
           float lit = smoothstep(-0.35, 0.5, dot(normalize(vW), uSun));
           gl_FragColor = vec4(uColor * rim * lit * uStrength, 1.0);
         }`,
@@ -535,7 +535,7 @@ function startScene(kit) {
           float f = fract(seed.x + uTime * 0.045 * seed.y);
           float reach = 3.4 * seed.y;
           vec3 p = position + aim * (f * (2.0 - f)) * 0.5 * reach;
-          vAlpha = uOpacity * smoothstep(0.0, 0.04, f) * pow(1.0 - f, 1.6) * 0.26;
+          vAlpha = uOpacity * smoothstep(0.0, 0.04, f) * pow(max(0.0, 1.0 - f), 1.6) * 0.26;
           gl_PointSize = (1.6 + f * 2.6) * uPixel;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }`,
