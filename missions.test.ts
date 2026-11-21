@@ -17,6 +17,7 @@ const read = (path: string) => readFileSync(root + path, "utf8");
 const data = JSON.parse(read("assets/missions/voyager-1/trajectory.json"));
 const page = read("missions/voyager-1.html");
 const script = read("missions/voyager-1.js");
+const kit = read("mission-scene.js");
 const DAY = 86400000;
 const dayOf = (utc: string) => (Date.parse(utc) - Date.parse(data.epoch)) / DAY;
 
@@ -184,21 +185,23 @@ test("the story is readable and the live figures run without the 3D scene", () =
   expect(read("mission-page.css")).toMatch(/\.loader\.mission-loader\s*\{[^}]*inset:\s*auto/);
   // The canvas is decoration; every fact is in the cards.
   expect(page).toContain('<div id="canvas-container"></div>');
-  expect(script).not.toContain("canvasLabel");
+  expect(script + kit).not.toContain("canvasLabel");
   // Live readouts and the part picker are wired before WebGL is asked for.
-  const scene = script.indexOf("SPACE.createScene(");
+  const scene = script.indexOf("createMissionKit()");
+  expect(scene).toBeGreaterThan(0);
   expect(script.indexOf("setInterval(tickLive, 1000)")).toBeLessThan(scene);
   expect(script.indexOf("$('hello-btn').addEventListener")).toBeLessThan(scene);
   expect(script.indexOf("$('parts').appendChild(btn)")).toBeLessThan(scene);
-  expect(script).toContain("if (setup) startScene(setup);");
+  expect(script).toContain("if (kit) startScene(kit);");
+  expect(kit).toContain("if (!setup) return null;");
   // The figures shipped in the markup are the right size before any script.
   expect(page).toMatch(/id="hero-earth-km">25,9\d\d,\d{3},\d{3}</);
 });
 
 test("system reduced-motion preference stills the drift but keeps scroll control", () => {
-  expect(script).toContain("const reduced = SPACE.prefersReducedMotion;");
-  expect(script).toContain("if (!reduced) time += dt;");
-  expect(script).toContain("const k = snap || reduced ? 1 : 1 - Math.exp(-dt * 6);");
+  expect(kit).toContain("const reduced = SPACE.prefersReducedMotion;");
+  expect(kit).toContain("if (!reduced) kit.time += dt;");
+  expect(kit).toContain("const k = snap || reduced ? 1 : 1 - Math.exp(-dt * 6);");
 });
 
 test("mission modules are imported under one URL each", () => {
@@ -216,6 +219,7 @@ test("mission modules are imported under one URL each", () => {
   expect(page).toContain(`src="/${chromeUrl}"`);
   const bundleUrl = read("seasons.html").match(/common\.bundle\.js\?v=[\w-]+/)![0];
   expect(script).toContain(`'/${bundleUrl}'`);
+  expect(kit).toContain(`'./${bundleUrl}'`);
 });
 
 test("the spacecraft model keeps its named parts and stays within the phone budget", () => {
@@ -231,7 +235,7 @@ test("the spacecraft model keeps its named parts and stays within the phone budg
     expect(names, `model has no label anchor for ${part}`).toContain(`Hotspot_${part}`);
   }
   expect(json.extensionsRequired).toContain("EXT_meshopt_compression");
-  expect(script).toContain("loader.setMeshoptDecoder(MeshoptDecoder)");
+  expect(kit).toContain("loader.setMeshoptDecoder(MeshoptDecoder)");
   const readme = read("assets/missions/voyager-1/README.md");
   expect(readme).toContain("https://science.nasa.gov/resource/voyager-3d-model/");
   for (const still of ["og-cover.png", "poster.webp", "poster-800.webp"]) {

@@ -5,23 +5,17 @@
    Scroll position picks the chapter and its progress (mission-story.js);
    each chapter turns progress into a mission date and a camera pose. Every
    position Voyager takes comes from trajectory.json (JPL Horizons). */
-import * as THREE from 'three';
 import { SPACE } from '/common.bundle.js?v=20260909-2';
-import { Line2 } from 'three/addons/lines/Line2.js';
-import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
-import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
   AU_KM, DAY_MS, PLANETS, createTrajectory, equatorialToEcliptic, formatDate,
   formatLightTime, planetOrbit, planetPosition, sampleRows,
 } from '/mission-orbits.js?v=20261121-1';
-import { createStory } from '/mission-story.js?v=20261121-1';
+import { createMissionKit, lerp, smooth } from '/mission-scene.js?v=20261121-1';
+import { createChart } from '/mission-story.js?v=20261121-1';
 
 const ASSETS = '/assets/missions/voyager-1/';
-const reduced = SPACE.prefersReducedMotion;
 const $ = (id) => document.getElementById(id);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
-const lerp = (a, b, t) => a + (b - a) * t;
-const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 const km = (value) => Math.round(value).toLocaleString('en-US');
 
 SPACE.buildNav('missions');
@@ -103,155 +97,15 @@ for (const part of PARTS) {
   partButtons.set(part.key, btn);
 }
 
-/* ──── Speed chart (2D canvas inside the Jupiter card) ──── */
-function createChart(canvas, rows, eventDay) {
-  const ctx = canvas.getContext('2d');
-  const style = getComputedStyle(document.documentElement);
-  const ink = style.getPropertyValue('--ink-faint').trim(), accent = style.getPropertyValue('--accent').trim();
-  const t0 = rows[0][0], t1 = rows[rows.length - 1][0];
-  const top = Math.ceil(Math.max(...rows.map((r) => r[1])) / 10) * 10;
-  let lastDrawn = null;
-  return function draw(day) {
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    if (!w || !h) return;
-    const key = w + ':' + h + ':' + day.toFixed(3);
-    if (key === lastDrawn) return;
-    lastDrawn = key;
-    const dpr = Math.min(devicePixelRatio || 1, 2);
-    if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    const padL = 30, padB = 18, padT = 6;
-    const X = (t) => padL + ((t - t0) / (t1 - t0)) * (w - padL - 4);
-    const Y = (v) => padT + (1 - v / top) * (h - padT - padB);
-    ctx.font = '10px "Fragment Mono", monospace';
-    ctx.fillStyle = ink;
-    ctx.strokeStyle = 'rgba(232,236,244,0.12)';
-    ctx.lineWidth = 1;
-    for (let v = 0; v <= top; v += 10) {
-      ctx.beginPath(); ctx.moveTo(padL, Y(v)); ctx.lineTo(w - 4, Y(v)); ctx.stroke();
-      ctx.fillText(String(v), 4, Y(v) + 3);
-    }
-    ctx.fillText('km/s', 4, h - 4);
-    ctx.textAlign = 'center';
-    ctx.fillText('closest approach', X(eventDay), h - 4);
-    ctx.textAlign = 'left';
-    const trace = (until, color, width) => {
-      ctx.beginPath();
-      rows.forEach((r, i) => { if (r[0] <= until) ctx[i ? 'lineTo' : 'moveTo'](X(r[0]), Y(r[1])); });
-      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
-    };
-    trace(t1, 'rgba(232,236,244,0.28)', 1);
-    trace(day, accent, 2);
-    const now = sampleRows(rows, day);
-    ctx.fillStyle = accent;
-    ctx.beginPath(); ctx.arc(X(now[0]), Y(now[1]), 3.5, 0, Math.PI * 2); ctx.fill();
-  };
-}
 const drawJupiterChart = createChart($('chart-jupiter'), data.speed.jupiter, DAYS.jupiter);
 drawJupiterChart(data.speed.jupiter[0][0]);
 
 /* ──── 3D scene ──── */
-const setup = SPACE.createScene({ fov: 35, near: 0.05, far: 4000, bloom: { strength: 0.7, radius: 0.55, threshold: 3.2 } });
-if (setup) startScene(setup);
+const kit = createMissionKit();
+if (kit) startScene(kit);
 
-function startScene({ scene, camera, renderer, render, quality }) {
-  const container = $('canvas-container');
-  // Ecliptic (x toward the equinox, z north) to the scene's y-up frame.
-  const E = (p, out = new THREE.Vector3()) => out.set(p[0], p[2], -p[1]);
-  const dot = (() => {
-    const c = document.createElement('canvas');
-    c.width = c.height = 64;
-    const g = c.getContext('2d');
-    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grad.addColorStop(0, 'rgba(255,255,255,1)');
-    grad.addColorStop(0.25, 'rgba(255,255,255,0.9)');
-    grad.addColorStop(0.5, 'rgba(255,255,255,0.22)');
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 64, 64);
-    const texture = new THREE.CanvasTexture(c);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-  })();
-  // A sprite that keeps its size on screen whatever the zoom or lens.
-  function glow(color, fraction, boost = 1) {
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: dot, color: new THREE.Color(color).multiplyScalar(boost), transparent: true,
-      depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, sizeAttenuation: false,
-    }));
-    sprite.userData.fraction = fraction;
-    sprite.renderOrder = 5;
-    return sprite;
-  }
-  const sprites = [];
-  const addGlow = (parent, color, fraction, boost) => { const s = glow(color, fraction, boost); parent.add(s); sprites.push(s); return s; };
-  function fatLine(points, color, width, opacity = 1) {
-    const geometry = new LineGeometry();
-    geometry.setPositions(points);
-    const material = new LineMaterial({ color, linewidth: width, transparent: true, opacity, depthWrite: false, depthTest: false });
-    const line = new Line2(geometry, material);
-    line.frustumCulled = false;
-    return line;
-  }
-  // Move a two-point wide line in place. LineGeometry.setPositions would
-  // allocate a fresh GPU buffer on every call, which leaks at frame rate.
-  function setSegment(line, from, to) {
-    const buffer = line.geometry.attributes.instanceStart.data;
-    buffer.array.set([from.x, from.y, from.z, to.x, to.y, to.z]);
-    buffer.needsUpdate = true;
-  }
-  function thinLoop(points, color, opacity) {
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    return new THREE.LineLoop(geometry, new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
-  }
-
-  const stars = SPACE.createStarfield({ count: 3800, innerR: 1500, outerR: 2400 });
-  scene.add(stars.points);
-  const sunLight = new THREE.DirectionalLight(0xfff3df, 4.6);
-  scene.add(sunLight, sunLight.target);
-  const skyLight = new THREE.HemisphereLight(0x9db4dd, 0x10131f, 0.9);
-  scene.add(skyLight);
-  // Out here real shadows are pitch black. A faint light riding with the
-  // camera keeps the side of the spacecraft facing the reader legible. The
-  // planets keep their true night side: it is off during the flybys.
-  const fill = new THREE.DirectionalLight(0xbfd2ff, 0.9);
-  fill.position.set(0.4, 0.5, 1);
-  camera.add(fill);
-  scene.add(camera);
-
-  /* ── Labels: a pool of HTML tags placed on projected points each frame ── */
-  const labelLayer = $('scene-labels');
-  const labels = new Map();
-  const projected = new THREE.Vector3();
-  const size = new THREE.Vector2();
-  function project(world) {
-    projected.copy(world).project(camera);
-    if (projected.z < -1 || projected.z > 1) return null;
-    return [(projected.x * 0.5 + 0.5) * size.x, (projected.y * -0.5 + 0.5) * size.y];
-  }
-  function place(key, text, world, cls = '', dx = 10, dy = -6, alpha = 1) {
-    let label = labels.get(key);
-    if (!label) {
-      label = { el: document.createElement('span'), used: false };
-      label.el.className = 'scene-label';
-      labelLayer.appendChild(label.el);
-      labels.set(key, label);
-    }
-    const at = alpha > 0.02 && project(world);
-    if (!at) return;
-    label.used = true;
-    label.el.className = 'scene-label ' + cls;
-    SPACE.setText(label.el, text);
-    label.el.style.opacity = alpha;
-    label.el.style.transform = 'translate(' + (at[0] + dx).toFixed(1) + 'px,' + (at[1] + dy).toFixed(1) + 'px)';
-  }
-  function flushLabels() {
-    for (const label of labels.values()) {
-      label.el.style.display = label.used ? '' : 'none';
-      label.used = false;
-    }
-  }
+function startScene(kit) {
+  const { THREE, scene, camera, renderer, E, addGlow, fatLine, setSegment, thinLoop, sunLight, skyLight, fill, place, anchors, setClock, pose, orbit, drag } = kit;
 
   /* ════ Set 1: the spacecraft ════ */
   const craft = new THREE.Group();
@@ -263,59 +117,10 @@ function startScene({ scene, camera, renderer, render, quality }) {
   craftSpin.add(craftModel);
   craft.add(craftSpin);
   scene.add(craft);
-  const anchors = new Map();
-  const hotspots = new Map();
-  const manager = new THREE.LoadingManager();
-  const hideLoader = SPACE.createLoader(manager, 12000);
-  const loaders = Promise.all([
-    import('three/addons/loaders/GLTFLoader.js'),
-    import('three/addons/libs/meshopt_decoder.module.js'),
-  ]).then(([{ GLTFLoader }, { MeshoptDecoder }]) => (mgr) => {
-    const loader = new GLTFLoader(mgr);
-    loader.setMeshoptDecoder(MeshoptDecoder);
-    return loader;
-  });
-  loaders.then((make) => make(manager).load(ASSETS + 'voyager.glb', (gltf) => {
-    const anisotropy = renderer.capabilities.getMaxAnisotropy();
-    gltf.scene.traverse((node) => {
-      if (node.isMesh && node.material.map) node.material.map.anisotropy = anisotropy;
-    });
+  kit.loadModel(ASSETS + 'voyager.glb', (gltf) => {
     craftModel.add(gltf.scene);
-    for (const part of PARTS) {
-      const anchor = gltf.scene.getObjectByName('Hotspot_' + part.key);
-      if (!anchor) continue;
-      anchors.set(part.key, anchor);
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'hotspot';
-      btn.tabIndex = -1;
-      btn.addEventListener('click', () => selectPart(part.key));
-      btn.style.display = 'none';
-      labelLayer.appendChild(btn);
-      hotspots.set(part.key, btn);
-    }
-    container.style.backgroundImage = 'none';
-    loop.invalidate();
-  }, undefined, (error) => { console.warn('Voyager model unavailable.', error); hideLoader(); }));
-
-  // Drag turns the spacecraft. Vertical drags stay with the page scroll on
-  // touch screens (touch-action: pan-y), so only the yaw is taken there.
-  const drag = { yaw: 0, pitch: 0, active: false, x: 0, y: 0 };
-  renderer.domElement.addEventListener('pointerdown', (e) => {
-    if (stage !== 'craft') return;
-    drag.active = true; drag.x = e.clientX; drag.y = e.clientY;
-    renderer.domElement.setPointerCapture(e.pointerId);
-  });
-  renderer.domElement.addEventListener('pointermove', (e) => {
-    if (!drag.active) return;
-    drag.yaw -= (e.clientX - drag.x) * 0.006;
-    if (e.pointerType === 'mouse') drag.pitch = Math.max(-0.9, Math.min(0.9, drag.pitch + (e.clientY - drag.y) * 0.004));
-    drag.x = e.clientX; drag.y = e.clientY;
-    loop.invalidate();
-  });
-  const endDrag = () => { drag.active = false; };
-  renderer.domElement.addEventListener('pointerup', endDrag);
-  renderer.domElement.addEventListener('pointercancel', endDrag);
+    kit.addHotspots(gltf.scene, PARTS, selectPart);
+  }, { tracked: true });
 
   /* ════ Set 2: the solar system ════ */
   const sys = new THREE.Group();
@@ -494,26 +299,10 @@ function startScene({ scene, camera, renderer, render, quality }) {
     function load() {
       if (requested) return;
       requested = true;
-      loaders.then((make) => make().load('/assets/planet-models/' + cfg.key + '.glb', (gltf) => {
-        const root = gltf.scene;
-        // The planet-model files keep NASA's proportions; normalise the
-        // globe (not the rings) to one unit radius, as the Grand Tour does.
-        const body = root.children.find((child) => !/ring/i.test(child.name)) || root;
-        root.updateMatrixWorld(true);
-        const box = new THREE.Box3().setFromObject(body);
-        const extent = box.getSize(new THREE.Vector3());
-        const k = 2 / (Math.cbrt(extent.x * extent.y * extent.z) || 1);
-        root.scale.setScalar(k);
-        root.position.copy(box.getCenter(new THREE.Vector3())).multiplyScalar(-k);
-        root.traverse((node) => {
-          if (!node.isMesh) return;
-          node.material.metalness = 0;
-          if ('roughness' in node.material) node.material.roughness = Math.max(node.material.roughness, 0.82);
-        });
+      kit.loadPlanet(cfg.key, (root) => {
         spin.remove(stand);
         spin.add(root);
-        loop.invalidate();
-      }, undefined, (error) => console.warn(cfg.key + ' model unavailable.', error)));
+      });
     }
     const points = [];
     for (const row of cfg.path) { const v = toScene(row); points.push(v.x, v.y, v.z); }
@@ -582,12 +371,6 @@ function startScene({ scene, camera, renderer, render, quality }) {
   };
 
   /* ──── Mission clock ──── */
-  const clockEl = $('clock');
-  function setClock(date, a, b) {
-    SPACE.setText($('clock-date'), date);
-    if ($('clock-a').__html !== a) { $('clock-a').__html = a; $('clock-a').innerHTML = a; }
-    if ($('clock-b').__html !== b) { $('clock-b').__html = b; $('clock-b').innerHTML = b; }
-  }
   function cruiseClock(day, row) {
     const sunAu = Math.hypot(row[1], row[2], row[3]);
     setClock(formatDate(traj.msOf(day)),
@@ -596,20 +379,7 @@ function startScene({ scene, camera, renderer, render, quality }) {
   }
 
   /* ──── Chapters: progress → mission date and camera pose ──── */
-  const pose = { position: new THREE.Vector3(0, 6, 30), target: new THREE.Vector3(), fov: 35 };
-  const current = { position: pose.position.clone(), target: new THREE.Vector3(), fov: 35 };
   const voyager = new THREE.Vector3(), earth = new THREE.Vector3(), scratch = new THREE.Vector3();
-  const orbit = (target, azimuth, elevation, distance) => {
-    pose.target.copy(target);
-    pose.position.set(
-      target.x + distance * Math.cos(elevation) * Math.sin(azimuth),
-      target.y + distance * Math.sin(elevation),
-      target.z + distance * Math.cos(elevation) * Math.cos(azimuth));
-    pose.fov = 35;
-  };
-  let time = 0, stage = '', wide = true;
-  // Where the subject sits on screen: clear of the card.
-  const offset = { x: 0, y: 0, tx: 0, ty: 0 };
 
   function showSystem(day, opts = {}) {
     const row = traj.at(day);
@@ -634,7 +404,7 @@ function startScene({ scene, camera, renderer, render, quality }) {
 
   const CHAPTERS = {
     hero(p) {
-      orbit(scratch.set(0, 1.2, 0), 0.75 + time * 0.07 + drag.yaw, 0.2 + drag.pitch, lerp(21, 17, p));
+      orbit(scratch.set(0, 1.2, 0), 0.75 + kit.time * 0.07 + drag.yaw, 0.2 + drag.pitch, lerp(21, 17, p));
     },
     craft(p) {
       const anchor = selectedPart && anchors.get(selectedPart);
@@ -646,13 +416,7 @@ function startScene({ scene, camera, renderer, render, quality }) {
       } else {
         orbit(scratch.set(0, 1.2, 0), 0.75 + p * 2.4 + drag.yaw, 0.24 + drag.pitch, 18);
       }
-      for (const [key, btn] of hotspots) {
-        anchors.get(key).getWorldPosition(scratch);
-        const at = project(scratch);
-        btn.style.display = at ? '' : 'none';
-        if (at) btn.style.transform = 'translate(' + at[0].toFixed(1) + 'px,' + at[1].toFixed(1) + 'px)';
-        btn.classList.toggle('is-active', key === selectedPart);
-      }
+      kit.showHotspots(selectedPart);
     },
     launch(p) {
       showSystem(lerp(1, DAYS.jupiter - 4, p));
@@ -706,7 +470,7 @@ function startScene({ scene, camera, renderer, render, quality }) {
     },
     lightday() {
       showSystem(today());
-      orbit(scratch.copy(voyager).multiplyScalar(0.5), -1.75 + (reduced ? 0 : Math.sin(time * 0.08) * 0.2), 0.2, voyager.length() * 2.2);
+      orbit(scratch.copy(voyager).multiplyScalar(0.5), -1.75 + (kit.reduced ? 0 : Math.sin(kit.time * 0.08) * 0.2), 0.2, voyager.length() * 2.2);
       place('voyager', 'Voyager 1 · now', voyager, 'is-craft', 10, -18);
       place('sun', 'Sun & Earth', scratch.set(0, 0, 0), 'is-home', 12, 14);
       for (const m of milestones) if (m.day !== DAYS.lightDay) place('m' + m.day, m.text, m.at, 'is-event', 12, 6);
@@ -715,7 +479,7 @@ function startScene({ scene, camera, renderer, render, quality }) {
       line.needsUpdate = true;
       // A day of light-travel, played in a few seconds: out, then back.
       const sinceHello = helloSentAt < 0 ? Infinity : (performance.now() - helloSentAt) / 1000;
-      const cycle = sinceHello < 9 ? sinceHello / 4.5 : (reduced ? 0.6 : (time * 0.16) % 2);
+      const cycle = sinceHello < 9 ? sinceHello / 4.5 : (kit.reduced ? 0.6 : (kit.time * 0.16) % 2);
       pulse.position.lerpVectors(earth, voyager, cycle < 1 ? cycle : 2 - cycle);
     },
     record(p) {
@@ -726,89 +490,60 @@ function startScene({ scene, camera, renderer, render, quality }) {
       orbit(scratch, azimuth, 0.12 + drag.pitch * 0.5, lerp(3.4, 2.1, smooth(0, 0.7, p)));
     },
     future(p) {
-      orbit(scratch.set(0, 1.2, 0), 2.6 + time * 0.04 + drag.yaw, 0.16, 22 * Math.pow(26, smooth(0.1, 1, p)));
+      orbit(scratch.set(0, 1.2, 0), 2.6 + kit.time * 0.04 + drag.yaw, 0.16, 22 * Math.pow(26, smooth(0.1, 1, p)));
     },
   };
 
   function enterStage(next) {
-    stage = next;
     craft.visible = next === 'craft';
     sys.visible = next === 'system';
     flybys.jupiter.group.visible = next === 'jupiter';
     flybys.saturn.group.visible = next === 'saturn';
-    clockEl.classList.toggle('is-on', next !== 'craft');
+    kit.clock.classList.toggle('is-on', next !== 'craft');
+    // The planets keep their true night side: no fill light in the flybys.
     fill.visible = next === 'craft';
     skyLight.intensity = next === 'craft' ? 0.9 : 0.08;
     if (next === 'craft') {
       sunLight.position.set(-14, 22, 16);
       sunLight.target.position.set(0, 0, 0);
     }
-    snap = true;
   }
-  let snap = true;
 
-  const story = createStory($('story'), {
+  kit.run({
+    chapters: CHAPTERS,
+    enterStage,
+    canDrag: () => kit.stage === 'craft',
     onChapter(chapter) {
       // Fetch each planet a chapter early so it is there when the cut lands.
       if (chapter.id === 'launch' || chapter.id === 'jupiter') flybys.jupiter.load();
       if (chapter.id === 'jupiter' || chapter.id === 'cruise' || chapter.id === 'saturn') flybys.saturn.load();
     },
-  });
-  let past = false;
-
-  function frame(now, dt) {
-    const state = story.read();
-    past = state.past;
-    if (!reduced) time += dt;
-    if (state.stage !== stage) enterStage(state.stage);
-    renderer.getSize(size);
-    wide = size.x > 860;
-
-    // Reset what only some chapters touch.
-    path.material.opacity = tip.material.opacity = 1;
-    pathAhead.material.opacity = 0.16;
-    voyagerDot.material.opacity = 1;
-    drop.material.opacity = 0.3;
-    planetDots.get('earth').userData.fraction = 0.018;
-    $('sunbeams').style.opacity = 0;
-    for (const btn of hotspots.values()) if (state.id !== 'craft') btn.style.display = 'none';
-    const signal = state.id === 'lightday';
-    earthLine.visible = pulse.visible = signal;
-
-    CHAPTERS[state.id](state.progress);
-
-    const lookingBack = state.id === 'portrait' ? smooth(0.36, 0.6, state.progress) : 0;
-    const side = state.id === 'jupiter' || state.id === 'saturn' || state.id === 'record' ? -1 : 1;
-    offset.tx = wide ? (side < 0 ? -0.2 : 0.15) : 0;
-    offset.ty = wide ? 0 : 0.2;
-
-    const k = snap || reduced ? 1 : 1 - Math.exp(-dt * 6);
-    snap = false;
-    current.position.lerp(pose.position, k);
-    current.target.lerp(pose.target, k);
-    current.fov = lerp(current.fov, pose.fov, k);
-    offset.x = lerp(offset.x, offset.tx, k);
-    offset.y = lerp(offset.y, offset.ty, k);
-    camera.position.copy(current.position);
-    camera.lookAt(current.target);
-    camera.fov = current.fov;
-    camera.setViewOffset(size.x, size.y, -offset.x * size.x, offset.y * size.y, size.x, size.y);
-
-    // Dots hold their size on screen whatever the lens.
-    const lens = 2 * Math.tan((camera.fov * Math.PI) / 360);
-    for (const sprite of sprites) sprite.scale.setScalar(sprite.userData.fraction * lens);
-    stars.points.position.copy(camera.position);
-    stars.uniforms.uTime.value = time;
-
-    if (stage === 'system') {
+    // Keep the subject clear of the card: beside it on wide screens, above
+    // it on phones.
+    offset(state, wide) {
+      const cardOnRight = state.id === 'jupiter' || state.id === 'saturn' || state.id === 'record';
+      return wide ? [cardOnRight ? -0.2 : 0.15, 0] : [0, 0.2];
+    },
+    before(state) {
+      path.material.opacity = tip.material.opacity = 1;
+      pathAhead.material.opacity = 0.16;
+      voyagerDot.material.opacity = 1;
+      drop.material.opacity = 0.3;
+      planetDots.get('earth').userData.fraction = 0.018;
+      $('sunbeams').style.opacity = 0;
+      earthLine.visible = pulse.visible = state.id === 'lightday';
+    },
+    after(state) {
+      if (kit.stage !== 'system') return;
+      const lookingBack = state.id === 'portrait' ? smooth(0.36, 0.6, state.progress) : 0;
       const reach = camera.position.length();
       const far = smooth(45, 130, reach);
       shock.userData.uniforms.uOpacity.value = far;
       heliopause.userData.uniforms.uOpacity.value = far;
-      shock.userData.uniforms.uTime.value = heliopause.userData.uniforms.uTime.value = time;
+      shock.userData.uniforms.uTime.value = heliopause.userData.uniforms.uTime.value = kit.time;
       shock.visible = heliopause.visible = far > 0.01;
       windUniforms.uOpacity.value = far;
-      windUniforms.uTime.value = time;
+      windUniforms.uTime.value = kit.time;
       windUniforms.uPixel.value = renderer.getPixelRatio();
       const inner = 1 - smooth(60, 220, reach);
       orbitLines.forEach((line, i) => { line.material.opacity = (i < 4 ? 0.34 * (1 - smooth(18, 50, reach)) : 0.34) * lerp(0.5, 1, inner); line.visible = line.material.opacity > 0.01; });
@@ -820,16 +555,6 @@ function startScene({ scene, camera, renderer, render, quality }) {
       }
       for (const m of milestones) m.dot.visible = far > 0.3 && state.id !== 'portrait';
       sunDot.userData.fraction = lerp(0.075, 0.045, far) * lerp(1, 0.5, lookingBack);
-    }
-
-    flushLabels();
-    container.style.opacity = (1 - state.dim).toFixed(3);
-    labelLayer.style.opacity = (1 - state.dim).toFixed(3);
-    clockEl.style.visibility = state.dim > 0.6 ? 'hidden' : '';
-    quality.frame(dt, drag.active);
-    render();
-  }
-
-  const loop = SPACE.createFrameLoop(frame, { fps: 60, animated: () => !past, element: container });
-  addEventListener('scroll', () => loop.invalidate(), { passive: true });
+    },
+  });
 }
