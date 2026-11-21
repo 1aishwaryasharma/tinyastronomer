@@ -143,7 +143,7 @@ one hard Sun, a weak blue fill and a rim light, composited over a flat
 
 ## Recordings (`audio/`)
 
-Built by `tools/build-voyager-audio.ts` from two NASA originals. Nothing is
+Built by `tools/build-voyager-audio.ts` from NASA and University of Iowa originals. Nothing is
 changed but length, level and encoding (mono MP3).
 
 - `greeting-<language>.mp3`: ten of the Golden Record's fifty-five spoken
