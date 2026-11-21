@@ -175,8 +175,10 @@ changed but length, level and encoding (mono MP3).
     Library of Congress presents the same recordings "courtesy of the NASA
     Jet Propulsion Laboratory". The site's use is ten clips of one to six
     seconds, unaltered, each with its translation, on a free educational
-    page. If a rights holder objects, remove `greeting-*.mp3` and the
-    `record` entry of `RECORDINGS`; the card then links to NASA's page.
+    page. If a rights holder objects, remove `greeting-*.mp3`, the
+    `record` entry of `RECORDINGS` and the greeting assertions in
+    `mission-audio.test.ts`; the page's Sources list still links to NASA's
+    greetings page.
 - `plasma-waves.mp3`: twelve seconds from the soundtrack of PIA17045, "Voyager
   Captures Sounds of Interstellar Space",
   <https://science.nasa.gov/photojournal/voyager-captures-sounds-of-interstellar-space>.

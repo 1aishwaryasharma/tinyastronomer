@@ -133,7 +133,7 @@ html { scroll-padding-top: 0; }
 /* Recordings a chapter can play */
 .clip-box { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .clip-box .parts { margin-top: 0; }
-.clip-box .parts + .clip-note, .clip-box .hello-out + .parts { margin-top: 10px; }
+.clip-box .hello-out + .parts { margin-top: 10px; }
 .card .clip-note { font-size: 12.5px; line-height: 1.5; }
 .clip-note .science-kind { margin-right: 6px; }
 .clip-credit { color: var(--ink-faint); white-space: nowrap; }
@@ -233,6 +233,11 @@ html { scroll-padding-top: 0; }
     top: calc(116px + env(safe-area-inset-top, 0px)); text-align: left; font-size: 10px;
   }
   .mission-clock .clock-date { font-size: 22px; }
+  /* A notice that stays up would sit on the card's buttons down there. */
+  .loader.mission-loader.loader-failed {
+    bottom: auto; top: calc(180px + env(safe-area-inset-top, 0px));
+    left: calc(16px + env(safe-area-inset-left, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); transform: none; max-width: none;
+  }
   .part-btn, .sound-toggle { min-height: 40px; }
   /* Under the Explore button, clear of the mission clock on the left. */
   .sound-toggle {

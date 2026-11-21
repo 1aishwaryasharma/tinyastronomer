@@ -18,10 +18,10 @@ function browser({ stored = null as string | null, hasAudio = true, refuses = fa
   const policy = { gesture: true, late: false };
   const contexts: any[] = [], fetched: string[] = [], sources: any[] = [];
   const listeners = new Map<string, Function>();
-  const param = () => ({ value: 0, target: 0, setTargetAtTime(v: number) { this.target = v; }, setValueAtTime(v: number) { this.target = this.value = v; } });
-  const node = (extra = {}) => ({ connect: (to: unknown) => to, start() {}, stop() {}, gain: param(), frequency: param(), Q: param(), ...extra });
+  // Only what playing a recording needs: a made-up tone would have nothing to call.
+  const node = (extra = {}) => ({ connect: (to: unknown) => to, start() {}, stop() {}, gain: { value: 0 }, ...extra });
   class AudioContext {
-    state = "suspended"; currentTime = 0; sampleRate = 8000; destination = {}; onstatechange = () => {};
+    state = "suspended"; destination = {}; onstatechange = () => {};
     constructor() { if (refuses) throw new Error("NotSupportedError"); contexts.push(this); }
     resume() {
       if (!policy.gesture) return;
@@ -30,9 +30,6 @@ function browser({ stored = null as string | null, hasAudio = true, refuses = fa
     }
     suspend() { this.state = "suspended"; this.onstatechange(); }
     createGain() { return node(); }
-    createBiquadFilter() { return node(); }
-    createOscillator() { return node(); }
-    createBuffer(_: number, length: number) { return { getChannelData: () => new Float32Array(length) }; }
     createBufferSource() { const source = node({ onended: null as null | (() => void), stopped: false, stop() { this.stopped = true; } }); sources.push(source); return source; }
     decodeAudioData(bytes: unknown) { return Promise.resolve({ bytes }); }
   }
@@ -50,8 +47,7 @@ function browser({ stored = null as string | null, hasAudio = true, refuses = fa
     removeEventListener: (type: string) => void listeners.delete(type),
     document: { hidden: false, addEventListener() {} },
   };
-  // The hum's hiss is a looping source too; these are the recordings.
-  const played = () => sources.filter((source) => source.buffer?.bytes);
+  const played = () => sources;
   return { env, button, contexts, fetched, played, store, listeners, policy };
 }
 const clips = { hello: { url: "/hello.mp3" }, other: { url: "/other.mp3" }, gone: { url: "/missing.mp3" } };
@@ -355,7 +351,6 @@ test("without Web Audio the page keeps its recordings hidden", () => {
   const { env, button } = browser({ hasAudio: false });
   const nodes = page_(env, button);
   const sound = mountMissionSound({ recordings: story, assets: "/assets/x/", env });
-  expect(sound.supported).toBe(false);
   expect(nodes.has("hall-sounds-box")).toBe(false);
   sound.follow(at("hall", 0.9));
 });

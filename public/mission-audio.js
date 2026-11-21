@@ -1,7 +1,7 @@
 /* Sound for a mission page: real recordings, and nothing else. Space is
    silent, so the page makes no sound of its own.
 
-     mountMissionSound({ recordings, assets })   → { supported, follow(state) }
+     mountMissionSound({ recordings, assets })   → { follow(state) }
 
    is all a page calls: it finds the page's sound controls, and the page
    passes it the story's state as that changes. Underneath is the player,
@@ -35,7 +35,7 @@ export function createMissionAudio({ clips = {}, button = null, start = null, en
   // `listen(fn)`: fn runs whenever what is playing, or whether sound can
   // play, has changed.
   const audio = { supported: Boolean(Context), on: false, playing: null, listen: (fn) => void listeners.add(fn) };
-  if (!Context) return Object.assign(audio, { setSound() {}, play: async () => 'failed', cue: () => null, stop() {} });
+  if (!Context) return Object.assign(audio, { play: async () => 'failed', cue: () => null, stop() {} });
   const changed = () => { for (const fn of listeners) fn(); };
 
   let ctx = null, clipGain = null;
@@ -97,13 +97,13 @@ export function createMissionAudio({ clips = {}, button = null, start = null, en
   const arm = () => { for (const type of GESTURES) env.addEventListener?.(type, wake, { passive: true }); };
   function disarm() { for (const type of GESTURES) env.removeEventListener?.(type, wake); }
 
-  audio.setSound = (on) => {
+  function setSound(on) {
     audio.on = on && ensure();
     store(audio.on);
-    // Off stops a recording the story started.
+    // Off means silence: whatever is playing stops.
     if (!audio.on) audio.stop();
     report();
-  };
+  }
 
   function load(key) {
     if (!buffers.has(key)) {
@@ -183,11 +183,11 @@ export function createMissionAudio({ clips = {}, button = null, start = null, en
     button.addEventListener('click', () => {
       const ask = isWaiting() && !refused;
       disarm();
-      audio.setSound(ask || !audio.on);
+      setSound(ask || !audio.on);
       refused = isWaiting();
     });
   }
-  if (start) start.addEventListener('click', () => { disarm(); audio.setSound(true); });
+  if (start) start.addEventListener('click', () => { disarm(); setSound(true); });
   show();
   return audio;
 }
@@ -253,18 +253,21 @@ export function mountMissionSound({ recordings, assets, env = globalThis }) {
     // pressing the same recording later makes it theirs.
     if (audio.playing !== cued) cued = null;
     const recording = byKey.get(audio.playing);
-    if (recording && recording !== captioned) doc.getElementById(recording.chapter + '-heard').innerHTML = recording.text;
-    if (recording) captioned = recording;
     // A recording has ended, or sound has just come on: the next one may
     // already be due, and nothing else will ask while the reader sits still.
     // Wait a beat, so a recording the reader has just pressed starts first.
-    else Promise.resolve().then(offer);
+    if (!recording) return queueMicrotask(offer);
+    // Sound-state changes arrive here too; rewriting the same caption would
+    // have a screen reader announce it again.
+    if (recording !== captioned) {
+      doc.getElementById(recording.chapter + '-heard').innerHTML = recording.text;
+      captioned = recording;
+    }
   });
 
   return {
-    supported: audio.supported,
     follow(state) {
-      if (last && state.id !== last.id && audio.playing === cued) audio.stop();
+      if (cued && last && state.id !== last.id) audio.stop();
       last = state;
       offer();
     },
