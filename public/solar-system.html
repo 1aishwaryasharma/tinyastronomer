@@ -115,7 +115,7 @@
   </div>
   <details class="science-note">
     <summary><span class="science-kind">Teaching model</span><span>Accuracy &amp; sources</span></summary>
-    <p>Planet facts use published reference values. The animation uses simplified circular mean orbits; starting positions are illustrative, spin is not time-scaled, and moon sizes and distances are visual aids. The default view compresses sizes and distances. In Distance View, planet sizes are proportional to one another and mean orbital spacing is proportional, but size and distance still use different scales. Haumea is drawn with its measured stretched shape and the 61° tilt of its ring plane; which way it turns is not known. Haumea, Makemake and Eris are plain-colour globes, because no spacecraft has mapped their surfaces.</p>
+    <p>Planet facts use published reference values. The animation uses simplified circular mean orbits; starting positions are illustrative, spin is not time-scaled, and moon sizes and distances are visual aids. The default view compresses sizes and distances. In Distance View, planet sizes are proportional to one another and mean orbital spacing is proportional, but size and distance still use different scales. Haumea is drawn with its measured stretched shape and the 61° tilt of its ring plane; its spin is drawn in the direction its moons orbit, which is assumed, not measured. Haumea, Makemake and Eris are plain-colour globes, because no spacecraft has mapped their surfaces.</p>
     <p class="science-sources"><span>Sources</span>
       <a href="https://science.nasa.gov/solar-system/">NASA Solar System</a>
       <a href="https://science.nasa.gov/solar-system/moons/facts/">NASA Moon counts</a>
@@ -123,6 +123,7 @@
       <a href="https://ssd.jpl.nasa.gov/planets/phys_par.html">JPL Physical values</a>
       <a href="https://science.nasa.gov/dwarf-planets/">NASA Dwarf planets</a>
       <a href="https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html">JPL Small-Body Database</a>
+      <a href="https://doi.org/10.1038/nature24051">Haumea shape and ring (Ortiz et al. 2017)</a>
       <span>Reviewed Aug 16, 2026 · Haumea and Makemake added Nov 21, 2026</span>
     </p>
   </details>
@@ -294,12 +295,10 @@ WORLDS.forEach((w, i) => {
   // replace it moments later. If a model cannot load, its neutral mean-color
   // globe remains intentionally free of invented surface geography.
   const hasScientificModel = Boolean(planetModels.paths[w.key]);
-  const mat = hasScientificModel
-    ? new THREE.MeshStandardMaterial({ color: w.dot, roughness: 1, metalness: 0 })
-    : planetMaterial(w);
+  const mat = hasScientificModel ? tourTextures.plainGlobeMaterial(w) : planetMaterial(w);
   const globeGeometry = w.type === 'earth' ? createEarthGeometry(1, 96, 64) : unitSphere;
   const fallbackMesh = new THREE.Mesh(globeGeometry, mat);
-  // Haumea's measured ellipsoid; every other world stays a sphere.
+  // Bodies with measured axesKm are drawn as ellipsoids.
   fallbackMesh.scale.set(...SPACE_DATA.globeScale(w));
   fallbackMesh.castShadow = true;
   fallbackMesh.receiveShadow = true;

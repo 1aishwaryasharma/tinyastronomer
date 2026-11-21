@@ -93,13 +93,14 @@ export const SPACE_DATA = (function () {
       periodDays: 103290,
       // The sphere with the same volume as axesKm.
       radiusKm: 798,
-      retro: false,
+      retro: true,
       rotationHours: 3.92,
       surfaceMap: false,
       // The ring found in 2017 lies in Haumea's equatorial plane, which matches
       // the orbit of its moon Hiʻiaka (Ragozzine & Brown 2009). That plane is
       // tipped 61° against Haumea's own orbit (119° between the poles). Which
-      // way the body turns in that plane has not been measured.
+      // way the body turns in that plane has not been measured; retro draws
+      // it turning the way Hiʻiaka orbits, the usual assumption.
       tiltDeg: 61,
       type: 'rock',
       wow: 'In 2017, astronomers watched Haumea pass in front of a star and discovered that it has a ring — the first ever found around a world in the Kuiper Belt.'

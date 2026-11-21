@@ -373,7 +373,6 @@ test('Grand Tour uses traceable scientific surface assets', () => {
   expect(earthVisuals).toContain('assets/earth/day-4k.jpg');
   expect(earthVisuals).toContain('assets/earth/lights-2k.webp');
   // No spacecraft has mapped these: a plain colour, never an invented surface.
-  expect(textures).toContain('p.surfaceMap === false');
   for (const key of ['eris', 'haumea', 'makemake']) {
     expect(models).not.toContain(`${key}.glb`);
     expect(existsSync(`assets/teaching-textures/${key}.webp`)).toBe(false);

@@ -36,11 +36,14 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
     return planetTextures.get(p.key);
   }
 
+  // A featureless globe in the catalog colour.
+  function plainGlobeMaterial(p) {
+    return new THREE.MeshStandardMaterial({ color: p.dot, roughness: 1, metalness: 0 });
+  }
+
   function planetMaterial(p) {
-    // No spacecraft has mapped this world: a plain observed-colour globe.
-    if (p.surfaceMap === false) {
-      return new THREE.MeshStandardMaterial({ color: p.dot, roughness: 1, metalness: 0 });
-    }
+    // No spacecraft has mapped this world, so nothing is painted on it.
+    if (p.surfaceMap === false) return plainGlobeMaterial(p);
     if (p.type !== 'earth') {
       return new THREE.MeshStandardMaterial({ map: planetTexture(p), roughness: 1, metalness: 0 });
     }
@@ -115,7 +118,7 @@ export function createTourTextures(renderer, { earthDetails = true } = {}) {
     return tex;
   }
 
-  return { loadingManager, loadEarthDetails, makeRingTexture, planetMaterial, planetTexture, updateEarthLighting };
+  return { loadingManager, loadEarthDetails, makeRingTexture, plainGlobeMaterial, planetMaterial, planetTexture, updateEarthLighting };
 }
 
 window.createTourTextures = createTourTextures;
