@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { AU_KM, equatorialToEcliptic, planetPosition, sampleRows, unpackRows } from "./public/mission-orbits.js";
+import { yieldingLabels } from "./public/mission-story.js";
 import { PARTS, SATURN, createFlight } from "./public/missions/cassini-mission.js";
 
 const root = fileURLToPath(new URL("./public/", import.meta.url));
@@ -302,6 +303,27 @@ test("a planet's name never prints over its own flyby tag", () => {
   expect(flight.cruise(late).inner).toBe(false);
   expect(flybys.filter((flyby) => flight.flybyTagged(flyby, late)).map((flyby) => flyby.key)).toEqual(["jupiter"]);
   expect(flight.nameTagAlpha("venus", late)).toBe(1);
+});
+
+test("the labels that would print over each other give way by rank, and the cruise ranks them", () => {
+  const box = (x: number, y: number, rank: number | null, w = 60, h = 12) => ({ x, y, w, h, rank });
+  // The lower rank gives way to the higher, whichever was placed first.
+  expect([...yieldingLabels([box(0, 0, 1), box(30, 4, 2)])]).toEqual([0]);
+  expect([...yieldingLabels([box(0, 0, 2), box(30, 4, 1)])]).toEqual([1]);
+  // Equal ranks: the earlier one stays.
+  expect([...yieldingLabels([box(0, 0, 1), box(30, 4, 1)])]).toEqual([1]);
+  // Apart, or with no rank, nothing moves; a label that gave way frees the others.
+  expect(yieldingLabels([box(0, 0, 1), box(80, 0, 2), box(0, 40, 2)]).size).toBe(0);
+  expect(yieldingLabels([box(0, 0, null), box(10, 2, null), box(20, 4, 1)]).size).toBe(0);
+  expect([...yieldingLabels([box(0, 0, 3), box(40, 6, 2), box(90, 12, 1)])]).toEqual([1]);
+  // Lines set one above the other, edge to edge, are not printing over each other.
+  expect(yieldingLabels([box(0, 0, 1), box(0, 11, 2)]).size).toBe(1);
+  expect(yieldingLabels([box(0, 0, 1), box(0, 12, 2)]).size).toBe(0);
+  // The cruise page ranks Cassini over a flyby tag over a planet's name.
+  const cruise = read("missions/cassini.js");
+  expect(cruise).toMatch(/alpha: flight\.nameTagAlpha\(planet, day\), rank: 1/);
+  expect(cruise).toMatch(/place\('cassini', 'Cassini', cassini, \{[^}]*rank: 3/);
+  expect(cruise).toMatch(/place\('fly-' \+ flyby\.key[^;]*rank: 2/);
 });
 
 test("every chapter in the markup has a rail link and a known set, and the dated ones a date", () => {

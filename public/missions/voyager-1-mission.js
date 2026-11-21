@@ -24,6 +24,40 @@ export const PARTS = [
     text: 'A ten-sided box holding three pairs of computers, a tape recorder and the fuel tank. All its computers together have about 70 kilobytes of memory, far less than one phone photo.' },
 ];
 
+// The Golden Record greetings the page can play: ten of the fifty-five.
+// `said` is NASA's translation; `key` names the recording,
+// audio/greeting-<key>.mp3.
+export const GREETINGS = [
+  { key: 'english', label: 'English', said: 'Hello from the children of planet Earth.' },
+  { key: 'mandarin', label: 'Mandarin', said: 'Hope everyone’s well. We are thinking about you all. Please come here to visit when you have time.' },
+  { key: 'hindi', label: 'Hindi', said: 'Greetings from the inhabitants of this world.' },
+  { key: 'spanish', label: 'Spanish', said: 'Hello and greetings to all.' },
+  { key: 'arabic', label: 'Arabic', said: 'Greetings to our friends in the stars. We wish that we will meet you someday.' },
+  { key: 'french', label: 'French', said: 'Hello everybody.' },
+  { key: 'bengali', label: 'Bengali', said: 'Hello! Let there be peace everywhere.' },
+  { key: 'russian', label: 'Russian', said: 'Greetings! I welcome you!' },
+  { key: 'japanese', label: 'Japanese', said: 'Hello? How are you?' },
+  { key: 'zulu', label: 'Zulu', said: 'We greet you, great ones. We wish you longevity.' },
+];
+
+// The hum under each chapter, as mission-audio.js takes it: pitch and filter
+// in hertz, `air` the hiss of wind. Low and close at the giant planets, thin
+// and windy at the edge of the Sun's bubble, dying away in the last chapter
+// as the spacecraft does.
+export const BEDS = {
+  hero: { root: 110, bright: 700, air: 0.02, level: 0.8 },
+  craft: { root: 110, bright: 900, air: 0.02, level: 0.7 },
+  launch: { root: 123.5, bright: 1100, air: 0.04, level: 0.9 },
+  jupiter: { root: 82.4, bright: 600, air: 0.05 },
+  cruise: { root: 98, bright: 800, air: 0.03, level: 0.8 },
+  saturn: { root: 73.4, bright: 650, air: 0.05 },
+  portrait: { root: 146.8, bright: 1400, air: 0.01, level: 0.6 },
+  edge: { root: 98, bright: 500, air: 0.12, level: 0.9 },
+  lightday: { root: 130.8, bright: 900, air: 0.03, level: 0.5 },
+  record: { root: 110, bright: 700, air: 0, level: 0.35 },
+  future: { root: 82.4, bright: 500, air: 0.04, level: 0.8, fades: true },
+};
+
 // `data` is trajectory.json.
 export function createFlight(data) {
   const calendar = missionCalendar(data.epoch);

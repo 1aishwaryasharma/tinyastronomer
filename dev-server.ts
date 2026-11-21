@@ -101,6 +101,7 @@ const headersFor = (pathname: string) => {
 const contentTypes: Record<string, string> = {
   css: "text/css; charset=utf-8",
   glb: "model/gltf-binary",
+  mp3: "audio/mpeg",
   html: "text/html; charset=utf-8",
   jpg: "image/jpeg",
   js: "text/javascript; charset=utf-8",

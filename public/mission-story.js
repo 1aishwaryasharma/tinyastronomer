@@ -3,6 +3,7 @@
      storyState(chapters, scrollY, viewportHeight)   pure scroll arithmetic
      createStory(root, { onChapter })                the page's chapters, measured
      follow(dt, jump)                                the camera's easing
+     yieldingLabels(boxes)                           which of a frame's labels give way
      createPartPicker(parts)                         the spacecraft-parts buttons
      createChart(canvas, rows, { unit, events })     a line chart in a card
 
@@ -80,6 +81,26 @@ export function createStory(root, { onChapter } = {}) {
 // The share of the way to its target the camera covers in a frame `dt`
 // seconds long. A cut between sets, or reduced motion, jumps straight there.
 export const follow = (dt, jump) => (jump ? 1 : 1 - Math.exp(-dt * 6));
+
+// Which of one frame's labels should give way. `boxes` are { x, y, w, h, rank }
+// in screen pixels, in a stable order. A label with a rank gives way to a
+// higher-ranked one it would print over, and the earlier of two equals wins;
+// one that has given way takes no one else's place. A label without a rank
+// (null) neither gives way nor is given way to. Returns a Set of indices.
+export function yieldingLabels(boxes) {
+  const order = boxes.flatMap((box, i) => (box.rank == null ? [] : [i]))
+    .sort((a, b) => boxes[b].rank - boxes[a].rank || a - b);
+  const held = [], gives = new Set();
+  for (const i of order) {
+    const a = boxes[i];
+    const covered = held.some((j) => {
+      const b = boxes[j];
+      return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    });
+    if (covered) gives.add(i); else held.push(i);
+  }
+  return gives;
+}
 
 // One button per part in #parts; picking one fills #part-title and
 // #part-text, picking it again lets go. `parts` are { key, label, title,

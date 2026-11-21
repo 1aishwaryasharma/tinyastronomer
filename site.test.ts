@@ -695,6 +695,47 @@ test('the first scene notice stays up when a later failure follows it', () => {
   expect(p.buttons).toEqual([]);
 });
 
+// kit.loadModel from mission-scene.js with a model fetch that always fails.
+function failingModelLoad(p: ReturnType<typeof sceneNoticePage>, setTimer: (fn: () => void, ms: number) => void, hideLoader = () => {}) {
+  const kit = readFileSync('mission-scene.js', 'utf8');
+  const source = kit.slice(kit.indexOf('function loadModel'), kit.indexOf('/* ── Worlds'));
+  return new Function('SPACE', 'models', 'renderer', 'container', 'invalidate', 'hideLoader', 'setTimeout', 'console', 'MODEL_NOTICE_MS',
+    `${source}; return loadModel;`
+  )(
+    { showSceneNotice: p.showSceneNotice },
+    { loadGltf: (_url: string, _ok: unknown, fail: (error: Error) => void) => fail(new Error('404')) },
+    {}, { style: {} }, () => {}, hideLoader, setTimer, { warn() {} }, 10000,
+  ) as (url: string, onLoad: () => void) => void;
+}
+
+test('a mission model that cannot load says so in the loader chip, briefly, and the page carries on', () => {
+  const p = sceneNoticePage(false);
+  let hidden = 0, loaded = 0, clear: (() => void) | null = null, wait = 0;
+  failingModelLoad(p, (fn, ms) => { clear = fn; wait = ms; }, () => { hidden++; })('/m.glb', () => { loaded++; });
+  expect(loaded).toBe(0);
+  expect(hidden).toBe(1);
+  expect(p.classes.has('loader-failed')).toBe(true);
+  expect(p.attrs.role).toBe('alert');
+  expect(p.text.textContent).toContain('3D model unavailable');
+  expect(p.text.textContent).toContain('story carries on');
+  expect(p.bar.hidden).toBe(true);
+  expect(p.buttons).toEqual([]);
+  // It is not a permanent curtain: the chip goes once it has been read.
+  expect(wait).toBe(10000);
+  clear!();
+  expect(p.classes.has('loader-failed')).toBe(false);
+  expect(p.attrs.role).toBe('status');
+});
+
+test('a notice that is already up is kept when the model fails too', () => {
+  const p = sceneNoticePage(false);
+  p.failWebGL();
+  let timers = 0;
+  failingModelLoad(p, () => { timers++; })('/m.glb', () => {});
+  expect(p.text.textContent).toContain('cannot run the 3D view');
+  expect(timers).toBe(0);
+});
+
 test('adaptive quality follows the preview container and its expansion into a study', () => {
   const common = readFileSync('common.js', 'utf8');
   const governor = common.slice(

@@ -5,11 +5,12 @@
    Scroll position picks the chapter and its progress (mission-story.js);
    each chapter turns progress into a mission date and a camera pose. Every
    position Voyager takes comes from trajectory.json (JPL Horizons). */
-import { SPACE } from '/common.bundle.js?v=20260909-2';
+import { SPACE } from '/common.bundle.js?v=20261121-1';
 import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-1';
-import { createMissionKit } from '/mission-scene.js?v=20261121-1';
-import { createChart, createPartPicker } from '/mission-story.js?v=20261121-1';
-import { PARTS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-1';
+import { createMissionKit } from '/mission-scene.js?v=20261121-2';
+import { createClipButtons, createMissionAudio } from '/mission-audio.js?v=20261121-1';
+import { createChart, createPartPicker, createStory } from '/mission-story.js?v=20261121-2';
+import { BEDS, GREETINGS, PARTS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-2';
 
 const ASSETS = '/assets/missions/voyager-1/';
 const $ = (id) => document.getElementById(id);
@@ -47,12 +48,34 @@ $('hello-btn').addEventListener('click', () => {
 
 const picker = createPartPicker(PARTS);
 
+/* ──── Sound: off until asked for, and it works without the 3D scene ──── */
+const sound = createMissionAudio({
+  beds: BEDS,
+  clips: {
+    plasma: { url: ASSETS + 'audio/plasma-waves.mp3', gain: 0.5 },
+    ...Object.fromEntries(GREETINGS.map((g) => [g.key, { url: ASSETS + 'audio/greeting-' + g.key + '.mp3' }])),
+  },
+  button: $('sound-toggle'),
+});
+$('greetings-box').hidden = $('plasma-box').hidden = !sound.supported;
+createClipButtons($('plasma'), [{ key: 'plasma', label: 'Hear interstellar space' }], sound);
+createClipButtons($('greetings'), GREETINGS, sound, (greeting) => {
+  $('greeting-out').innerHTML = '“' + greeting.said + '” <strong>' + greeting.label + '</strong>';
+});
+
 const drawJupiterChart = createChart($('chart-jupiter'), data.speed.jupiter, { events: [{ day: DAYS.jupiter, label: 'closest approach' }] });
 drawJupiterChart(data.speed.jupiter[0][0]);
 
 /* ──── 3D scene ──── */
 const kit = createMissionKit();
-if (kit) startScene(kit);
+if (kit) {
+  startScene(kit);
+} else {
+  const story = createStory($('story'), { onChapter: sound.stop });
+  const hear = () => sound.follow(story.read());
+  addEventListener('scroll', hear, { passive: true });
+  hear();
+}
 
 function buildCraft(kit) {
   const craft = new kit.THREE.Group();
@@ -409,6 +432,7 @@ function systemChapters(kit, system) {
         place('voyager', 'Voyager 1', voyager, VOYAGER);
         place('sun', 'Sun & planets', ORIGIN, { cls: 'is-dim', dx: 12, dy: 14 });
         system.labelMilestones((m) => m.day <= day && m.day > DAYS.portrait);
+        if (day >= DAYS.pause) sound.cue('plasma');
       },
     },
     lightday: {
@@ -449,11 +473,13 @@ function startScene(kit) {
       saturn: { play: saturn.play },
     },
     onChapter(chapter) {
+      sound.stop();
       // Fetch each planet a chapter early so it is there when the cut lands.
       if (chapter.id === 'launch' || chapter.id === 'jupiter') jupiter.load();
       if (chapter.id === 'jupiter' || chapter.id === 'cruise' || chapter.id === 'saturn') saturn.load();
     },
     frame(state) {
+      sound.follow(state);
       // Light scattered inside the camera when it looked back at the Sun.
       $('sunbeams').style.opacity = state.id === 'portrait' ? (smooth(0.62, 0.9, state.progress) * 0.9).toFixed(3) : 0;
       if (kit.stage === 'system') system.dress(state, lookBack(state));

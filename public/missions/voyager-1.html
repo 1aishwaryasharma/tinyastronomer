@@ -34,7 +34,7 @@
 <link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/common.css?v=20261018-1">
-<link rel="stylesheet" href="/mission-page.css?v=20261121-1">
+<link rel="stylesheet" href="/mission-page.css?v=20261121-2">
 <style>
   #canvas-container { --mission-poster: url('/assets/missions/voyager-1/poster.webp'); }
   @media (max-width: 860px) {
@@ -75,6 +75,7 @@
     <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
     <h1 class="title">Voyager 1: The Farthest Spacecraft</h1>
     <a class="crumb" href="/missions">← All missions</a>
+    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" hidden>Sound off</button>
   </div>
 </header>
 
@@ -136,6 +137,7 @@
       <details class="science-note">
         <summary><span class="science-kind">Measured path</span><span>Accuracy &amp; sources</span></summary>
         <p>Voyager's path, speed and the dates on screen come from NASA/JPL's reconstructed trajectory (Horizons). Planet positions use JPL's approximate orbital elements. The Sun, planets and spacecraft are drawn as enlarged dots: at this scale every one of them would be far smaller than a pixel.</p>
+        <p><strong>Sound.</strong> Space is silent. With Sound on, the quiet hum behind the story is made on your device as scenery, not recorded. The greetings and the plasma waves further on are real recordings, and each says so where it plays.</p>
         <p class="science-sources"><span>Sources</span>
           <a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a>
           <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">JPL planet positions</a>
@@ -150,7 +152,7 @@
     <div class="card">
       <div class="card-kicker">5 March 1979 · Jupiter</div>
       <h2>Stealing speed from a giant</h2>
-      <p>Voyager 1 swung around Jupiter 349,000 km from its centre. Jupiter races around the Sun at 13 km every second, and its gravity towed the little spacecraft along with it. Voyager arrived moving about 13 km/s and left at about 24. This trick is called a <strong>gravity assist</strong>.</p>
+      <p>Voyager 1 swung around Jupiter about 349,000 km from its centre. Jupiter races around the Sun at 13 km every second, and its gravity towed the little spacecraft along with it. Voyager arrived moving about 13 km/s and left at about 24. This trick is called a <strong>gravity assist</strong>.</p>
       <canvas class="chart" id="chart-jupiter" role="img" aria-label="Chart: Voyager 1's speed relative to the Sun rises from about 13 to about 24 kilometres per second as it passes Jupiter, with a brief peak of 37 at closest approach."></canvas>
       <p class="chart-caption">Speed relative to the Sun, from JPL's trajectory. The spike is Voyager falling toward Jupiter and climbing back out.</p>
       <div class="fact-callout"><span class="fact-tag">✦ Discovery</span>Its cameras caught volcanoes erupting on the moon <strong>Io</strong>: the first active volcanoes ever seen beyond Earth.</div>
@@ -195,6 +197,10 @@
         <div><span class="stat-label">Edge of the bubble</span><span class="stat-value">25 Aug 2012 <small>· 122 AU</small></span></div>
         <p class="stat-note">One AU is the distance from Earth to the Sun. Crossing that edge, the heliopause, made Voyager 1 the first human-made object in <strong>interstellar space</strong>. Nobody knows the bubble's true shape; the one drawn here is a simple guess.</p>
       </div>
+      <div class="clip-box" id="plasma-box" hidden>
+        <div class="parts" id="plasma" role="group" aria-label="Recording from interstellar space"></div>
+        <p class="clip-note"><span class="science-kind">Real measurement</span> Not sound, but electric ripples in the gas between the stars, felt by Voyager's antennas in 2012 and 2013 and played through a speaker. Seven months are squeezed into twelve seconds. The rising pitch means the gas is getting denser. <span class="clip-credit">NASA/JPL-Caltech/University of Iowa</span></p>
+      </div>
     </div>
   </section>
 
@@ -220,6 +226,11 @@
       <div class="card-kicker">A message in a bottle</div>
       <h2>The Golden Record</h2>
       <p>Bolted to Voyager's side is a gold-plated copper record, made in case anyone ever finds it. A team led by Carl Sagan filled it with the sights and sounds of Earth.</p>
+      <div class="clip-box" id="greetings-box" hidden>
+        <p class="clip-note"><span class="science-kind">Real recordings</span> <span class="clip-credit">NASA/JPL</span></p>
+        <p class="hello-out" id="greeting-out" aria-live="polite">Pick a greeting to hear it as it was recorded in 1977.</p>
+        <div class="parts" id="greetings" role="group" aria-label="Greetings on the Golden Record"></div>
+      </div>
       <div class="stats">
         <div><span class="stat-label">Pictures</span><span class="stat-value">115</span></div>
         <div><span class="stat-label">Spoken greetings</span><span class="stat-value">55 <small>languages</small></span></div>
@@ -316,6 +327,8 @@
       <a href="https://science.nasa.gov/mission/voyager/">NASA Voyager</a>
       <a href="https://science.nasa.gov/mission/voyager/spacecraft/">NASA Voyager spacecraft</a>
       <a href="https://science.nasa.gov/mission/voyager/golden-record/">NASA Golden Record</a>
+      <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/">NASA Golden Record greetings</a>
+      <a href="https://science.nasa.gov/photojournal/voyager-captures-sounds-of-interstellar-space">NASA Sounds of interstellar space</a>
       <a href="https://science.nasa.gov/mission/voyager/voyager-1s-pale-blue-dot/">NASA Pale Blue Dot</a>
       <a href="https://science.nasa.gov/mission/voyager/voyager-1/voyager-1-what-is-a-light-day/">NASA What is a light-day?</a>
       <a href="https://science.nasa.gov/blogs/voyager/">NASA Voyager blog</a>
@@ -327,6 +340,6 @@
     <a class="foot-next" href="/missions">More missions →</a> · <a class="foot-next" href="/sky-tonight">See tonight&rsquo;s sky yourself →</a></div>
 </div>
 
-<script type="module" src="/missions/voyager-1.js?v=20261121-1"></script>
+<script type="module" src="/missions/voyager-1.js?v=20261121-2"></script>
 </body>
 </html>

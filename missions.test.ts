@@ -310,7 +310,7 @@ test("the camera eases toward its pose at the same pace on any display, and jump
 
 test("mission modules are imported under one URL each", () => {
   const specifiers = new Map<string, Set<string>>();
-  const files = ["missions/voyager-1.html", "missions/voyager-1.js", "missions/voyager-1-mission.js", "mission-scene.js", "mission-story.js"];
+  const files = ["missions/voyager-1.html", "missions/voyager-1.js", "missions/voyager-1-mission.js", "mission-scene.js", "mission-story.js", "mission-audio.js"];
   for (const file of files) {
     for (const match of read(file).matchAll(/(?:from\s+|src=)["']((?:\.{0,2}\/)[^"'?]+\.js)(\?[^"']*)?["']/g)) {
       const url = new URL(match[1], "https://site/" + file).pathname;
@@ -318,7 +318,7 @@ test("mission modules are imported under one URL each", () => {
       specifiers.get(url)!.add(match[2] ?? "");
     }
   }
-  for (const module of ["/mission-orbits.js", "/mission-story.js", "/mission-scene.js", "/missions/voyager-1-mission.js", "/planet-models.js"]) {
+  for (const module of ["/mission-orbits.js", "/mission-story.js", "/mission-scene.js", "/mission-audio.js", "/missions/voyager-1-mission.js", "/planet-models.js"]) {
     expect([...specifiers.keys()]).toContain(module);
   }
   for (const [module, versions] of specifiers) expect([...versions], module).toHaveLength(1);

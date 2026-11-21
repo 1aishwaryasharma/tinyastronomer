@@ -1164,6 +1164,7 @@ float fbm(vec3 p) {
     revealRailButton,
     seededRandom,
     setText,
+    showSceneNotice,
     wirePlayPause
   };
 })();

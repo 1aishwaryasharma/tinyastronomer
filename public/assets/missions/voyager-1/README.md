@@ -1,4 +1,4 @@
-# Voyager 1 spacecraft model and stills
+# Voyager 1 spacecraft model, stills and recordings
 
 `voyager.glb`, `og-cover.png`, `poster.webp` and `poster-800.webp` are built by
 `tools/build-voyager-model.py` from NASA's own Voyager model. (`trajectory.json`
@@ -140,3 +140,48 @@ one hard Sun, a weak blue fill and a rim light, composited over a flat
 | `og-cover.png` | 216 KB | 1200 x 630 |
 | `poster.webp` | 40 KB | 1600 x 1000 |
 | `poster-800.webp` | 17 KB | 800 x 500 |
+
+## Recordings (`audio/`)
+
+Built by `tools/build-voyager-audio.ts` from two NASA originals. Nothing is
+changed but length, level and encoding (mono MP3).
+
+- `greeting-<language>.mp3`: ten of the Golden Record's fifty-five spoken
+  greetings, each cut from the single "Greetings in 55 Languages" track.
+  - NASA's page, with the translations the site quotes:
+    <https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/>.
+    NASA plays the track there through a SoundCloud embed and offers no file.
+  - File used: the same track as held by Wikimedia Commons, tagged public
+    domain as a NASA work,
+    `https://commons.wikimedia.org/wiki/File:Voyager_Golden_Record_-_Greetings_In_55_Languages.mp3`
+    (6,366,073 bytes, SHA-256
+    `72e19421515a4ee1debbd5595c90140a739e300805443303d1b485be73cd3630`).
+  - Credit: NASA/JPL. The speakers were volunteers recorded at Cornell
+    University in 1977.
+  - Each cut was checked by transcribing it and comparing the words with the
+    greeting the record's documentation gives for that language.
+- `plasma-waves.mp3`: twelve seconds from the soundtrack of PIA17045, "Voyager
+  Captures Sounds of Interstellar Space",
+  <https://science.nasa.gov/photojournal/voyager-captures-sounds-of-interstellar-space>.
+  File used:
+  `https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia17/pia17045/PIA17045_20130906-640.mp4`
+  (3,532,551 bytes, SHA-256
+  `fcdec8d93dacfbe61d4282fff1f3dc896a4cbce0849e64838aff35b6287c3bdf`).
+  Credit: NASA/JPL-Caltech/University of Iowa. It is plasma-wave data from
+  October 2012 to May 2013 played at its own frequencies with the time
+  compressed, not a sound recording, and the page says so.
+
+NASA material is generally not copyrighted and may be used for education with
+NASA acknowledged as the source and no suggestion of endorsement
+(<https://www.nasa.gov/nasa-brand-center/images-and-media/>). The Golden
+Record's music is a different matter: it belongs to its performers and
+publishers, and none of it is used here.
+
+Rebuild, with ffmpeg on PATH and both files downloaded outside the repository:
+
+    bun tools/build-voyager-audio.ts /tmp/greetings.mp3 /tmp/PIA17045.mp4
+
+The eleven files total about 385 KB. None is fetched until its button is
+pressed, or, for the plasma waves, until a reader with Sound on reaches 2012.
+The hum behind the story is not a file: `mission-audio.js` makes it in the
+browser.
