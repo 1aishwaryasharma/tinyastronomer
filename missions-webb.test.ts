@@ -3,31 +3,23 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AU_KM, planetPosition, sampleRows } from "./public/mission-orbits.js";
+import { AU_KM, sampleRows } from "./public/mission-orbits.js";
+import {
+  CLIP, PARTS, SHIELD_C, STEPS, alignmentCaption, celsius, createFlight, infraredCaption,
+} from "./public/missions/webb-mission.js";
 
 const root = fileURLToPath(new URL("./public/", import.meta.url));
 const read = (path: string) => readFileSync(root + path, "utf8");
 const ASSETS = "assets/missions/webb/";
 const data = JSON.parse(read(ASSETS + "trajectory.json"));
 const page = read("missions/webb.html");
-const script = read("missions/webb.js");
 const voyagerPage = read("missions/voyager-1.html");
-const voyagerScript = read("missions/voyager-1.js");
 const readme = read(ASSETS + "README.md");
 const DAY = 86400000;
 const dayOf = (utc: string) => (Date.parse(utc) - Date.parse(data.epoch)) / DAY;
 const range = (row: number[]) => Math.hypot(row[1], row[2], row[3]);
-
-// The lookup the page builds: the fine transfer rows, then the halo.
-const path: number[][] = data.transfer
-  .filter((row: number[]) => row[0] < data.halo[0][0])
-  .map((row: number[]) => row.slice(0, 4))
-  .concat(data.halo);
-const l2Km = (ms: number) => Math.hypot(...(planetPosition("earth", ms) as number[])) * AU_KM * data.l2Ratio;
-const lapStarts: number[] = [];
-for (let i = 1; i < data.halo.length; i++) {
-  if (data.halo[i - 1][2] < 0 && data.halo[i][2] >= 0) lapStarts.push(data.halo[i][0]);
-}
+const flight = createFlight(data);
+const { rows: path, l2Km, lapStarts, DAYS } = flight;
 
 test("the trajectory is JPL's, sampled finely enough for what the page draws", () => {
   expect(data.source).toContain("JPL Horizons");
@@ -61,7 +53,11 @@ test("the climb to L2 slows the way the card and its chart say", () => {
   expect(page).toContain("falls from 6.6 kilometres per second an hour after launch to about 0.2");
   // The shared chart draws its grid in tens, so the trace must fit under 10.
   expect(Math.max(...speeds)).toBeLessThan(10);
-  expect(script).toContain("createChart($('chart-speed'), speedRows, { events: [{ day: DAYS.arrive, label: 'arrives' }] })");
+  expect(flight.speedRows).toHaveLength(data.transfer.length);
+  expect(flight.speedRows[0]).toEqual([data.transfer[0][0], speeds[0]]);
+  // The chart marks the arrival, so its rows must run past it.
+  expect(flight.speedRows.at(-1)![0]).toBeGreaterThan(DAYS.arrive);
+  expect(flight.kmPerSec(DAYS.arrive)).toBe(arrival[4]);
 });
 
 test("the distance from Earth follows Horizons, and L2 sits where the page says", () => {
@@ -88,7 +84,8 @@ test("the distance from Earth follows Horizons, and L2 sits where the page says"
 });
 
 test("Webb arrives on 24 January 2022 and stays in a loop around L2", () => {
-  const arrive = dayOf("2022-01-24T19:00Z");
+  const arrive = DAYS.arrive;
+  expect(arrive).toBe(dayOf("2022-01-24T19:00Z"));
   const flown = data.halo.filter((row: number[]) => row[0] >= arrive && row[0] <= data.measuredUntil);
   for (const row of flown) {
     const ms = Date.parse(data.epoch) + row[0] * DAY;
@@ -99,7 +96,6 @@ test("Webb arrives on 24 January 2022 and stays in a loop around L2", () => {
   // Before arrival it is still on its way out: nearer Earth than L2 is.
   for (const row of data.transfer) if (row[0] < arrive) expect(row[1]).toBeLessThan(1260000);
   expect(page).toContain('<time datetime="2022-01-24">24 January 2022</time>');
-  expect(script).toContain("arrive: dayOn(2022, 1, 24, 19)");
 });
 
 test("the halo is as wide, as slow and as far as the copy says", () => {
@@ -119,7 +115,8 @@ test("the halo is as wide, as slow and as far as the copy says", () => {
   expect(page).toContain("Webb loops around that empty point about twice a year.");
   // The figures shipped in the markup are right for the day they were written.
   const written = dayOf("2026-11-21T00:00Z");
-  expect(lapStarts.filter((start) => start <= written).length - 1).toBe(9);
+  expect(flight.lapsBy(written)).toBe(9);
+  expect(flight.lapsBy(DAYS.arrive)).toBe(0);
   expect(page).toContain('id="halo-laps">9<');
   const shipped = Number(page.match(/id="hero-earth-km">([\d,]+)</)![1].replace(/,/g, ""));
   expect(Math.abs(shipped - range(sampleRows(path, written)))).toBeLessThan(5000);
@@ -129,18 +126,17 @@ test("the halo is as wide, as slow and as far as the copy says", () => {
   expect(page).toContain('id="hero-light">5.6 seconds<');
 });
 
-test("the unfolding steps agree between the card, the script, the clip and its notes", () => {
+test("the unfolding steps agree between the card, the clip and its notes", () => {
   const items = [...page.matchAll(/<li><time datetime="(\d{4}-\d\d-\d\d)">[^<]+<\/time>[^<]+<\/li>/g)].map((m) => m[1]);
   const steps = items.slice(0, 10);
   expect(steps).toEqual([
     "2021-12-25", "2021-12-26", "2021-12-28", "2021-12-29", "2021-12-30",
     "2021-12-31", "2022-01-04", "2022-01-05", "2022-01-07", "2022-01-08",
   ]);
-  const dates = [...script.matchAll(/\{ date: \[(\d+), (\d+), (\d+), \d+\], label: '[^']+' \}/g)]
-    .map((m) => `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`);
-  expect(dates).toEqual(steps);
-  expect(script).toContain("const CLIP_END = 10;");
-  expect(readme).toContain("One animation, `Deploy`, 10 seconds long");
+  expect(flight.steps.map((step) => new Date(flight.msOf(step.day)).toISOString().slice(0, 10))).toEqual(steps);
+  // One second of the clip for each step.
+  expect(STEPS).toHaveLength(CLIP.seconds);
+  expect(readme).toContain(`One animation, \`${CLIP.name}\`, ${CLIP.seconds} seconds long`);
   // Every step is inside the month Horizons' transfer rows cover, so the
   // clock's distance for it is measured.
   for (const date of steps) {
@@ -150,14 +146,85 @@ test("the unfolding steps agree between the card, the script, the clip and its n
   expect(page).toContain("The motion is simplified");
 });
 
-test("every chapter in the markup has a scene, a rail link, and a known set", () => {
+test("scrolling the unfolding chapter plays every step once, in order", () => {
+  const { unfoldAt, steps } = flight;
+  // Held folded at the top, on launch day.
+  expect(unfoldAt(0)).toEqual({ index: 0, second: 0, label: "Folded for launch", dateDay: DAYS.first, day: DAYS.first });
+  expect(unfoldAt(0.05).second).toBe(0);
+  let last = unfoldAt(0);
+  const seen = new Set<number>();
+  for (let p = 0; p <= 1.0001; p += 0.002) {
+    const now = unfoldAt(p);
+    expect(now.second, `clip at ${p.toFixed(3)}`).toBeGreaterThanOrEqual(last.second);
+    expect(now.day, `clock at ${p.toFixed(3)}`).toBeGreaterThanOrEqual(last.day);
+    // The clock runs up to the step's date; the first row Horizons has is
+    // twenty minutes after the first step.
+    expect(now.day).toBeLessThanOrEqual(Math.max(now.dateDay, DAYS.first));
+    expect(now.second).toBeGreaterThanOrEqual(now.index);
+    expect(now.second).toBeLessThanOrEqual(now.index + 1);
+    seen.add(now.index);
+    last = now;
+  }
+  expect([...seen]).toEqual(steps.map((_, i) => i));
+  // Held open at the bottom, on the day the last wing locked.
+  expect(unfoldAt(0.95)).toEqual(unfoldAt(1));
+  expect(unfoldAt(1).second).toBe(CLIP.seconds);
+  expect(unfoldAt(1).label).toBe(STEPS.at(-1)!.label);
+  expect(unfoldAt(1).day).toBe(steps.at(-1)!.day);
+});
+
+test("the flight's clock only runs forward, from the first measured row to today", () => {
+  const { chapterDay } = flight;
+  let last = 0;
+  for (const [id, day] of Object.entries(chapterDay)) {
+    for (let p = 0; p <= 1.0001; p += 0.05) {
+      expect(day(p), `${id} at ${p.toFixed(2)}`).toBeGreaterThanOrEqual(last);
+      last = day(p);
+    }
+  }
+  expect(chapterDay.journey(0)).toBe(data.transfer[0][0]);
+  expect(chapterDay.journey(1)).toBe(DAYS.arrive);
+  expect(chapterDay.halo(0)).toBe(DAYS.arrive);
+  // Today is reached before the chapter ends, and held.
+  expect(chapterDay.halo(0.82)).toBe(chapterDay.halo(1));
+  expect(chapterDay.halo(1)).toBeGreaterThan(dayOf("2026-11-21T00:00Z"));
+  expect(chapterDay.halo(1)).toBeLessThanOrEqual(flight.lastDay);
+  // The two dots on the way out are the two unfolding steps they name.
+  expect(DAYS.sunshieldOpen).toBe(dayOf("2022-01-04T17:00Z"));
+  expect(DAYS.mirrorOpen).toBe(dayOf("2022-01-08T18:00Z"));
+  expect(DAYS.mirrorOpen).toBeLessThan(DAYS.arrive);
+});
+
+test("the path is drawn in three spans: the way out, the laps flown and the forecast", () => {
+  const { spans } = flight;
+  // The halo rows take over from the transfer rows without doubling back.
+  expect(path[spans.halo]).toEqual(data.halo[0]);
+  expect(path[spans.halo - 1][0]).toBeLessThan(data.halo[0][0]);
+  expect(path[spans.halo - 1]).toHaveLength(4);
+  // The bright line stops where the measurements do.
+  expect(path[spans.measured][0]).toBeLessThanOrEqual(data.measuredUntil);
+  expect(path[spans.measured + 1][0]).toBeGreaterThan(data.measuredUntil);
+  expect(spans.measured).toBeGreaterThan(spans.halo);
+});
+
+test("the live figures follow the clock and stop at the end of the forecast", () => {
+  const ms = Date.parse("2026-11-21T00:00Z");
+  const now = flight.live(ms);
+  expect(now.ms).toBe(ms);
+  expect(now.earthKm).toBe(range(sampleRows(path, dayOf("2026-11-21T00:00Z"))));
+  expect(now.lightSeconds).toBeCloseTo(now.earthKm / 299792.458, 9);
+  expect(now.laps).toBe(9);
+  const late = flight.live(Date.parse("2040-01-01T00:00Z"));
+  expect(late.ms).toBe(flight.msOf(flight.lastDay));
+  expect(late.earthKm).toBe(range(path.at(-1)!));
+});
+
+test("every chapter in the markup has a rail link and a known set", () => {
   const chapters = [...page.matchAll(/<section class="chapter[^"]*" id="([^"]+)" data-stage="([^"]+)">/g)];
   expect(chapters.map((m) => m[1])).toEqual([
     "hero", "telescope", "unfold", "journey", "halo", "sunshield", "mirror", "infrared", "future",
   ]);
-  const handlers = script.slice(script.indexOf("const CHAPTERS = {"), script.indexOf("function before"));
   for (const [, id, stage] of chapters) {
-    expect(handlers, `no scene for chapter ${id}`).toMatch(new RegExp(`\\n    ${id}\\(`));
     expect(["craft", "l2", "nebula"], `${id} names an unknown set`).toContain(stage);
     expect(page, `no rail link for ${id}`).toContain(`<a href="#${id}">`);
   }
@@ -165,6 +232,8 @@ test("every chapter in the markup has a scene, a rail link, and a known set", ()
   // The flight and the dust cloud are their own sets, so the cuts are hidden.
   expect(chapters.find((m) => m[1] === "journey")![2]).toBe("l2");
   expect(chapters.find((m) => m[1] === "infrared")![2]).toBe("nebula");
+  // Each chapter on the flight set has a date to show.
+  expect(Object.keys(flight.chapterDay)).toEqual(chapters.filter((m) => m[2] === "l2").map((m) => m[1]));
   for (const id of ["mission-header", "story", "parts", "guide", "hero-asof"]) {
     expect(page.split(`id="${id}"`).length, id).toBe(2);
   }
@@ -174,18 +243,14 @@ test("the story is readable and its controls work without the 3D scene", () => {
   expect(page).toContain('class="loader mission-loader"');
   expect(page).not.toContain("loader-js-required");
   expect(page).toContain('<div id="canvas-container"></div>');
-  // Live readouts, the part picker and both sliders are wired before WebGL
-  // is asked for.
-  const scene = script.indexOf("createMissionKit(");
-  expect(scene).toBeGreaterThan(0);
-  expect(script.indexOf("setInterval(tickLive, 1000)")).toBeLessThan(scene);
-  expect(script.indexOf("createPartPicker(PARTS)")).toBeLessThan(scene);
-  expect(script.indexOf("$('align-slider').addEventListener")).toBeLessThan(scene);
-  expect(script.indexOf("$('ir-slider').addEventListener")).toBeLessThan(scene);
-  expect(script).toContain("if (kit) startScene(kit);");
   // One line near the top is written only by the script.
   expect(page).toContain('<p class="stat-note" id="hero-asof"></p>');
-  expect(script).toContain("'Worked out for ' + formatDate(ms) + ' from JPL Horizons data'");
+  // Each slider's caption starts as the markup has it and changes on the way.
+  expect(page).toContain(`id="align-out" aria-live="polite">${alignmentCaption(0)}<`);
+  expect(page).toContain(`id="ir-out" aria-live="polite">${infraredCaption(0)}<`);
+  for (const caption of [alignmentCaption, infraredCaption]) {
+    expect(new Set([0, 0.5, 1].map(caption)).size).toBe(3);
+  }
   // The only inline script is the import map, byte for byte Voyager's, so
   // its CSP hash is the one already allowed.
   const inline = (html: string) => [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[0]);
@@ -206,9 +271,8 @@ test("what is drawn rather than measured says so", () => {
   expect(page.match(/Illustration, not a Webb image/g)).toHaveLength(1);
   expect(page).toContain("in space the mirror side is always in shadow");
   // Hot and cold are NASA's two figures, the same everywhere they appear.
-  expect(page.match(/\+85 °C/g)!.length).toBeGreaterThanOrEqual(2);
-  expect(page.match(/−233 °C/g)!.length).toBeGreaterThanOrEqual(2);
-  expect(script).toContain("lerp(85, -233, side)");
+  for (const face of [SHIELD_C.sun, SHIELD_C.mirror]) expect(page.split(celsius(face)).length).toBeGreaterThanOrEqual(3);
+  expect([celsius(SHIELD_C.sun), celsius(SHIELD_C.mirror)]).toEqual(["+85 °C", "−233 °C"]);
   expect(page).toContain("https://science.nasa.gov/");
 });
 
@@ -234,25 +298,31 @@ test("the page carries the head tags and guide the site's page checks ask for", 
   expect(guide).toContain('class="science-sources"');
   const ids = [...page.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
   expect(new Set(ids).size).toBe(ids.length);
-  expect(script).toContain("SPACE.buildNav('missions')");
 });
 
 test("shared modules are imported under the same URLs the Voyager page uses", () => {
-  const imports = (source: string) => {
-    const found = new Map<string, string>();
-    for (const match of source.matchAll(/(?:from\s+|src=|href=)["'](\/[^"'?]+\.(?:js|css))(\?[^"']*)?["']/g)) {
-      found.set(match[1], match[2] ?? "");
+  // Two URLs for one module would run it twice. Each file's imports, by the
+  // path they resolve to.
+  const imports = (...files: string[]) => {
+    const found = new Map<string, Set<string>>();
+    for (const file of files) {
+      for (const match of read(file).matchAll(/(?:from\s+|src=|href=)["']((?:\.{0,2}\/)[^"'?]+\.(?:js|css))(\?[^"']*)?["']/g)) {
+        const url = new URL(match[1], "https://site/" + file).pathname;
+        if (!found.has(url)) found.set(url, new Set());
+        found.get(url)!.add(match[2] ?? "");
+      }
     }
     return found;
   };
-  const mine = new Map([...imports(page), ...imports(script)]);
-  const theirs = new Map([...imports(voyagerPage), ...imports(voyagerScript)]);
+  const mine = imports("missions/webb.html", "missions/webb.js", "missions/webb-mission.js");
+  const theirs = imports("missions/voyager-1.html", "missions/voyager-1.js", "missions/voyager-1-mission.js");
+  for (const [module, versions] of mine) expect([...versions], module).toHaveLength(1);
   for (const module of ["/common.bundle.js", "/mission-orbits.js", "/mission-scene.js", "/mission-story.js", "/chrome.js", "/scene-load-failure.js", "/common.css", "/mission-page.css"]) {
-    expect(mine.get(module), module).toBe(theirs.get(module)!);
+    expect([...mine.get(module)!], module).toEqual([...theirs.get(module)!]);
   }
-  // Nothing relative: the page sits in a folder.
+  expect([...mine.keys()]).toContain("/missions/webb-mission.js");
+  // Nothing relative in the markup: the page sits in a folder.
   expect(page).not.toMatch(/(?:src|href)="\.\.?\//);
-  expect(script).not.toMatch(/from\s+['"]\.\.?\//);
 });
 
 type Gltf = {
@@ -270,7 +340,7 @@ test("the telescope model keeps its named parts, its clip and the phone budget",
   expect(statSync(file).size).toBeLessThan(900 * 1024);
   const json: Gltf = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString("utf8"));
   const names = json.nodes.map((node) => node.name);
-  const parts = [...script.matchAll(/\{ key: '(\w+)', label:/g)].map((m) => m[1]);
+  const parts = PARTS.map((part) => part.key);
   expect(parts).toEqual([
     "PrimaryMirror", "SecondaryMirror", "Sunshield", "InstrumentModule", "Bus", "SolarArray", "Antenna", "MomentumFlap",
   ]);
@@ -286,14 +356,13 @@ test("the telescope model keeps its named parts, its clip and the phone budget",
   expect(json.extensionsRequired).toContain("EXT_meshopt_compression");
   // One clip, and it only ever moves pivots: Meshopt's quantization owns the
   // transform of every mesh node.
-  expect(json.animations.map((a) => a.name)).toEqual(["Deploy"]);
+  expect(json.animations.map((a) => a.name)).toEqual([CLIP.name]);
   expect(json.animations[0].channels.length).toBe(19);
   for (const channel of json.animations[0].channels) {
     const node = json.nodes[channel.target.node];
     expect(node.name).toMatch(/^(Pivot|Scale)_/);
     expect(node.mesh).toBeUndefined();
   }
-  expect(script).toContain("THREE.AnimationClip.findByName(gltf.animations, 'Deploy')");
   expect(readme).toContain("https://science.nasa.gov/3d-resources/james-webb-space-telescope-a/");
   // Stills: the social card is 1200 x 630 and both are light.
   const cover = readFileSync(root + ASSETS + "og-cover.png");
@@ -328,15 +397,16 @@ test("the packed model loads in the vendored three.js and its clip unfolds the t
   loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf: any = await new Promise((resolve, reject) =>
     loader.parse(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength), "", resolve, reject));
-  const clip = THREE.AnimationClip.findByName(gltf.animations, "Deploy");
-  expect(clip.duration).toBeCloseTo(10, 3);
+  const clip = THREE.AnimationClip.findByName(gltf.animations, CLIP.name);
+  expect(clip.duration).toBeCloseTo(CLIP.seconds, 3);
   const mixer = new THREE.AnimationMixer(gltf.scene);
   const action = mixer.clipAction(clip);
   action.setLoop(THREE.LoopOnce);
   action.clampWhenFinished = true;
   action.play();
+  // Posed the way the page poses it: at the second a scroll position asks for.
   const sizeAt = (second: number) => {
-    action.time = second;
+    action.time = Math.min(second, CLIP.seconds - 1e-3);
     mixer.update(0);
     gltf.scene.updateMatrixWorld(true);
     return new THREE.Box3().setFromObject(gltf.scene).getSize(new THREE.Vector3());
@@ -349,7 +419,7 @@ test("the packed model loads in the vendored three.js and its clip unfolds the t
   expect(rest.z).toBeGreaterThan(20);
 
   // Folded for launch it has to fit a rocket: far narrower and shorter.
-  const folded = sizeAt(0);
+  const folded = sizeAt(flight.unfoldAt(0).second);
   expect(folded.x).toBeLessThan(7);
   expect(folded.z).toBeLessThan(11);
   const towerDown = at("Hotspot_PrimaryMirror").y;
@@ -363,7 +433,7 @@ test("the packed model loads in the vendored three.js and its clip unfolds the t
   expect(at("Hotspot_PrimaryMirror").y - towerDown).toBeCloseTo(1.22, 2);
 
   // Open: about 21 m long and 14 m wide.
-  const open = sizeAt(9.999);
+  const open = sizeAt(flight.unfoldAt(1).second);
   expect(open.z).toBeGreaterThan(20.5);
   expect(open.z).toBeLessThan(21.7);
   expect(open.x).toBeGreaterThan(14);
