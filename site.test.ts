@@ -2249,15 +2249,18 @@ test('Haumea and Makemake join the dwarf planets with sourced values', async () 
   expect(pluto.surfaceMap).toBeUndefined();
 
   // Makemake's spin axis is not established. Haumea's equator is its ring
-  // plane, 61° from its orbit: the angle between Hiʻiaka's orbit pole
+  // plane, and its tilt is the angle between Hiʻiaka's orbit pole
   // (Ragozzine & Brown 2009) and Haumea's own (JPL), both J2000 ecliptic.
+  // A tilt past 90° is drawn with retrograde spin, as for Pluto.
   expect(makemake.tiltDeg).toBe(0);
   const rad = (deg: number) => (deg * Math.PI) / 180;
   const poles = Math.acos(
     Math.cos(rad(28.2)) * Math.cos(rad(126.356)) +
     Math.sin(rad(28.2)) * Math.sin(rad(126.356)) * Math.cos(rad(122.0 - 206.766))
   );
-  expect(Math.abs(180 - poles / rad(1) - haumea.tiltDeg)).toBeLessThan(0.5);
+  expect(Math.abs(poles / rad(1) - haumea.tiltDeg)).toBeLessThan(0.5);
+  expect(haumea.retro).toBe(true);
+  expect(pluto.retro).toBe(true);
 
   // Haumea is drawn as its measured ellipsoid at the volume of radiusKm,
   // shortest along the spin axis (Y) and longest along X.
