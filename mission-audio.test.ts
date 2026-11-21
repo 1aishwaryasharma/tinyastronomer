@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { SOUND_KEY, bedLevel, createMissionAudio } from "./public/mission-audio.js";
-import { BEDS, GREETINGS } from "./public/missions/voyager-1-mission.js";
+import { BEDS, GREETINGS, RECORDINGS } from "./public/missions/voyager-1-mission.js";
 
 const root = fileURLToPath(new URL("./public/", import.meta.url));
 const read = (path: string) => readFileSync(root + path, "utf8");
@@ -186,24 +186,36 @@ test("the hum follows the story and is gone below it", () => {
 });
 
 test("every recording the page offers is shipped, small, and credited", () => {
+  const readme = read("assets/missions/voyager-1/README.md");
   const files = readdirSync(root + AUDIO).sort();
-  expect(files).toEqual([...GREETINGS.map((g) => `greeting-${g.key}.mp3`), "plasma-waves.mp3"].sort());
+  const recordings = Object.values(RECORDINGS).flat();
+  expect(files).toEqual([...GREETINGS.map((g) => `greeting-${g.key}.mp3`), ...recordings.map((r) => `${r.key}.mp3`)].sort());
   for (const file of files) expect(statSync(root + AUDIO + file).size, file).toBeLessThan(file.startsWith("greeting") ? 60 * 1024 : 160 * 1024);
-  expect(files.reduce((sum, file) => sum + statSync(root + AUDIO + file).size, 0)).toBeLessThan(420 * 1024);
+  // Each is fetched only when it plays, so this is a ceiling on a visit that hears everything.
+  expect(files.reduce((sum, file) => sum + statSync(root + AUDIO + file).size, 0)).toBeLessThan(760 * 1024);
+  // Every chapter with recordings has its box, and every recording a dated account of what it is.
+  for (const [chapter, list] of Object.entries(RECORDINGS)) {
+    expect(page).toMatch(new RegExp(`id="${chapter}-sounds-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real measurements</span>`));
+    expect(page).toContain(`id="${chapter}-heard"`);
+    expect(page).toContain(`id="${chapter}-sounds"`);
+    for (const recording of list) expect(recording.text, recording.key).toMatch(/\b(19|20)\d\d\b/);
+  }
+  expect(readme).toContain("https://space-audio.org/");
+  expect(readme).toContain("Creative Commons Attribution 4.0");
   // NASA's own translations, word for word apart from one capital.
   expect(GREETINGS.find((g) => g.key === "english")!.said).toBe("Hello from the children of planet Earth.");
   expect(GREETINGS.find((g) => g.key === "hindi")!.said).toBe("Greetings from the inhabitants of this world.");
-  const readme = read("assets/missions/voyager-1/README.md");
   expect(readme).toContain("https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/");
   expect(readme).toContain("PIA17045");
   expect(page).toContain('<span class="clip-credit">NASA/JPL</span>');
   expect(page).toContain('<span class="clip-credit">NASA/JPL-Caltech/University of Iowa</span>');
+  expect(page).toContain('<span class="clip-credit">NASA/University of Iowa</span>');
 });
 
 test("the page says which sounds are real, and ships silent", () => {
   expect(page).toContain('<button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" hidden>Sound off</button>');
   expect(page).toMatch(/id="greetings-box" hidden>\s*<p class="clip-note"><span class="science-kind">Real recordings<\/span>/);
-  expect(page).toMatch(/id="plasma-box" hidden>[\s\S]*?<span class="science-kind">Real measurement<\/span> Not sound/);
+  expect(page).toContain("Not sound, but electric ripples felt by Voyager's antennas and played through a speaker.");
   expect(page).toContain("Space is silent. With Sound on, the quiet hum behind the story is made on your device as scenery, not recorded.");
   expect(page).not.toMatch(/<audio|autoplay/i);
   // Sound starts from a press, so the site-wide ban on autoplay stays.

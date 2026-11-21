@@ -40,6 +40,27 @@ export const GREETINGS = [
   { key: 'zulu', label: 'Zulu', said: 'We greet you, great ones. We wish you longevity.' },
 ];
 
+// What Voyager's plasma wave antennas picked up, by the chapter that plays
+// it: electric waves, not sound, played through a speaker by the University
+// of Iowa team that built the instrument. `key` names audio/<key>.mp3, `text`
+// is what the card says while it plays, and `gain` tames the loud ones.
+export const RECORDINGS = {
+  jupiter: [
+    { key: 'jupiter-lightning', label: 'Lightning', gain: 0.45,
+      text: '<strong>Lightning on Jupiter.</strong> Each falling whistle is the radio crackle of a lightning bolt: the first sign of storms on another planet. March 1979.' },
+    { key: 'jupiter-chorus', label: 'Dawn chorus', gain: 0.4,
+      text: '<strong>Jupiter’s dawn chorus.</strong> Electrons trapped in the planet’s radiation belts make rising chirps, like birds at sunrise. 5 March 1979.' },
+    { key: 'jupiter-bow-shock', label: 'Bow shock', gain: 0.35,
+      text: '<strong>The bow shock.</strong> The hiss turns to a roar where the solar wind slams into Jupiter’s magnetic field, four days before the flyby. 1 March 1979.' },
+  ],
+  edge: [
+    { key: 'termination-shock', label: 'Solar wind slows', gain: 0.5,
+      text: '<strong>15 December 2004.</strong> Ripples in the thin gas just before Voyager crossed the termination shock, where the solar wind suddenly slows. Three hours are squeezed into six seconds.' },
+    { key: 'plasma-waves', label: 'Interstellar space', gain: 0.5,
+      text: '<strong>2012 and 2013.</strong> Ripples in the gas between the stars. Seven months are squeezed into twelve seconds, and the rising pitch means the gas is getting denser: the proof that Voyager had left the Sun’s bubble.' },
+  ],
+};
+
 // The hum under each chapter, as mission-audio.js takes it: pitch and filter
 // in hertz, `air` the hiss of wind, `swell` how hard the chapter's event
 // presses as the reader scrolls. The launch roars and falls away, each giant

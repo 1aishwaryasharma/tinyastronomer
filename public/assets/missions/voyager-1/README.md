@@ -170,6 +170,23 @@ changed but length, level and encoding (mono MP3).
   Credit: NASA/JPL-Caltech/University of Iowa. It is plasma-wave data from
   October 2012 to May 2013 played at its own frequencies with the time
   compressed, not a sound recording, and the page says so.
+- Four more excerpts of what Voyager 1's plasma wave instrument picked up,
+  from the University of Iowa's Radio and Plasma Wave Group, which built it:
+  <https://space-audio.org/>. All four are Voyager 1's own data.
+
+  | File | Source file | What and when | SHA-256 of the source |
+  | --- | --- | --- | --- |
+  | `jupiter-lightning.mp3` | `https://space-audio.org/sounds/JupiterWhistlers/jwhist.mp3` | Whistlers from lightning, Jupiter flyby, March 1979 | `1ab57a4d6e1ec859107c19abe7b8d3bf27c0f31ba60e2639ede04fb8adf8acba` |
+  | `jupiter-chorus.mp3` | `https://space-audio.org/sounds/JupiterChorus/jov-chor.mp3` | Chorus in the radiation belts, 5 March 1979 | `122c90b25b4806364f9411c56c3a298d674841a124b0dafb9e25a253beb06505` |
+  | `jupiter-bow-shock.mp3` | `https://space-audio.org/sounds/JupiterBowShock/jovbow.mp3` | Bow shock crossing on approach, 1 March 1979 | `b5a2801d398bd101cfc62cb8deffc84fe8c41d5295f413d1a1e1fa8219df8683` |
+  | `termination-shock.mp3` | `https://space.physics.uiowa.edu/space-audio/voyager/termination-shock/vgertermshock4.wav` | Plasma oscillations before the termination shock, 18:00 to 21:00 on 15 December 2004, compressed to six seconds | `4e0f2fe9158be96d1e492bb7eb231730d172373f11235171827a033d0073c15c` |
+
+  Licence: Creative Commons Attribution 4.0 International
+  (<https://space-audio.org/citation.html>), which asks for the credit
+  "Original space audio recordings provided courtesy of NASA and The
+  University of Iowa." The page credits them beside each set of buttons and
+  links to space-audio.org in its sources. These too are electric waves played
+  through a speaker, not sound.
 
 NASA material is generally not copyrighted and may be used for education with
 NASA acknowledged as the source and no suggestion of endorsement
@@ -177,11 +194,11 @@ NASA acknowledged as the source and no suggestion of endorsement
 Record's music is a different matter: it belongs to its performers and
 publishers, and none of it is used here.
 
-Rebuild, with ffmpeg on PATH and both files downloaded outside the repository:
+Rebuild, with ffmpeg on PATH and the six source files downloaded into one
+folder outside the repository, under the names the script lists:
 
-    bun tools/build-voyager-audio.ts /tmp/greetings.mp3 /tmp/PIA17045.mp4
+    bun tools/build-voyager-audio.ts /tmp/voyager-audio
 
-The eleven files total about 385 KB. None is fetched until its button is
-pressed, or, for the plasma waves, until a reader with Sound on reaches 2012.
-The hum behind the story is not a file: `mission-audio.js` makes it in the
-browser.
+The fifteen files total about 690 KB. None is fetched until it plays: on its
+button, or, with Sound on, when the story reaches its moment. The hum behind
+the story is not a file: `mission-audio.js` makes it in the browser.

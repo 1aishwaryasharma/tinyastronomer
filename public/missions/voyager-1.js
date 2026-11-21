@@ -10,7 +10,7 @@ import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/
 import { createMissionKit } from '/mission-scene.js?v=20261121-2';
 import { createClipButtons, createMissionAudio } from '/mission-audio.js?v=20261121-4';
 import { createChart, createPartPicker, createStory } from '/mission-story.js?v=20261121-2';
-import { BEDS, GREETINGS, PARTS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-3';
+import { BEDS, GREETINGS, PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-5';
 
 const ASSETS = '/assets/missions/voyager-1/';
 const $ = (id) => document.getElementById(id);
@@ -51,19 +51,30 @@ const picker = createPartPicker(PARTS);
 /* ──── Sound: off until asked for, and it works without the 3D scene ──── */
 const sound = createMissionAudio({
   beds: BEDS,
-  clips: {
-    plasma: { url: ASSETS + 'audio/plasma-waves.mp3', gain: 0.5 },
-    ...Object.fromEntries(GREETINGS.map((g) => [g.key, { url: ASSETS + 'audio/greeting-' + g.key + '.mp3' }])),
-  },
+  clips: Object.fromEntries([
+    ...Object.values(RECORDINGS).flat().map((r) => [r.key, { url: ASSETS + 'audio/' + r.key + '.mp3', gain: r.gain }]),
+    ...GREETINGS.map((g) => [g.key, { url: ASSETS + 'audio/greeting-' + g.key + '.mp3' }]),
+  ]),
   button: $('sound-toggle'),
   start: $('sound-start'),
 });
-$('greetings-box').hidden = $('plasma-box').hidden = !sound.supported;
-createClipButtons($('plasma'), [{ key: 'plasma', label: 'Hear interstellar space' }], sound);
 const showGreeting = (greeting) => {
   $('greeting-out').innerHTML = '“' + greeting.said + '” <strong>' + greeting.label + '</strong>';
 };
+$('greetings-box').hidden = !sound.supported;
 createClipButtons($('greetings'), GREETINGS, sound, showGreeting);
+// Each chapter's recordings, and what its card says while one plays.
+const heard = new Map();
+for (const [chapter, recordings] of Object.entries(RECORDINGS)) {
+  const show = (recording) => { $(chapter + '-heard').innerHTML = recording.text; };
+  $(chapter + '-sounds-box').hidden = !sound.supported;
+  createClipButtons($(chapter + '-sounds'), recordings, sound, show);
+  for (const recording of recordings) heard.set(recording.key, () => show(recording));
+}
+// Play a recording on the story's cue, with its words on the card.
+function cue(key) {
+  if (sound.cue(key)) heard.get(key)();
+}
 // With sound on, the record plays itself once when the reader reaches it:
 // one greeting after another, until they pick one or scroll on.
 async function playRecord() {
@@ -352,6 +363,7 @@ function buildFlyby(kit, cfg) {
       kit.place('fly-voyager', 'Voyager 1', here, { cls: 'is-craft' });
       kit.place('fly-moon', cfg.moon.name, moon.position);
       if (cfg.chart) cfg.chart(day);
+      if (cfg.cues) for (const [from, key] of cfg.cues) if (p >= from) cue(key);
     },
   };
 }
@@ -448,7 +460,8 @@ function systemChapters(kit, system) {
         place('voyager', 'Voyager 1', voyager, VOYAGER);
         place('sun', 'Sun & planets', ORIGIN, { cls: 'is-dim', dx: 12, dy: 14 });
         system.labelMilestones((m) => m.day <= day && m.day > DAYS.portrait);
-        if (day >= DAYS.pause) sound.cue('plasma');
+        if (day >= DAYS.pause) cue('plasma-waves');
+        else if (day >= DAYS.shock) cue('termination-shock');
       },
     },
     lightday: {
@@ -472,6 +485,8 @@ function startScene(kit) {
   const jupiter = buildFlyby(kit, {
     key: 'jupiter', name: 'Jupiter', radiusKm: 71492, color: 0xc9a27e, pole: [268.057, 64.495], periodDays: 0.41354,
     path: data.jupiter.path, closestDay: DAYS.jupiter, far: 46, near: 24, chart: drawJupiterChart,
+    // Both are from the pass itself.
+    cues: [[0.62, 'jupiter-chorus'], [0.3, 'jupiter-lightning']],
     moon: { name: 'Io', rows: data.jupiter.io, color: 0xf2d66b },
   });
   const saturn = buildFlyby(kit, {
