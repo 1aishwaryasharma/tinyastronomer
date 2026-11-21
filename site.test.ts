@@ -736,6 +736,19 @@ test('a notice that is already up is kept when the model fails too', () => {
   expect(timers).toBe(0);
 });
 
+test('a later failure replaces the passing model notice, and the model notice timing out does not take it down', () => {
+  const p = sceneNoticePage(false);
+  let clear: (() => void) | null = null;
+  failingModelLoad(p, (fn) => { clear = fn; })('/m.glb', () => {});
+  expect(p.text.textContent).toContain('3D model unavailable');
+  expect(p.showSceneNotice('The 3D view stopped.', { reload: true })).not.toBeNull();
+  expect(p.text.textContent).toBe('The 3D view stopped.');
+  expect(p.buttons).toHaveLength(1);
+  clear!();
+  expect(p.text.textContent).toBe('The 3D view stopped.');
+  expect(p.classes.has('loader-failed')).toBe(true);
+});
+
 test('adaptive quality follows the preview container and its expansion into a study', () => {
   const common = readFileSync('common.js', 'utf8');
   const governor = common.slice(

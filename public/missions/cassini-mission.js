@@ -2,7 +2,7 @@
    tests can hold it to JPL Horizons and to the spacecraft model directly. */
 import {
   AU_KM, LIGHT_KM_PER_SEC, clamp01, lerp, missionCalendar, planetPosition, sampleRows, smooth,
-} from '../mission-orbits.js?v=20261121-1';
+} from '../mission-orbits.js?v=20261121-2';
 
 // `key` names a node in cassini.glb, with a `Hotspot_<key>` anchor beside it.
 export const PARTS = [

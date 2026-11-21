@@ -46,14 +46,14 @@
    State, read-only: kit.time, kit.stage, kit.wide, kit.reduced
    kit.run({ sets, chapters, studio, frame, onChapter })   start the story; see below */
 import * as THREE from 'three';
-import { SPACE } from './common.bundle.js?v=20261121-1';
+import { SPACE } from './common.bundle.js?v=20261121-2';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
-  clamp01, equatorialToEcliptic, indexAt, lerp, planetOrbit, planetPosition,
-} from './mission-orbits.js?v=20261121-1';
-import { createStory, follow, yieldingLabels } from './mission-story.js?v=20261121-2';
+  approach, clamp01, equatorialToEcliptic, indexAt, lerp, planetOrbit, planetPosition,
+} from './mission-orbits.js?v=20261121-2';
+import { createStory, follow, yieldingLabels } from './mission-story.js?v=20261121-3';
 import { createPlanetModelLoader } from './planet-models.js?v=20261121-1';
 
 const FOV = 35;
@@ -250,7 +250,7 @@ export function createMissionKit(sceneOptions = {}) {
       console.warn('Model unavailable: ' + url, error);
       // The story reads without the spacecraft, so this is a passing notice
       // in the loader chip, not a failure of the page.
-      const clear = SPACE.showSceneNotice('3D model unavailable. The story carries on.');
+      const clear = SPACE.showSceneNotice('3D model unavailable. The story carries on.', { passing: true });
       if (clear) setTimeout(clear, MODEL_NOTICE_MS);
       hideLoader();
     });
@@ -319,7 +319,7 @@ export function createMissionKit(sceneOptions = {}) {
   function place(key, text, world, { cls = '', dx = 10, dy = -6, alpha = 1, rank = null } = {}) {
     let label = labels.get(key);
     if (!label) {
-      label = { el: document.createElement('span'), world: new THREE.Vector3(), width: 0, height: 0, fade: 1, wanted: false };
+      label = { el: document.createElement('span'), world: new THREE.Vector3(), width: 0, height: 0, x: 0, y: 0, fade: 1, wanted: false };
       labelLayer.appendChild(label.el);
       labels.set(key, label);
     }
@@ -346,7 +346,7 @@ export function createMissionKit(sceneOptions = {}) {
     const gives = yieldingLabels(shown.map((l) => ({ x: l.x, y: l.y, w: l.width, h: l.height, rank: l.rank })));
     shown.forEach((label, i) => {
       const target = gives.has(i) ? 0 : 1;
-      label.fade = jump ? target : target > label.fade ? Math.min(target, label.fade + dt * LABEL_FADE) : Math.max(target, label.fade - dt * LABEL_FADE);
+      label.fade = jump ? target : approach(label.fade, target, dt * LABEL_FADE);
       label.el.style.opacity = label.alpha * label.fade;
       label.el.style.transform = 'translate(' + label.x.toFixed(1) + 'px,' + label.y.toFixed(1) + 'px)';
     });

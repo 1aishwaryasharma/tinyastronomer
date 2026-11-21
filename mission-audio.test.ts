@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { SOUND_KEY, bedLevel, createMissionAudio } from "./public/mission-audio.js";
-import { BEDS, GREETINGS, RECORDINGS } from "./public/missions/voyager-1-mission.js";
+import { SOUND_KEY, bedLevel, createMissionAudio, mountMissionSound } from "./public/mission-audio.js";
+import { BEDS, RECORDINGS, createFlight } from "./public/missions/voyager-1-mission.js";
 
 const root = fileURLToPath(new URL("./public/", import.meta.url));
 const read = (path: string) => readFileSync(root + path, "utf8");
@@ -10,15 +10,19 @@ const page = read("missions/voyager-1.html");
 const AUDIO = "assets/missions/voyager-1/audio/";
 
 // A browser with just enough Web Audio to follow what the page asks of it.
-function browser({ stored = null as string | null, hasAudio = true } = {}) {
+// `gesture` is whether the browser currently counts the reader as having
+// touched the page: without it a context stays suspended, as on a phone
+// between a finger landing and lifting.
+function browser({ stored = null as string | null, hasAudio = true, refuses = false } = {}) {
+  const policy = { gesture: true };
   const contexts: any[] = [], fetched: string[] = [], sources: any[] = [];
   const listeners = new Map<string, Function>();
   const param = () => ({ value: 0, target: 0, setTargetAtTime(v: number) { this.target = v; }, setValueAtTime(v: number) { this.target = this.value = v; } });
   const node = (extra = {}) => ({ connect: (to: unknown) => to, start() {}, stop() {}, gain: param(), frequency: param(), Q: param(), ...extra });
   class AudioContext {
     state = "suspended"; currentTime = 0; sampleRate = 8000; destination = {}; onstatechange = () => {};
-    constructor() { contexts.push(this); }
-    resume() { this.state = "running"; this.onstatechange(); }
+    constructor() { if (refuses) throw new Error("NotSupportedError"); contexts.push(this); }
+    resume() { if (!policy.gesture) return; this.state = "running"; this.onstatechange(); }
     suspend() { this.state = "suspended"; this.onstatechange(); }
     createGain() { return node(); }
     createBiquadFilter() { return node(); }
@@ -29,8 +33,8 @@ function browser({ stored = null as string | null, hasAudio = true } = {}) {
   }
   const store = new Map<string, string>(stored ? [[SOUND_KEY, stored]] : []);
   const button = {
-    hidden: true, textContent: "Sound off", pressed: "false", waiting: "false", click: () => {},
-    setAttribute(name: string, value: string) { if (name === "aria-pressed") this.pressed = value; else this.waiting = value; },
+    hidden: true, textContent: "Sound off", pressed: "false", waiting: "false", name: "", click: () => {},
+    setAttribute(name: string, value: string) { if (name === "aria-pressed") this.pressed = value; else if (name === "aria-label") this.name = value; else this.waiting = value; },
     addEventListener(_: string, handler: () => void) { this.click = handler; },
   };
   const env = {
@@ -43,7 +47,7 @@ function browser({ stored = null as string | null, hasAudio = true } = {}) {
   };
   // The hum's hiss is a looping source too; these are the recordings.
   const played = () => sources.filter((source) => source.buffer?.bytes);
-  return { env, button, contexts, fetched, played, store, listeners };
+  return { env, button, contexts, fetched, played, store, listeners, policy };
 }
 const clips = { hello: { url: "/hello.mp3" }, other: { url: "/other.mp3" }, gone: { url: "/missing.mp3" } };
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -71,7 +75,7 @@ test("a remembered 'on' waits for the first touch of the visit", () => {
   createMissionAudio({ beds: BEDS, clips, button, env });
   expect(contexts).toHaveLength(0);
   expect(button).toMatchObject({ textContent: "Tap for sound", pressed: "true", waiting: "true" });
-  expect([...listeners.keys()].sort()).toEqual(["keydown", "pointerdown"]);
+  expect([...listeners.keys()].sort()).toEqual(["keydown", "pointerdown", "pointerup"]);
   listeners.get("pointerdown")!({ target: {} });
   expect(contexts).toHaveLength(1);
   expect(button).toMatchObject({ textContent: "Sound on", waiting: "false" });
@@ -115,7 +119,7 @@ test("a recording plays on its button whatever the switch says, one at a time", 
   const { env, button, fetched, played } = browser();
   const audio = createMissionAudio({ beds: BEDS, clips, button, env });
   const heard: (string | null)[] = [];
-  audio.onClip = (key: string | null) => heard.push(key);
+  audio.listen((key: string | null) => heard.push(key));
   const first = audio.play("hello");
   expect(audio.playing).toBe("hello");
   expect(audio.on).toBe(false);
@@ -140,7 +144,7 @@ test("a recording plays on its button whatever the switch says, one at a time", 
   expect(audio.playing).toBe(null);
 });
 
-test("the story cues a recording once, and only with sound on", async () => {
+test("a cue plays only with sound on, and never over another recording", async () => {
   const { env, button, played } = browser();
   const audio = createMissionAudio({ beds: BEDS, clips, button, env });
   expect(audio.cue("hello")).toBe(null);
@@ -148,13 +152,152 @@ test("the story cues a recording once, and only with sound on", async () => {
   button.click();
   const cued = audio.cue("hello");
   expect(audio.playing).toBe("hello");
-  // A cue never talks over a clip that is playing.
   expect(audio.cue("other")).toBe(null);
   await settle();
   played()[0].onended();
   expect(await cued).toBe("ended");
-  expect(audio.cue("hello")).toBe(null);
-  expect(audio.playing).toBe(null);
+});
+
+test("a touch starts remembered sound when the finger lifts, not when it lands", () => {
+  const { env, button, contexts, listeners, policy } = browser({ stored: "on" });
+  createMissionAudio({ beds: BEDS, clips, button, env });
+  policy.gesture = false;
+  listeners.get("pointerdown")!({ target: {} });
+  expect(contexts[0].state).toBe("suspended");
+  expect(button.textContent).toBe("Tap for sound");
+  // Still listening: the same touch ending is what the browser accepts.
+  policy.gesture = true;
+  listeners.get("pointerup")!({ target: {} });
+  expect(contexts[0].state).toBe("running");
+  expect(button.textContent).toBe("Sound on");
+  expect(listeners.size).toBe(0);
+});
+
+test("sound off stops a recording too, and a browser that refuses audio leaves the switch usable", async () => {
+  const { env, button, played } = browser();
+  const audio = createMissionAudio({ beds: BEDS, clips, button, env });
+  button.click();
+  const cued = audio.cue("hello");
+  await settle();
+  button.click();
+  expect(await cued).toBe("stopped");
+  expect(played()[0].stopped).toBe(true);
+
+  const refused = browser({ refuses: true });
+  const silent = createMissionAudio({ beds: BEDS, clips, button: refused.button, env: refused.env });
+  refused.button.click();
+  expect(refused.button).toMatchObject({ textContent: "Sound off", pressed: "false" });
+  expect(refused.store.get(SOUND_KEY)).toBe("off");
+  expect(await silent.play("hello")).toBe("failed");
+
+  // Remembered as on, but the context never runs: the second press turns it off.
+  const stuck = browser({ stored: "on" });
+  createMissionAudio({ beds: BEDS, clips, button: stuck.button, env: stuck.env });
+  stuck.policy.gesture = false;
+  stuck.button.click();
+  expect(stuck.button.textContent).toBe("Tap for sound");
+  stuck.button.click();
+  expect(stuck.button.textContent).toBe("Sound off");
+});
+
+test("the hum is not built for a reader who only plays a recording", async () => {
+  const { env, button, contexts } = browser();
+  const made: string[] = [];
+  const audio = createMissionAudio({ beds: BEDS, clips, button, env });
+  audio.play("hello");
+  const context = contexts[0];
+  context.createOscillator = () => { made.push("oscillator"); return { connect: (to: unknown) => to, start() {}, frequency: { setTargetAtTime() {}, setValueAtTime() {} }, type: "" }; };
+  await settle();
+  expect(made).toHaveLength(0);
+  audio.follow({ id: "hero", progress: 0, dim: 0, past: false });
+  button.click();
+  expect(made.length).toBeGreaterThan(0);
+  // A chapter with no bed is silent, not an error.
+  audio.follow({ id: "jupiter", progress: 0.5, dim: 0, past: false });
+  audio.follow({ id: "nowhere", progress: 0.5, dim: 0, past: false });
+});
+
+// The page around the player: just enough DOM for mountMissionSound.
+function page_(env: ReturnType<typeof browser>["env"], button: unknown) {
+  const nodes = new Map<string, any>([["sound-toggle", button]]);
+  const element = () => ({
+    hidden: true, innerHTML: "", textContent: "", pressed: "false", children: [] as any[], click: () => {},
+    setAttribute(_: string, value: string) { this.pressed = value; },
+    addEventListener(_: string, handler: () => void) { this.click = handler; },
+    appendChild(child: unknown) { this.children.push(child); },
+  });
+  Object.assign(env.document, {
+    createElement: element,
+    getElementById: (id: string) => { if (!nodes.has(id) && id !== "sound-start") nodes.set(id, element()); return nodes.get(id) ?? null; },
+  });
+  return nodes;
+}
+const story = { hall: [{ key: "a", label: "A", text: "<b>A</b>", at: 0.2 }, { key: "b", label: "B", text: "B", at: 0.2 }, { key: "c", label: "C", text: "C" }], yard: [{ key: "d", label: "D", text: "D", at: 0.5 }] };
+const at = (id: string, progress: number) => ({ id, progress, dim: 0, past: false });
+
+test("the story plays a chapter's recordings in order, one at a time, once", async () => {
+  const { env, button, fetched, played } = browser();
+  const nodes = page_(env, button);
+  const sound = mountMissionSound({ beds: {}, recordings: story, assets: "/assets/x/", env });
+  expect(nodes.get("hall-sounds-box").hidden).toBe(false);
+  expect(nodes.get("hall-sounds").children.map((b: any) => b.textContent)).toEqual(["A", "B", "C"]);
+  // Nothing with sound off, however far the reader scrolls.
+  sound.follow(at("hall", 0.9));
+  await settle();
+  expect(fetched).toEqual([]);
+  button.click();
+  sound.follow(at("hall", 0.1));
+  expect(fetched).toEqual([]);
+  // Arriving late still starts with the first.
+  sound.follow(at("hall", 0.9));
+  await settle();
+  expect(fetched).toEqual(["/assets/x/audio/a.mp3"]);
+  expect(nodes.get("hall-heard").innerHTML).toBe("<b>A</b>");
+  expect(nodes.get("hall-sounds").children.map((b: any) => b.pressed)).toEqual(["true", "false", "false"]);
+  // The next follows without another scroll; the one with no `at` never does.
+  played()[0].onended();
+  await settle();
+  expect(fetched).toEqual(["/assets/x/audio/a.mp3", "/assets/x/audio/b.mp3"]);
+  expect(nodes.get("hall-heard").innerHTML).toBe("B");
+  played()[1].onended();
+  await settle();
+  sound.follow(at("hall", 0.95));
+  await settle();
+  expect(fetched).toHaveLength(2);
+  // Each plays once per visit.
+  sound.follow(at("yard", 0.1));
+  sound.follow(at("hall", 0.9));
+  await settle();
+  expect(fetched).toHaveLength(2);
+});
+
+test("leaving a chapter stops its recording, and a press takes the chapter over from the story", async () => {
+  const { env, button, fetched, played } = browser();
+  const nodes = page_(env, button);
+  const sound = mountMissionSound({ beds: {}, recordings: story, assets: "/assets/x/", env });
+  button.click();
+  sound.follow(at("yard", 0.6));
+  await settle();
+  sound.follow(at("hall", 0.1));
+  expect(played()[0].stopped).toBe(true);
+  // The reader picks C before the story reaches A: A and B are theirs to press now.
+  nodes.get("hall-sounds").children[2].click();
+  await settle();
+  expect(nodes.get("hall-heard").innerHTML).toBe("C");
+  played()[1].onended();
+  await settle();
+  sound.follow(at("hall", 0.9));
+  await settle();
+  expect(fetched).toEqual(["/assets/x/audio/d.mp3", "/assets/x/audio/c.mp3"]);
+});
+
+test("without Web Audio the page keeps its recordings hidden", () => {
+  const { env, button } = browser({ hasAudio: false });
+  const nodes = page_(env, button);
+  const sound = mountMissionSound({ beds: {}, recordings: story, assets: "/assets/x/", env });
+  expect(sound.supported).toBe(false);
+  expect(nodes.has("hall-sounds-box")).toBe(false);
+  sound.follow(at("hall", 0.9));
 });
 
 test("the hum follows the story and is gone below it", () => {
@@ -189,22 +332,30 @@ test("every recording the page offers is shipped, small, and credited", () => {
   const readme = read("assets/missions/voyager-1/README.md");
   const files = readdirSync(root + AUDIO).sort();
   const recordings = Object.values(RECORDINGS).flat();
-  expect(files).toEqual([...GREETINGS.map((g) => `greeting-${g.key}.mp3`), ...recordings.map((r) => `${r.key}.mp3`)].sort());
+  expect(files).toEqual(recordings.map((r) => `${r.key}.mp3`).sort());
+  expect(RECORDINGS.record).toHaveLength(10);
   for (const file of files) expect(statSync(root + AUDIO + file).size, file).toBeLessThan(file.startsWith("greeting") ? 60 * 1024 : 160 * 1024);
   // Each is fetched only when it plays, so this is a ceiling on a visit that hears everything.
   expect(files.reduce((sum, file) => sum + statSync(root + AUDIO + file).size, 0)).toBeLessThan(760 * 1024);
   // Every chapter with recordings has its box, and every recording a dated account of what it is.
   for (const [chapter, list] of Object.entries(RECORDINGS)) {
-    expect(page).toMatch(new RegExp(`id="${chapter}-sounds-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real measurements</span>`));
+    expect(page).toMatch(new RegExp(`id="${chapter}-sounds-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real (measurements|recordings)</span>`));
     expect(page).toContain(`id="${chapter}-heard"`);
     expect(page).toContain(`id="${chapter}-sounds"`);
-    for (const recording of list) expect(recording.text, recording.key).toMatch(/\b(19|20)\d\d\b/);
+    if (chapter !== "record") for (const recording of list) expect(recording.text, recording.key).toMatch(/\b(19|20)\d\d\b/);
+  }
+  // The story plays the two crossings where its chapter reaches their dates.
+  const flight = createFlight(JSON.parse(read("assets/missions/voyager-1/trajectory.json")));
+  const [shock, pause] = RECORDINGS.edge;
+  for (const [recording, day] of [[shock, flight.DAYS.shock], [pause, flight.DAYS.pause]] as const) {
+    expect(flight.chapterDay.edge(recording.at!) - day, recording.key).toBeGreaterThanOrEqual(0);
+    expect(flight.chapterDay.edge(recording.at!) - day, recording.key).toBeLessThan(120);
   }
   expect(readme).toContain("https://space-audio.org/");
   expect(readme).toContain("Creative Commons Attribution 4.0");
   // NASA's own translations, word for word apart from one capital.
-  expect(GREETINGS.find((g) => g.key === "english")!.said).toBe("Hello from the children of planet Earth.");
-  expect(GREETINGS.find((g) => g.key === "hindi")!.said).toBe("Greetings from the inhabitants of this world.");
+  expect(RECORDINGS.record[0]).toMatchObject({ key: "greeting-english", text: "“Hello from the children of planet Earth.” <strong>English</strong>" });
+  expect(RECORDINGS.record.find((r) => r.key === "greeting-hindi")!.text).toContain("Greetings from the inhabitants of this world.");
   expect(readme).toContain("https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/");
   expect(readme).toContain("PIA17045");
   expect(page).toContain('<span class="clip-credit">NASA/JPL</span>');
@@ -214,7 +365,6 @@ test("every recording the page offers is shipped, small, and credited", () => {
 
 test("the page says which sounds are real, and ships silent", () => {
   expect(page).toContain('<button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" hidden>Sound off</button>');
-  expect(page).toMatch(/id="greetings-box" hidden>\s*<p class="clip-note"><span class="science-kind">Real recordings<\/span>/);
   expect(page).toContain("Not sound, but electric ripples felt by Voyager's antennas and played through a speaker.");
   expect(page).toContain("Space is silent. With Sound on, the quiet hum behind the story is made on your device as scenery, not recorded.");
   expect(page).not.toMatch(/<audio|autoplay/i);

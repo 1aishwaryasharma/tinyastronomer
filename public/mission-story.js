@@ -1,7 +1,10 @@
-/* The parts of a mission page that work without WebGL.
+/* The parts of a mission page that work without WebGL, and the scene's
+   arithmetic that the tests can run without it.
 
      storyState(chapters, scrollY, viewportHeight)   pure scroll arithmetic
      createStory(root, { onChapter })                the page's chapters, measured
+     followStory(root, onState)                      the story's state on every scroll,
+                                                     for a page with no 3D scene to drive it
      follow(dt, jump)                                the camera's easing
      yieldingLabels(boxes)                           which of a frame's labels give way
      createPartPicker(parts)                         the spacecraft-parts buttons
@@ -15,7 +18,7 @@
    runs from 0 to 1 across the part of it that is not dimmed, so nothing it
    shows happens in the dark. */
 
-import { clamp01, sampleRows, smooth } from './mission-orbits.js?v=20261121-1';
+import { clamp01, sampleRows, smooth } from './mission-orbits.js?v=20261121-2';
 
 // Pure: `chapters` are { top, height, stage } in document pixels.
 export function storyState(chapters, scrollY, viewportHeight) {
@@ -76,6 +79,15 @@ export function createStory(root, { onChapter } = {}) {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
 
   return { chapters, measure, read };
+}
+
+// For a page whose 3D scene could not start: nothing draws frames, so read
+// the story on each scroll instead. The chapter rail keeps working too.
+export function followStory(root, onState) {
+  const story = createStory(root);
+  const read = () => onState(story.read());
+  addEventListener('scroll', read, { passive: true });
+  read();
 }
 
 // The share of the way to its target the camera covers in a frame `dt`

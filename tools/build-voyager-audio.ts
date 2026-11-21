@@ -19,7 +19,7 @@
 import { mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GREETINGS, RECORDINGS } from "../public/missions/voyager-1-mission.js";
+import { RECORDINGS } from "../public/missions/voyager-1-mission.js";
 
 const dir = process.argv[2];
 if (!dir) throw new Error("usage: bun tools/build-voyager-audio.ts DIR");
@@ -35,22 +35,21 @@ const SOURCES = {
   terminationShock: "vgertermshock4.wav",
 };
 
-// Seconds into the greetings track, in the order they are on the record.
-const GREETING_CUTS: Record<string, [number, number]> = {
-  russian: [22.55, 24.7],
-  arabic: [32.5, 37.86],
-  french: [41.99, 43.16],
-  spanish: [50.64, 52.2],
-  bengali: [68.51, 70.61],
-  japanese: [105.28, 106.82],
-  hindi: [108.17, 110.8],
-  zulu: [120.2, 124.57],
-  mandarin: [149.46, 154.18],
-  english: [258.61, 261.02],
-};
-// The interstellar soundtrack plays the same twelve seconds twice; the bow
-// shock excerpt starts in the quiet solar wind so the crossing can be heard.
-const RECORDING_CUTS: Record<string, [keyof typeof SOURCES, number, number]> = {
+// Source and seconds into it. The greetings are in the order they are on the
+// record. The interstellar soundtrack plays the same twelve seconds twice;
+// the bow shock excerpt starts in the quiet solar wind so the crossing can be
+// heard.
+const CUTS: Record<string, [keyof typeof SOURCES, number, number]> = {
+  "greeting-russian": ["greetings", 22.55, 24.7],
+  "greeting-arabic": ["greetings", 32.5, 37.86],
+  "greeting-french": ["greetings", 41.99, 43.16],
+  "greeting-spanish": ["greetings", 50.64, 52.2],
+  "greeting-bengali": ["greetings", 68.51, 70.61],
+  "greeting-japanese": ["greetings", 105.28, 106.82],
+  "greeting-hindi": ["greetings", 108.17, 110.8],
+  "greeting-zulu": ["greetings", 120.2, 124.57],
+  "greeting-mandarin": ["greetings", 149.46, 154.18],
+  "greeting-english": ["greetings", 258.61, 261.02],
   "jupiter-lightning": ["whistlers", 3, 12],
   "jupiter-chorus": ["chorus", 28, 40],
   "jupiter-bow-shock": ["bowShock", 21.5, 33],
@@ -79,12 +78,10 @@ function cut(source: keyof typeof SOURCES, from: number, to: number, name: strin
   console.log(name.padEnd(26), (statSync(out + name).size / 1024).toFixed(1) + " KB", length.toFixed(2) + " s");
 }
 
-for (const { key } of GREETINGS) {
-  if (!GREETING_CUTS[key]) throw new Error("No cut times for the greeting in " + key);
-  cut("greetings", ...GREETING_CUTS[key], `greeting-${key}.mp3`, 64, PAD);
-}
 for (const { key } of Object.values(RECORDINGS).flat()) {
-  if (!RECORDING_CUTS[key]) throw new Error("No cut times for " + key);
-  // The Iowa files hold nothing above 5.5 kHz, and the interstellar tone sits near 2.5 kHz.
-  cut(...RECORDING_CUTS[key], `${key}.mp3`, key === "plasma-waves" ? 96 : 64);
+  if (!CUTS[key]) throw new Error("No cut times for " + key);
+  const [source, from, to] = CUTS[key];
+  // Speech is cut with a little air around it. The Iowa files hold nothing
+  // above 5.5 kHz; the interstellar tone sits near 2.5 kHz and gets more bits.
+  cut(source, from, to, `${key}.mp3`, key === "plasma-waves" ? 96 : 64, source === "greetings" ? PAD : 0);
 }

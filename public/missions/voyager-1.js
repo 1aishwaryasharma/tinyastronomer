@@ -5,12 +5,12 @@
    Scroll position picks the chapter and its progress (mission-story.js);
    each chapter turns progress into a mission date and a camera pose. Every
    position Voyager takes comes from trajectory.json (JPL Horizons). */
-import { SPACE } from '/common.bundle.js?v=20261121-1';
-import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-1';
-import { createMissionKit } from '/mission-scene.js?v=20261121-2';
-import { createClipButtons, createMissionAudio } from '/mission-audio.js?v=20261121-4';
-import { createChart, createPartPicker, createStory } from '/mission-story.js?v=20261121-2';
-import { BEDS, GREETINGS, PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-5';
+import { SPACE } from '/common.bundle.js?v=20261121-2';
+import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-2';
+import { createMissionKit } from '/mission-scene.js?v=20261121-3';
+import { mountMissionSound } from '/mission-audio.js?v=20261121-5';
+import { createChart, createPartPicker, followStory } from '/mission-story.js?v=20261121-3';
+import { BEDS, PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-6';
 
 const ASSETS = '/assets/missions/voyager-1/';
 const $ = (id) => document.getElementById(id);
@@ -48,61 +48,16 @@ $('hello-btn').addEventListener('click', () => {
 
 const picker = createPartPicker(PARTS);
 
-/* ──── Sound: off until asked for, and it works without the 3D scene ──── */
-const sound = createMissionAudio({
-  beds: BEDS,
-  clips: Object.fromEntries([
-    ...Object.values(RECORDINGS).flat().map((r) => [r.key, { url: ASSETS + 'audio/' + r.key + '.mp3', gain: r.gain }]),
-    ...GREETINGS.map((g) => [g.key, { url: ASSETS + 'audio/greeting-' + g.key + '.mp3' }]),
-  ]),
-  button: $('sound-toggle'),
-  start: $('sound-start'),
-});
-const showGreeting = (greeting) => {
-  $('greeting-out').innerHTML = '“' + greeting.said + '” <strong>' + greeting.label + '</strong>';
-};
-$('greetings-box').hidden = !sound.supported;
-createClipButtons($('greetings'), GREETINGS, sound, showGreeting);
-// Each chapter's recordings, and what its card says while one plays.
-const heard = new Map();
-for (const [chapter, recordings] of Object.entries(RECORDINGS)) {
-  const show = (recording) => { $(chapter + '-heard').innerHTML = recording.text; };
-  $(chapter + '-sounds-box').hidden = !sound.supported;
-  createClipButtons($(chapter + '-sounds'), recordings, sound, show);
-  for (const recording of recordings) heard.set(recording.key, () => show(recording));
-}
-// Play a recording on the story's cue, with its words on the card.
-function cue(key) {
-  if (sound.cue(key)) heard.get(key)();
-}
-// With sound on, the record plays itself once when the reader reaches it:
-// one greeting after another, until they pick one or scroll on.
-async function playRecord() {
-  for (const greeting of GREETINGS) {
-    const played = sound.cue(greeting.key);
-    if (!played) return;
-    showGreeting(greeting);
-    if (await played !== 'ended') return;
-  }
-}
-const hear = (state) => {
-  sound.follow(state);
-  if (state.id === 'record' && state.progress > 0.12) playRecord();
-};
+const sound = mountMissionSound({ beds: BEDS, recordings: RECORDINGS, assets: ASSETS });
 
 const drawJupiterChart = createChart($('chart-jupiter'), data.speed.jupiter, { events: [{ day: DAYS.jupiter, label: 'closest approach' }] });
 drawJupiterChart(data.speed.jupiter[0][0]);
 
 /* ──── 3D scene ──── */
 const kit = createMissionKit();
-if (kit) {
-  startScene(kit);
-} else {
-  const story = createStory($('story'), { onChapter: sound.stop });
-  const listen = () => hear(story.read());
-  addEventListener('scroll', listen, { passive: true });
-  listen();
-}
+// Sound follows the story with or without the 3D scene.
+if (kit) startScene(kit);
+else followStory($('story'), sound.follow);
 
 function buildCraft(kit) {
   const craft = new kit.THREE.Group();
@@ -363,7 +318,6 @@ function buildFlyby(kit, cfg) {
       kit.place('fly-voyager', 'Voyager 1', here, { cls: 'is-craft' });
       kit.place('fly-moon', cfg.moon.name, moon.position);
       if (cfg.chart) cfg.chart(day);
-      if (cfg.cues) for (const [from, key] of cfg.cues) if (p >= from) cue(key);
     },
   };
 }
@@ -462,8 +416,6 @@ function systemChapters(kit, system) {
         place('voyager', 'Voyager 1', voyager, VOYAGER);
         place('sun', 'Sun & planets', ORIGIN, { cls: 'is-dim', dx: 12, dy: 14 });
         system.labelMilestones((m) => m.day <= day && m.day > DAYS.portrait);
-        if (day >= DAYS.pause) cue('plasma-waves');
-        else if (day >= DAYS.shock) cue('termination-shock');
       },
     },
     lightday: {
@@ -487,8 +439,6 @@ function startScene(kit) {
   const jupiter = buildFlyby(kit, {
     key: 'jupiter', name: 'Jupiter', radiusKm: 71492, color: 0xc9a27e, pole: [268.057, 64.495], periodDays: 0.41354,
     path: data.jupiter.path, closestDay: DAYS.jupiter, far: 46, near: 24, chart: drawJupiterChart,
-    // Both are from the pass itself.
-    cues: [[0.62, 'jupiter-chorus'], [0.3, 'jupiter-lightning']],
     moon: { name: 'Io', rows: data.jupiter.io, color: 0xf2d66b },
   });
   const saturn = buildFlyby(kit, {
@@ -506,13 +456,12 @@ function startScene(kit) {
       saturn: { play: saturn.play },
     },
     onChapter(chapter) {
-      sound.stop();
       // Fetch each planet a chapter early so it is there when the cut lands.
       if (chapter.id === 'launch' || chapter.id === 'jupiter') jupiter.load();
       if (chapter.id === 'jupiter' || chapter.id === 'cruise' || chapter.id === 'saturn') saturn.load();
     },
     frame(state) {
-      hear(state);
+      sound.follow(state);
       // Light scattered inside the camera when it looked back at the Sun.
       $('sunbeams').style.opacity = state.id === 'portrait' ? (smooth(0.62, 0.9, state.progress) * 0.9).toFixed(3) : 0;
       if (kit.stage === 'system') system.dress(state, lookBack(state));

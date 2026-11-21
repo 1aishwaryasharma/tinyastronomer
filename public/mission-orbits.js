@@ -18,6 +18,8 @@ export const DAY_MS = 86400000;
 
 export const clamp01 = (x) => Math.max(0, Math.min(1, x));
 export const lerp = (a, b, t) => a + (b - a) * t;
+// `value` moved toward `target` by at most `step`.
+export const approach = (value, target, step) => (value < target ? Math.min(target, value + step) : Math.max(target, value - step));
 // 0 below `a`, 1 above `b`, an eased ramp between.
 export const smooth = (a, b, x) => {
   const t = clamp01((x - a) / (b - a));

@@ -10,13 +10,13 @@
    each chapter turns progress into a mission date and a camera pose. Every
    position Cassini or Huygens takes comes from trajectory.json and tour.bin
    (JPL Horizons). */
-import { SPACE } from '/common.bundle.js?v=20261121-1';
+import { SPACE } from '/common.bundle.js?v=20261121-2';
 import {
   clockTime, formatDate, formatLightTime, lerp, planetPosition, smooth, unpackRows,
-} from '/mission-orbits.js?v=20261121-1';
-import { createMissionKit } from '/mission-scene.js?v=20261121-2';
-import { createChart, createPartPicker } from '/mission-story.js?v=20261121-2';
-import { PARTS, SATURN, createFlight } from '/missions/cassini-mission.js?v=20261121-1';
+} from '/mission-orbits.js?v=20261121-2';
+import { createMissionKit } from '/mission-scene.js?v=20261121-3';
+import { createChart, createPartPicker } from '/mission-story.js?v=20261121-3';
+import { PARTS, SATURN, createFlight } from '/missions/cassini-mission.js?v=20261121-2';
 
 const ASSETS = '/assets/missions/cassini/';
 const $ = (id) => document.getElementById(id);

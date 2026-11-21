@@ -34,7 +34,7 @@
 <link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/fragment-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/common.css?v=20261018-1">
-<link rel="stylesheet" href="/mission-page.css?v=20261121-3">
+<link rel="stylesheet" href="/mission-page.css?v=20261121-4">
 <style>
   #canvas-container { --mission-poster: url('/assets/missions/voyager-1/poster.webp'); }
   @media (max-width: 860px) {
@@ -155,6 +155,7 @@
       <h2>Stealing speed from a giant</h2>
       <p>Voyager 1 swung around Jupiter about 349,000 km from its centre. Jupiter races around the Sun at 13 km every second, and its gravity towed the little spacecraft along with it. Voyager arrived moving about 13 km/s and left at about 24. This trick is called a <strong>gravity assist</strong>.</p>
       <canvas class="chart" id="chart-jupiter" role="img" aria-label="Chart: Voyager 1's speed relative to the Sun rises from about 13 to about 24 kilometres per second as it passes Jupiter, with a brief peak of 37 at closest approach."></canvas>
+      <p class="chart-caption">Speed relative to the Sun, from JPL's trajectory. The spike is Voyager falling toward Jupiter and climbing back out.</p>
       <div class="clip-box" id="jupiter-sounds-box" hidden>
         <p class="clip-note"><span class="science-kind">Real measurements</span> <span class="clip-credit">NASA/University of Iowa</span></p>
         <p class="hello-out" id="jupiter-heard" aria-live="polite">Not sound, but electric waves that Voyager's antennas picked up at Jupiter, played through a speaker.</p>
@@ -232,10 +233,10 @@
       <div class="card-kicker">A message in a bottle</div>
       <h2>The Golden Record</h2>
       <p>Bolted to Voyager's side is a gold-plated copper record, made in case anyone ever finds it. A team led by Carl Sagan filled it with the sights and sounds of Earth.</p>
-      <div class="clip-box" id="greetings-box" hidden>
+      <div class="clip-box" id="record-sounds-box" hidden>
         <p class="clip-note"><span class="science-kind">Real recordings</span> <span class="clip-credit">NASA/JPL</span></p>
-        <p class="hello-out" id="greeting-out" aria-live="polite">Pick a greeting to hear it as it was recorded in 1977.</p>
-        <div class="parts" id="greetings" role="group" aria-label="Greetings on the Golden Record"></div>
+        <p class="hello-out" id="record-heard" aria-live="polite">Pick a greeting to hear it as it was recorded in 1977.</p>
+        <div class="parts" id="record-sounds" role="group" aria-label="Greetings on the Golden Record"></div>
       </div>
       <div class="stats">
         <div><span class="stat-label">Pictures</span><span class="stat-value">115</span></div>
@@ -347,6 +348,6 @@
     <a class="foot-next" href="/missions">More missions →</a> · <a class="foot-next" href="/sky-tonight">See tonight&rsquo;s sky yourself →</a></div>
 </div>
 
-<script type="module" src="/missions/voyager-1.js?v=20261121-8"></script>
+<script type="module" src="/missions/voyager-1.js?v=20261121-9"></script>
 </body>
 </html>
