@@ -359,9 +359,12 @@ test("the page is reachable from the home deck and the Missions card", () => {
   }
   // A mission with a deep dive has no static card repeating it below.
   const cards: string[] = [];
+  let cardCount = 0;
   new HTMLRewriter()
-    .on(".grid article.card h3", { element() { cards.push(""); }, text(chunk) { cards[cards.length - 1] += chunk.text; } })
+    .on(".grid .card", { element() { cardCount++; } })
+    .on(".grid .card h3", { element() { cards.push(""); }, text(chunk) { cards[cards.length - 1] += chunk.text; } })
     .transform(missions);
+  expect(cardCount).toBe(5);
   expect(cards).toEqual(["Perseverance", "New Horizons", "Parker Solar Probe", "Apollo 11", "Hubble Telescope"]);
   expect(missions).toContain('About <span id="dive-voyager-km">25,320,225,956</span> km from the Sun');
   expect(missions).toContain("JPL Horizons figure for 1 January 2026");
