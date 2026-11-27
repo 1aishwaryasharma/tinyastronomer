@@ -47,8 +47,8 @@ external dependencies.
 
 Sky Tonight's module imports carry content-hash versions. After editing one
 of them (listed in `tools/stamp-module-versions.ts`) or any inline script, run
-`bun tools/stamp-module-versions.ts`; it also refreshes the CSP hashes. Settled review decisions are in
-[REVIEW.md](REVIEW.md).
+`bun tools/stamp-module-versions.ts`; it also refreshes the CSP hashes. See the
+[Sky Tonight forecast ADR](docs/adr/002-sky-tonight-forecast.md).
 
 Run the repository checks with Bun:
 
@@ -67,8 +67,8 @@ argent flow run qa-home-open-light-study --platform chromium
 .agent-device/run android
 ```
 
-Argent YAML lives in `.argent/flows/` (`.argent/qa.md`). Local Safari/Chrome
-scripts live in `.agent-device/flows/` (`.agent-device/qa.md`).
+See the [browser QA ADR](docs/adr/001-browser-qa.md) for replay policy and
+baseline review.
 
 For an additional HTML conformance check:
 

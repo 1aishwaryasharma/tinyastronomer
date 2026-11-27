@@ -5,7 +5,7 @@ name: Argent QA
 # the pull request (comment marker <!-- argent-qa -->), updated in place on
 # every push. Pushes to main run the flows and keep the artifacts but post
 # nothing. The job runs once per supported Node major (22 and 24); only the
-# Node 24 leg posts the comment. See .argent/qa.md.
+# Node 24 leg posts the comment.
 
 on:
   pull_request:

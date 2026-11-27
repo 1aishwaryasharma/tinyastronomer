@@ -8,7 +8,7 @@ description: >-
 
 inputs:
   argent-version:
-    description: Argent CLI version to install. Keep in step with .argent/qa.md.
+    description: Argent CLI version to install.
     required: false
     default: '0.21.0'
   bun-version:
