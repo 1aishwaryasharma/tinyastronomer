@@ -14,9 +14,10 @@ import { SPACE } from '/common.bundle.js?v=20261121-3';
 import {
   clockTime, formatDate, formatLightTime, lerp, planetPosition, smooth, unpackRows,
 } from '/mission-orbits.js?v=20261121-2';
-import { createMissionKit } from '/mission-scene.js?v=20261121-4';
-import { createChart, createPartPicker } from '/mission-story.js?v=20261121-3';
-import { PARTS, SATURN, createFlight } from '/missions/cassini-mission.js?v=20261121-2';
+import { mountMissionSound } from '/mission-audio.js?v=20261127-1';
+import { createMissionKit } from '/mission-scene.js?v=20261127-1';
+import { createChart, createPartPicker } from '/mission-story.js?v=20261127-1';
+import { PARTS, RECORDINGS, SATURN, createFlight } from '/missions/cassini-mission.js?v=20261127-1';
 
 const ASSETS = '/assets/missions/cassini/';
 const $ = (id) => document.getElementById(id);
@@ -38,6 +39,8 @@ tickLive();
 setInterval(tickLive, 1000);
 
 const picker = createPartPicker(PARTS);
+
+mountMissionSound({ recordings: RECORDINGS, assets: ASSETS });
 
 const drawCruiseChart = createChart($('chart-cruise'), data.speed, { events: flight.flybys.map((flyby) => ({ day: flyby.day, label: flyby.name[0] })) });
 drawCruiseChart(data.speed[0][0]);

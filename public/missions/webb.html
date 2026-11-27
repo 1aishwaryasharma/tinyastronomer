@@ -89,6 +89,7 @@
     <a class="brand" href="/" aria-label="tinyastronomer — back to the first stop"><span class="brand-mark" aria-hidden="true"></span>tiny<span class="brand-name">astronomer</span></a>
     <h1 class="title">James Webb Space Telescope: The Folding Giant</h1>
     <a class="crumb" href="/missions">← All missions</a>
+    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" hidden>Sound off</button>
   </div>
 </header>
 
@@ -122,6 +123,7 @@
         <div><span class="stat-label">Its radio signal takes</span><span class="stat-value live" id="hero-light">5.6 seconds</span></div>
         <p class="stat-note" id="hero-asof"></p>
       </div>
+      <button type="button" class="hello-btn" id="sound-start" hidden>▶ Play with sound</button>
       <p class="hero-scroll">Scroll to begin</p>
     </div>
   </section>
@@ -157,9 +159,15 @@
         <li><time datetime="2022-01-07">7 Jan</time>The first mirror wing locks.</li>
         <li><time datetime="2022-01-08">8 Jan</time>The second wing locks. Done.</li>
       </ol>
+      <div class="clip-box" hidden>
+        <p class="clip-note"><span class="science-kind">Real recordings</span> <span class="clip-credit">NASA</span></p>
+        <p class="hello-out" aria-live="polite">The control room on Earth as each step was confirmed.</p>
+        <div class="parts" role="group" aria-label="Recordings from the unfolding"></div>
+      </div>
       <details class="science-note">
         <summary><span class="science-kind">Simplified model</span><span>Accuracy &amp; sources</span></summary>
         <p>The order and dates are NASA's. The motion is simplified: the real sunshield unrolls from folded stacks and the solar panel opens like a fan, while here they stretch into place. The telescope is NASA's own 3D model, with fine detail removed. On this page it is lit from the front so you can see it; in space the mirror side is always in shadow.</p>
+        <p><strong>Sound.</strong> Space is silent, so this page makes no sound of its own. Webb carries no microphone, so everything you hear with Sound on was recorded on Earth: NASA's broadcast of the launch, and the control room as the telescope unfolded. Each says so where it plays.</p>
         <p class="science-sources"><span>Sources</span>
           <a href="https://science.nasa.gov/mission/webb/deployment-explorer/">NASA Webb deployment</a>
           <a href="https://science.nasa.gov/blogs/webb/2022/01/08/primary-mirror-wings-deployed-all-major-deployments-complete/">NASA Webb blog, 8 Jan 2022</a>
@@ -178,6 +186,11 @@
       <canvas class="chart" id="chart-speed" role="img" aria-label="Chart: Webb's speed relative to Earth falls from 6.6 kilometres per second an hour after launch to about 0.2 on arrival thirty days later."></canvas>
       <p class="chart-caption">Speed relative to Earth, from JPL's trajectory.</p>
       <p>The throw was a little too gentle on purpose. Webb can push itself faster, but it can never turn around to brake: that would point its cold mirror at the Sun.</p>
+      <div class="clip-box" hidden>
+        <p class="clip-note"><span class="science-kind">Real recordings</span> <span class="clip-credit">NASA</span></p>
+        <p class="hello-out" aria-live="polite">NASA's broadcast of the launch, from French Guiana.</p>
+        <div class="parts" role="group" aria-label="Recordings from the launch"></div>
+      </div>
       <details class="science-note">
         <summary><span class="science-kind">Measured path</span><span>Accuracy &amp; sources</span></summary>
         <p>Webb's path, speed and the dates on screen are its as-flown trajectory from NASA/JPL Horizons. The view turns once a year with the line from the Sun through Earth, so the L2 point stays still. Earth, the Moon and Webb are drawn as enlarged dots. L2 is placed with the standard formula for the Sun and Earth, 1.0 % of the Sun's distance beyond Earth.</p>
@@ -356,6 +369,9 @@
       <a href="https://science.nasa.gov/mission/webb/webbs-sunshield/">NASA Webb sunshield</a>
       <a href="https://science.nasa.gov/mission/webb/science-overview/science-explainers/how-does-webb-stay-cold/">NASA How Webb stays cold</a>
       <a href="https://science.nasa.gov/blogs/webb/">NASA Webb blog</a>
+      <a href="https://images.nasa.gov/details/Coverage%20of%20the%20launch%20of%20the%20James%20Webb%20Space%20Telescope%20on%20an%20Ariane%205%20rocket%20from%20the%20Guiana%20Space%20Center%20in%20Kourou%2C%20French%20Guiana">NASA launch broadcast</a>
+      <a href="https://images.nasa.gov/details/GSFC_20220104_Webb_SunShield_Tensioning">NASA sunshield tensioning coverage</a>
+      <a href="https://images.nasa.gov/details/GSFC_M14070_Webb_Primary_Mirror_Deploy">NASA mirror deployment coverage</a>
       <a href="https://www.esa.int/Science_Exploration/Space_Science/Webb">ESA Webb</a>
       <a href="https://ssd.jpl.nasa.gov/horizons/">JPL Horizons</a>
       <span>Reviewed Nov 21, 2026</span>
@@ -365,6 +381,6 @@
     <a class="foot-next" href="/missions">More missions →</a> · <a class="foot-next" href="/sky-tonight">See tonight&rsquo;s sky yourself →</a></div>
 </div>
 
-<script type="module" src="/missions/webb.js?v=20261121-4"></script>
+<script type="module" src="/missions/webb.js?v=20261127-1"></script>
 </body>
 </html>

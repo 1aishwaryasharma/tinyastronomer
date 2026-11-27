@@ -1,11 +1,12 @@
 /* Sound for a mission page: real recordings, and nothing else. Space is
    silent, so the page makes no sound of its own.
 
-     mountMissionSound({ recordings, assets })   → { follow(state) }
+     mountMissionSound({ recordings, assets })
 
-   is all a page calls: it finds the page's sound controls, and the page
-   passes it the story's state as that changes. Underneath is the player,
-   createMissionAudio({ clips, button, start }), exported for the tests.
+   is all a page calls: it finds the page's sound controls and follows the
+   page's story (mission-story.js) itself, with the 3D scene or without
+   it. Underneath is the player, createMissionAudio({ clips, button,
+   start }), exported for the tests.
 
    A recording is fetched when first played. One plays when the reader
    presses its button, whatever the sound switch says: the press is the
@@ -20,9 +21,11 @@
    Markup a page provides, all of it shipped `hidden` where it needs sound:
      #sound-toggle                 the switch
      #sound-start                  the opening card's invitation (optional)
-     #<chapter>-sounds-box         a chapter's recordings, holding
-     #<chapter>-sounds               the group their buttons go in, and
-     #<chapter>-heard                the line that says what is playing */
+     .clip-box                     in each chapter with recordings, holding
+       .parts                        the group their buttons go in, and
+       .hello-out                    the line that says what is playing */
+import { theStory } from './mission-story.js?v=20261127-1';
+
 export const SOUND_KEY = 'ta-sound';
 const CLIP_GAIN = 0.8;
 
@@ -216,12 +219,14 @@ function createClipButtons(container, items, audio, onPress, doc) {
 //               1, from which the story plays it; without `at` it has a
 //               button only.
 //   assets      the page's asset folder, ending in a slash
+//   story       the story to follow, the page's own unless given; one with
+//               just onState(fn) will do
 // With the sound switch on, a chapter's recordings play in the order listed,
 // one at a time, each once per visit, as the reader passes their `at`. The
 // reader pressing a recording's button takes over that chapter from the
 // story. A recording the story started stops when the reader leaves its
 // chapter; one the reader pressed plays out.
-export function mountMissionSound({ recordings, assets, env = globalThis }) {
+export function mountMissionSound({ recordings, assets, env = globalThis, story = theStory() }) {
   const doc = env.document;
   const byKey = new Map(), queued = new Map();
   for (const [chapter, list] of Object.entries(recordings)) {
@@ -234,10 +239,18 @@ export function mountMissionSound({ recordings, assets, env = globalThis }) {
     button: doc.getElementById('sound-toggle'),
     start: doc.getElementById('sound-start'),
   });
+  // Each chapter's recordings go in the box its own section holds.
+  const boxes = new Map(Object.keys(recordings).map((chapter) => {
+    const box = doc.getElementById(chapter)?.querySelector('.clip-box');
+    const buttons = box?.querySelector('.parts'), heard = box?.querySelector('.hello-out');
+    if (!buttons || !heard) throw new Error('Chapter #' + chapter + ' has recordings but no .clip-box with .parts and .hello-out');
+    return [chapter, { box, buttons, heard }];
+  }));
   if (audio.supported) {
     for (const [chapter, list] of Object.entries(recordings)) {
-      doc.getElementById(chapter + '-sounds-box').hidden = false;
-      createClipButtons(doc.getElementById(chapter + '-sounds'), list, audio, () => queued.set(chapter, []), doc);
+      const { box, buttons } = boxes.get(chapter);
+      box.hidden = false;
+      createClipButtons(buttons, list, audio, () => queued.set(chapter, []), doc);
     }
   }
 
@@ -260,16 +273,14 @@ export function mountMissionSound({ recordings, assets, env = globalThis }) {
     // Sound-state changes arrive here too; rewriting the same caption would
     // have a screen reader announce it again.
     if (recording !== captioned) {
-      doc.getElementById(recording.chapter + '-heard').innerHTML = recording.text;
+      boxes.get(recording.chapter).heard.innerHTML = recording.text;
       captioned = recording;
     }
   });
 
-  return {
-    follow(state) {
-      if (cued && last && state.id !== last.id) audio.stop();
-      last = state;
-      offer();
-    },
-  };
+  story.onState((state) => {
+    if (cued && last && state.id !== last.id) audio.stop();
+    last = state;
+    offer();
+  });
 }

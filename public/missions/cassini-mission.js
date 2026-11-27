@@ -29,6 +29,39 @@ export const PARTS = [
 // the equatorial radius the trajectory is scaled by.
 export const SATURN = { pole: [40.589, 83.537], periodDays: 0.44401, polarKm: 54364 };
 
+// The recordings each chapter can play, as mission-audio.js takes them:
+// `key` names audio/<key>.mp3, `text` is what the card says while it plays,
+// `gain` tames the loud ones, and `at` is the scroll progress from which the
+// story plays it by itself for a reader with sound on. All but the legacy's
+// are what Cassini's radio and plasma wave antennas picked up: electric
+// waves, not sound, played through a speaker by the University of Iowa team
+// that built the instrument. The finale's `at` are where its chapter reaches
+// each recording's date; the lightning's is where the tour reaches January
+// 2006. Mission control at the end plays as the reader arrives after the
+// plunge, as the last signal reached Earth after it.
+export const RECORDINGS = {
+  arrival: [
+    { key: 'saturn-bow-shock', label: 'Bow shock', gain: 0.5, at: 0.05,
+      text: '<strong>27 June 2004.</strong> Four days out, Cassini crossed the bow shock, where the solar wind slams into Saturn’s magnetic field, and the hiss turns to a roar. Twenty-eight minutes are squeezed into ten seconds.' },
+  ],
+  tour: [
+    { key: 'saturn-radio', label: 'Radio from the auroras', gain: 0.45, at: 0.03,
+      text: '<strong>Saturn’s radio voice.</strong> Radio waves from its auroras, rising and falling like birdsong. They are far too high to hear, so they are played 44 times lower and 22 times faster. November 2003, as Cassini closed in.' },
+    { key: 'saturn-lightning', label: 'Lightning', gain: 0.5, at: 0.145,
+      text: '<strong>A thunderstorm on Saturn.</strong> Each crackle is the radio burst from a lightning bolt deep in its clouds, like static on a radio during a storm. About fifty minutes are squeezed into twelve seconds. 23 January 2006.' },
+  ],
+  finale: [
+    { key: 'ring-gap', label: 'Inside the gap', gain: 0.5, at: 0.012,
+      text: '<strong>26 April 2017.</strong> The first dive between the rings and the planet. Scientists expected dust to pelt the spacecraft. They heard almost none: only the whistles of waves in the thin gas. Played four times faster.' },
+    { key: 'enceladus-waves', label: 'Enceladus calling', gain: 0.5, at: 0.66,
+      text: '<strong>2 September 2017.</strong> Waves running along the magnetic field between Saturn and Enceladus, the moon with the fountains: a sign the two are wired together. Lowered five times in pitch, and played about thirty times faster.' },
+  ],
+  legacy: [
+    { key: 'loss-of-signal', label: 'The last signal', at: 0,
+      text: '<strong>Mission control, 15 September 2017.</strong> The room at JPL as Cassini’s radio fell silent: “the signal from the spacecraft is gone, and within the next 45 seconds, so will be the spacecraft.” A real recording, made on Earth.' },
+  ],
+};
+
 // Flyby tags crowd the inner solar system, so once Cassini is this far from
 // the Sun only Jupiter's is left up, and the outer planets get their names.
 const INNER_AU = 2.2;

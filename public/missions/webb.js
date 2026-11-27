@@ -9,11 +9,12 @@
    trajectory.json (JPL Horizons). */
 import { SPACE } from '/common.bundle.js?v=20261121-3';
 import { clamp01, formatDate, lerp, smooth } from '/mission-orbits.js?v=20261121-2';
-import { createMissionKit } from '/mission-scene.js?v=20261121-4';
-import { createChart, createPartPicker } from '/mission-story.js?v=20261121-3';
+import { mountMissionSound } from '/mission-audio.js?v=20261127-1';
+import { createMissionKit } from '/mission-scene.js?v=20261127-1';
+import { createChart, createPartPicker } from '/mission-story.js?v=20261127-1';
 import {
-  CLIP, PARTS, SHIELD_C, alignmentCaption, celsius, createFlight, infraredCaption,
-} from '/missions/webb-mission.js?v=20261121-2';
+  CLIP, PARTS, RECORDINGS, SHIELD_C, alignmentCaption, celsius, createFlight, infraredCaption,
+} from '/missions/webb-mission.js?v=20261127-1';
 
 const ASSETS = '/assets/missions/webb/';
 const $ = (id) => document.getElementById(id);
@@ -134,6 +135,8 @@ const TRUE = lightFrom([5, -52, 9], { sunIntensity: 5.2, fill: 0.6, sky: 0.18 })
 const unfolded = (state) => (state.id === 'unfold' ? flight.unfoldAt(state.progress).second : CLIP.seconds);
 // How far the mirror chapter's yardsticks have grown in, 0 to 1.
 const yardsticksIn = (state) => (state.id === 'mirror' ? smooth(0, 0.2, state.progress) : 0);
+
+mountMissionSound({ recordings: RECORDINGS, assets: ASSETS });
 
 /* ──── 3D scene ──── */
 const kit = createMissionKit({ shadowMap: true });

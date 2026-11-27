@@ -208,3 +208,39 @@ lights the mirror side; in space it is in permanent shadow.
 | `poster.webp` | 25 KB | 1600 x 1000 |
 | `poster-800.webp` | 12 KB | 800 x 500 |
 | `trajectory.json` | 75 KB | see `tools/build-webb-trajectory.ts` |
+
+## Recordings (`audio/`)
+
+Webb carries no microphone and no instrument that picks up waves, so it has
+no sounds of its own. Everything the page plays was recorded on Earth, from
+NASA's coverage. Built by `tools/build-mission-audio.ts`, which reads each
+excerpt straight from NASA's file. Nothing is changed but length, level and
+encoding (mono MP3). Each cut was checked by transcribing it.
+
+| File | NASA video (`images.nasa.gov`) | Seconds into the "mobile" file | What is heard |
+| --- | --- | --- | --- |
+| `liftoff.mp3` | [Launch coverage, 25 December 2021](https://images.nasa.gov/details/Coverage%20of%20the%20launch%20of%20the%20James%20Webb%20Space%20Telescope%20on%20an%20Ariane%205%20rocket%20from%20the%20Guiana%20Space%20Center%20in%20Kourou%2C%20French%20Guiana) | 4807 to 4823.7 | Engine start and liftoff, with the commentary "Liftoff from a tropical rainforest to the edge of time itself. James Webb begins a voyage back to the birth of the universe." |
+| `separation.mp3` | the same | 6448.4 to 6466.6 | Confirmation of observatory separation, about 27 minutes after launch, over applause in the control centre |
+| `sunshield-tensioned.mp3` | [Sunshield tensioning, 4 January 2022](https://images.nasa.gov/details/GSFC_20220104_Webb_SunShield_Tensioning) | 8551.5 to 8568.4 | The call that all five layers are fully tensioned, and the room's response |
+| `mirror-latched.mp3` | [Primary mirror final deployment, 8 January 2022](https://images.nasa.gov/details/GSFC_M14070_Webb_Primary_Mirror_Deploy) | 13571.9 to 13585.4 | "We have a fully deployed JWST observatory", and the cheering |
+
+The files used are NASA's `~mobile.mp4` renditions of each video (345,980,229;
+388,598,102 and 623,266,522 bytes). Their times run a few seconds off the
+captions NASA publishes beside them; the cut times above are into the mobile
+files.
+
+- Rights: NASA coverage, released through the NASA Image and Video Library.
+  NASA's media guidelines (<https://www.nasa.gov/nasa-brand-center/images-and-media/>)
+  say NASA material is generally not subject to copyright in the United
+  States and ask that NASA be credited. The page credits NASA beside the
+  buttons and links each video in its sources. It names no speaker.
+- Left out on purpose: the NASA/Chandra sonifications of Webb's images
+  (Cosmic Cliffs, Southern Ring Nebula, WASP-96 b). A sonification turns a
+  picture into music, with notes and instruments chosen by people, so it is
+  not a recording, and this page plays only recordings.
+
+Rebuild, with ffmpeg on PATH:
+
+    bun tools/build-mission-audio.ts webb
+
+The four files total about 460 KB. None is fetched until it plays.

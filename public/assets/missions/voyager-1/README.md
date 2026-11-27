@@ -143,7 +143,7 @@ one hard Sun, a weak blue fill and a rim light, composited over a flat
 
 ## Recordings (`audio/`)
 
-Built by `tools/build-voyager-audio.ts` from NASA and University of Iowa originals. Nothing is
+Built by `tools/build-mission-audio.ts` from NASA and University of Iowa originals. Nothing is
 changed but length, level and encoding (mono MP3).
 
 - `greeting-<language>.mp3`: ten of the Golden Record's fifty-five spoken
@@ -205,11 +205,14 @@ changed but length, level and encoding (mono MP3).
   | `termination-shock.mp3` | `https://space.physics.uiowa.edu/space-audio/voyager/termination-shock/vgertermshock4.wav` | Plasma oscillations before the termination shock, 18:00 to 21:00 on 15 December 2004, compressed to six seconds | `4e0f2fe9158be96d1e492bb7eb231730d172373f11235171827a033d0073c15c` |
 
   Licence: Creative Commons Attribution 4.0 International
-  (<https://space-audio.org/citation.html>), which asks for the credit
+  (<https://space-audio.org/citation.html>). It asks for the credit
   "Original space audio recordings provided courtesy of NASA and The
-  University of Iowa." The page credits them beside each set of buttons and
-  links to space-audio.org in its sources. These too are electric waves played
-  through a speaker, not sound.
+  University of Iowa", a link to the licence, and a note of any change. The
+  page credits NASA and the University of Iowa beside each set of buttons,
+  and its sources list links to space-audio.org with the licence named and
+  "shortened here" (the clips are trimmed, levelled and re-encoded), and
+  links to the licence itself. These too are electric waves played through a
+  speaker, not sound.
 
 The Golden Record's music is a different matter: it belongs to its performers
 and publishers, and none of it is used here.
@@ -217,7 +220,7 @@ and publishers, and none of it is used here.
 Rebuild, with ffmpeg on PATH and the six source files downloaded into one
 folder outside the repository, under the names the script lists:
 
-    bun tools/build-voyager-audio.ts /tmp/voyager-audio
+    bun tools/build-mission-audio.ts voyager-1 /tmp/voyager-audio
 
 The fifteen files total about 690 KB. None is fetched until it plays: on its
 button, or, with Sound on, when the story reaches its moment. The page makes

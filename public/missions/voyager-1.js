@@ -7,9 +7,9 @@
    position Voyager takes comes from trajectory.json (JPL Horizons). */
 import { SPACE } from '/common.bundle.js?v=20261121-3';
 import { PLANETS, clockTime, formatDate, formatLightTime, lerp, smooth } from '/mission-orbits.js?v=20261121-2';
-import { createMissionKit } from '/mission-scene.js?v=20261121-4';
-import { mountMissionSound } from '/mission-audio.js?v=20261121-9';
-import { createChart, createPartPicker, followStory } from '/mission-story.js?v=20261121-3';
+import { createMissionKit } from '/mission-scene.js?v=20261127-1';
+import { mountMissionSound } from '/mission-audio.js?v=20261127-1';
+import { createChart, createPartPicker } from '/mission-story.js?v=20261127-1';
 import { PARTS, RECORDINGS, createFlight } from '/missions/voyager-1-mission.js?v=20261121-9';
 
 const ASSETS = '/assets/missions/voyager-1/';
@@ -48,16 +48,14 @@ $('hello-btn').addEventListener('click', () => {
 
 const picker = createPartPicker(PARTS);
 
-const sound = mountMissionSound({ recordings: RECORDINGS, assets: ASSETS });
+mountMissionSound({ recordings: RECORDINGS, assets: ASSETS });
 
 const drawJupiterChart = createChart($('chart-jupiter'), data.speed.jupiter, { events: [{ day: DAYS.jupiter, label: 'closest approach' }] });
 drawJupiterChart(data.speed.jupiter[0][0]);
 
 /* ──── 3D scene ──── */
 const kit = createMissionKit();
-// Sound follows the story with or without the 3D scene.
 if (kit) startScene(kit);
-else followStory($('story'), sound.follow);
 
 function buildCraft(kit) {
   const craft = new kit.THREE.Group();
@@ -461,7 +459,6 @@ function startScene(kit) {
       if (chapter.id === 'jupiter' || chapter.id === 'cruise' || chapter.id === 'saturn') saturn.load();
     },
     frame(state) {
-      sound.follow(state);
       // Light scattered inside the camera when it looked back at the Sun.
       $('sunbeams').style.opacity = state.id === 'portrait' ? (smooth(0.62, 0.9, state.progress) * 0.9).toFixed(3) : 0;
       if (kit.stage === 'system') system.dress(state, lookBack(state));

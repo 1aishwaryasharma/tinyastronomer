@@ -266,7 +266,7 @@ test("the story is readable and its controls work without the 3D scene", () => {
 
 test("what is drawn rather than measured says so", () => {
   const notes = [...page.matchAll(/<span class="science-kind">([^<]+)<\/span>/g)].map((m) => m[1]);
-  expect(notes).toEqual(["Simplified model", "Measured path", "Illustration"]);
+  expect(notes).toEqual(["Real recordings", "Simplified model", "Real recordings", "Measured path", "Illustration"]);
   expect(page).toContain("is drawn by this page, not taken by Webb");
   expect(page.match(/Illustration, not a Webb image/g)).toHaveLength(1);
   expect(page).toContain("in space the mirror side is always in shadow");

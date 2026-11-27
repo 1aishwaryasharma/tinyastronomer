@@ -2,9 +2,8 @@
    arithmetic that the tests can run without it.
 
      storyState(chapters, scrollY, viewportHeight)   pure scroll arithmetic
-     createStory(root, { onChapter })                the page's chapters, measured
-     followStory(root, onState)                      the story's state on every scroll,
-                                                     for a page with no 3D scene to drive it
+     theStory()                                      the page's one story: its chapters,
+                                                     measured, and the chapter rail
      follow(dt, jump)                                the camera's easing
      yieldingLabels(boxes)                           which of a frame's labels give way
      createPartPicker(parts)                         the spacecraft-parts buttons
@@ -41,53 +40,69 @@ export function storyState(chapters, scrollY, viewportHeight) {
   };
 }
 
-// `read()` returns storyState plus the chapter's id, its stage, and the side
-// of the screen its card sits on (`.chapter.right` in the markup).
-export function createStory(root, { onChapter } = {}) {
+// The page's story: its chapters, measured, and where the reader is in them.
+// There is one per page, made by whoever first asks for it; the 3D scene
+// makes it before it knows whether it can draw, so the story, and with it
+// the chapter rail, runs on every mission page whatever else does. It moves
+// on in one place: whenever the page scrolls or its layout changes, it works
+// out the state, keeps the rail current, then tells whoever listens.
+//   state()          storyState plus the chapter's id, its stage, and the
+//                    side of the screen its card sits on (`.chapter.right`)
+//   onState(fn)      fn(state) now and whenever it changes
+//   onChapter(fn)    fn(chapter) now and whenever the active chapter changes
+let pageStory = null;
+export function theStory() {
+  if (!pageStory) pageStory = createStory(document.getElementById('story'));
+  return pageStory;
+}
+
+function createStory(root) {
   const chapters = [...root.querySelectorAll('.chapter')].map((el) => ({
     el, id: el.id, stage: el.dataset.stage, side: el.classList.contains('right') ? 'right' : 'left', top: 0, height: 1,
   }));
   const rail = document.querySelector('.chapter-rail');
   const railLinks = rail ? [...rail.querySelectorAll('a')] : [];
-  let current = -1;
+  const chapterListeners = new Set(), stateListeners = new Set();
+  let current = -1, state = null;
 
+  function advance() {
+    const next = storyState(chapters, window.scrollY, window.innerHeight);
+    const chapter = chapters[next.index];
+    state = { ...next, id: chapter.id, stage: chapter.stage, side: chapter.side };
+    if (next.index !== current) {
+      current = next.index;
+      for (const link of railLinks) {
+        if (link.getAttribute('href') === '#' + chapter.id) link.setAttribute('aria-current', 'step');
+        else link.removeAttribute('aria-current');
+      }
+      for (const fn of chapterListeners) fn(chapter);
+    }
+    for (const fn of stateListeners) fn(state);
+  }
+
+  // A chapter that grows or shrinks moves the reader within the story
+  // without a scroll.
   function measure() {
     for (const chapter of chapters) {
       const rect = chapter.el.getBoundingClientRect();
       chapter.top = rect.top + window.scrollY;
       chapter.height = Math.max(1, rect.height);
     }
-  }
-
-  function read() {
-    const state = storyState(chapters, window.scrollY, window.innerHeight);
-    const chapter = chapters[state.index];
-    if (state.index !== current) {
-      current = state.index;
-      for (const link of railLinks) {
-        if (link.getAttribute('href') === '#' + chapter.id) link.setAttribute('aria-current', 'step');
-        else link.removeAttribute('aria-current');
-      }
-      if (onChapter) onChapter(chapter);
-    }
-    return { ...state, id: chapter.id, stage: chapter.stage, side: chapter.side };
+    advance();
   }
 
   measure();
   addEventListener('resize', measure);
   new ResizeObserver(measure).observe(root);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+  addEventListener('scroll', advance, { passive: true });
 
-  return { chapters, measure, read };
-}
-
-// For a page whose 3D scene could not start: nothing draws frames, so read
-// the story on each scroll instead. The chapter rail keeps working too.
-export function followStory(root, onState) {
-  const story = createStory(root);
-  const read = () => onState(story.read());
-  addEventListener('scroll', read, { passive: true });
-  read();
+  return {
+    chapters,
+    state: () => state,
+    onState(fn) { stateListeners.add(fn); fn(state); },
+    onChapter(fn) { chapterListeners.add(fn); fn(chapters[current]); },
+  };
 }
 
 // The share of the way to its target the camera covers in a frame `dt`
