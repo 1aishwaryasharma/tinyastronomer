@@ -53,7 +53,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
   approach, clamp01, equatorialToEcliptic, indexAt, lerp, planetOrbit, planetPosition,
 } from './mission-orbits.js?v=20261121-2';
-import { createStory, follow, yieldingLabels } from './mission-story.js?v=20261127-1';
+import { follow, theStory, yieldingLabels } from './mission-story.js?v=20261127-1';
 import { createPlanetModelLoader } from './planet-models.js?v=20261121-1';
 
 const FOV = 35;
@@ -97,6 +97,9 @@ function canvasTexture(width, height, paint) {
 // Returns null when the device cannot run WebGL; SPACE.createScene has
 // already said so in the loader chip, and the story reads on without it.
 export function createMissionKit(sceneOptions = {}) {
+  // The story runs whether or not the 3D view can start, so the chapter rail
+  // works either way.
+  const story = theStory();
   const setup = SPACE.createScene({
     fov: FOV, near: 0.05, far: 4000, bloom: { strength: 0.7, radius: 0.55, threshold: 3.2 }, ...sceneOptions,
   });
@@ -467,7 +470,7 @@ export function createMissionKit(sceneOptions = {}) {
   // The subject is kept clear of the card: beside it on wide screens, on the
   // side the chapter's markup leaves free, and above it on phones.
   kit.run = function run({ sets, chapters, studio, frame: onFrame, onChapter }) {
-    const story = createStory(document.getElementById('story'), { onChapter });
+    if (onChapter) story.onChapter(onChapter);
     for (const { id, stage } of story.chapters) {
       if (!chapters[id] || !sets[stage]) throw new Error('Chapter #' + id + ' has no scene, or its set "' + stage + '" is unknown');
     }

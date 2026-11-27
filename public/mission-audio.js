@@ -4,7 +4,7 @@
      mountMissionSound({ recordings, assets })
 
    is all a page calls: it finds the page's sound controls and follows the
-   story's scroll itself, with the 3D scene or without it. Underneath is the
+   page's story (mission-story.js) itself, with the 3D scene or without it. Underneath is the
    player, createMissionAudio({ clips, button, start }), exported for the
    tests.
 
@@ -24,7 +24,7 @@
      #<chapter>-sounds-box         a chapter's recordings, holding
      #<chapter>-sounds               the group their buttons go in, and
      #<chapter>-heard                the line that says what is playing */
-import { followStory } from './mission-story.js?v=20261127-1';
+import { theStory } from './mission-story.js?v=20261127-1';
 
 export const SOUND_KEY = 'ta-sound';
 const CLIP_GAIN = 0.8;
@@ -219,15 +219,14 @@ function createClipButtons(container, items, audio, onPress, doc) {
 //               1, from which the story plays it; without `at` it has a
 //               button only.
 //   assets      the page's asset folder, ending in a slash
-//   story       how the story's state reaches it: by default every scroll of
-//               the page's #story. The tests drive the returned follow()
-//               instead.
+//   story       the story to follow, the page's own unless given; one with
+//               just follow(onState) will do
 // With the sound switch on, a chapter's recordings play in the order listed,
 // one at a time, each once per visit, as the reader passes their `at`. The
 // reader pressing a recording's button takes over that chapter from the
 // story. A recording the story started stops when the reader leaves its
 // chapter; one the reader pressed plays out.
-export function mountMissionSound({ recordings, assets, env = globalThis, story = (onState) => followStory(env.document.getElementById('story'), onState) }) {
+export function mountMissionSound({ recordings, assets, env = globalThis, story = theStory() }) {
   const doc = env.document;
   const byKey = new Map(), queued = new Map();
   for (const [chapter, list] of Object.entries(recordings)) {
@@ -276,6 +275,6 @@ export function mountMissionSound({ recordings, assets, env = globalThis, story 
     last = state;
     offer();
   }
-  story(follow);
+  story.follow(follow);
   return { follow };
 }

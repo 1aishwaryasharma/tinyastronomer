@@ -9,7 +9,6 @@ import { RECORDINGS as WEBB, createFlight as webbFlight } from "./public/mission
 const root = fileURLToPath(new URL("./public/", import.meta.url));
 const read = (path: string) => readFileSync(root + path, "utf8");
 const page = read("missions/voyager-1.html");
-const AUDIO = "assets/missions/voyager-1/audio/";
 
 // A browser with just enough Web Audio to follow what the page asks of it.
 // `gesture` is whether the browser currently counts the reader as having
@@ -231,14 +230,14 @@ function page_(env: ReturnType<typeof browser>["env"], button: unknown) {
 }
 const story = { hall: [{ key: "a", label: "A", text: "<b>A</b>", at: 0.2 }, { key: "b", label: "B", text: "B", at: 0.2 }, { key: "c", label: "C", text: "C" }], yard: [{ key: "d", label: "D", text: "D", at: 0.5 }] };
 const at = (id: string, progress: number) => ({ id, progress, dim: 0, past: false });
-// The page's scroll is the story's default source; the tests drive follow().
-const mount = (options: Parameters<typeof mountMissionSound>[0]) => mountMissionSound({ story: () => {}, ...options });
+// The page's own story is the default; the tests drive follow() themselves.
+const mount = (options: Parameters<typeof mountMissionSound>[0]) => mountMissionSound({ story: { follow() {} }, ...options });
 
 test("the sound follows the story it is given, with no help from the page", async () => {
   const { env, button, played } = browser({ stored: "on" });
   page_(env, button);
   let follow: ((state: ReturnType<typeof at>) => void) | null = null;
-  mountMissionSound({ recordings: story, assets: "/assets/x/", env, story: (onState: typeof follow) => { follow = onState; } });
+  mountMissionSound({ recordings: story, assets: "/assets/x/", env, story: { follow: (onState: typeof follow) => { follow = onState; } } });
   button.click();
   follow!(at("hall", 0.9));
   await settle();
@@ -370,27 +369,76 @@ test("without Web Audio the page keeps its recordings hidden", () => {
   sound.follow(at("hall", 0.9));
 });
 
+// A page's story element, chapter rail and window: what theStory() reads.
+function storyPage(chapters: { id: string; top: number }[]) {
+  const listeners = new Map<string, Function>();
+  const links = chapters.map(({ id }) => ({ href: "#" + id, current: null as string | null,
+    getAttribute() { return this.href; }, setAttribute(_: string, value: string) { this.current = value; }, removeAttribute() { this.current = null; } }));
+  const els = chapters.map(({ id, top }) => ({ id, dataset: { stage: "craft" }, classList: { contains: () => false },
+    getBoundingClientRect: () => ({ top: top - win.scrollY, height: 1000 }) }));
+  const win = { scrollY: 0, innerHeight: 800 };
+  const saved = { document: globalThis.document, window: globalThis.window, addEventListener: globalThis.addEventListener, ResizeObserver: globalThis.ResizeObserver };
+  Object.assign(globalThis, {
+    window: win,
+    document: { getElementById: () => ({ querySelectorAll: () => els }), querySelector: () => ({ querySelectorAll: () => links }) },
+    addEventListener: (type: string, fn: Function) => void listeners.set(type, fn),
+    ResizeObserver: class { observe() {} },
+  });
+  const scrollTo = (y: number) => { win.scrollY = y; listeners.get("scroll")!(); };
+  const restore = () => Object.assign(globalThis, saved);
+  return { links, scrollTo, restore };
+}
+
+test("by default the sound follows the page's own story, which keeps the chapter rail current", async () => {
+  const dom = storyPage([{ id: "hall", top: 0 }, { id: "yard", top: 1000 }]);
+  try {
+    const { theStory } = await import("./public/mission-story.js");
+    const { env, button, played } = browser({ stored: "on" });
+    page_(env, button);
+    mountMissionSound({ recordings: story, assets: "/assets/x/", env });
+    expect(dom.links.map((l) => l.current)).toEqual(["step", null]);
+    button.click();
+    dom.scrollTo(500);
+    await settle();
+    expect(played()).toHaveLength(1);
+    dom.scrollTo(1200);
+    expect(dom.links.map((l) => l.current)).toEqual([null, "step"]);
+    // The 3D scene follows the same story: one per page.
+    expect(theStory()).toBe(theStory());
+    let entered = "";
+    theStory().onChapter((chapter: { id: string }) => { entered = chapter.id; });
+    expect(entered).toBe("yard");
+  } finally {
+    dom.restore();
+  }
+});
+
 // What every mission page with sound shares: the switch, the invitation, a
 // box inside each chapter with its recordings, each shipped, small and dated,
 // one line mounting it all, and the page saying that space is silent.
-const SOUND_PAGES = [
-  { mission: "voyager-1", recordings: RECORDINGS as Record<string, { key: string; text: string }[]>, undated: ["record"], fileKB: (file: string) => (file.startsWith("greeting") ? 60 : 160), totalKB: 760 },
-  { mission: "cassini", recordings: CASSINI, undated: [], fileKB: () => 140, totalKB: 720 },
-  { mission: "webb", recordings: WEBB, undated: [], fileKB: () => 140, totalKB: 720 },
+// `kinds` is what each chapter's box says its sounds are: waves played
+// through a speaker are measurements, sound is a recording. Sizes are in KB,
+// the short greetings held to less.
+type SoundPage = { mission: string; recordings: Record<string, { key: string; text: string }[]>; kinds: Record<string, "measurements" | "recordings">; undated?: string[]; fileKB: number; shortKB?: number; totalKB: number };
+const SOUND_PAGES: SoundPage[] = [
+  { mission: "voyager-1", recordings: RECORDINGS, kinds: { jupiter: "measurements", edge: "measurements", record: "recordings" }, undated: ["record"], fileKB: 160, shortKB: 60, totalKB: 760 },
+  { mission: "cassini", recordings: CASSINI, kinds: { arrival: "measurements", tour: "measurements", finale: "measurements", legacy: "recordings" }, fileKB: 140, totalKB: 720 },
+  { mission: "webb", recordings: WEBB, kinds: { journey: "recordings", unfold: "recordings" }, fileKB: 140, totalKB: 720 },
 ];
 const IN_CHAPTER = (chapter: string) => new RegExp(`<section class="chapter[^"]*" id="${chapter}"(?:(?!</section>)[^])*?id="${chapter}-sounds-box"`);
 
-for (const { mission, recordings, undated, fileKB, totalKB } of SOUND_PAGES) {
+for (const { mission, recordings, kinds, undated = [], fileKB, shortKB = fileKB, totalKB } of SOUND_PAGES) {
   test(`${mission}: every recording is shipped, small, dated and in its chapter, and the page ships silent`, () => {
     const html = read(`missions/${mission}.html`);
     const dir = `assets/missions/${mission}/audio/`;
     const files = readdirSync(root + dir).sort();
     expect(files).toEqual(Object.values(recordings).flat().map((r) => `${r.key}.mp3`).sort());
-    for (const file of files) expect(statSync(root + dir + file).size, file).toBeLessThan(fileKB(file) * 1024);
+    for (const file of files) expect(statSync(root + dir + file).size, file).toBeLessThan((file.startsWith("greeting") ? shortKB : fileKB) * 1024);
     // Each is fetched only when it plays, so this is a ceiling on a visit that hears everything.
     expect(files.reduce((sum, file) => sum + statSync(root + dir + file).size, 0)).toBeLessThan(totalKB * 1024);
+    expect(Object.keys(kinds)).toEqual(Object.keys(recordings));
     for (const [chapter, list] of Object.entries(recordings)) {
-      expect(html).toMatch(new RegExp(`id="${chapter}-sounds-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real (measurements|recordings)</span>`));
+      expect(html).toMatch(new RegExp(`id="${chapter}-sounds-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real ${kinds[chapter]}</span>`));
       expect(html).toMatch(IN_CHAPTER(chapter));
       expect(html).toContain(`id="${chapter}-heard"`);
       expect(html).toContain(`id="${chapter}-sounds"`);
@@ -452,15 +500,14 @@ test("Voyager's recordings are credited, its greetings are NASA's words, and its
 
 test("Cassini plays what its antennas picked up, and the room as its signal stopped, each on its date", () => {
   const html = read("missions/cassini.html"), readme = read("assets/missions/cassini/README.md");
-  expect(Object.keys(CASSINI)).toEqual(["arrival", "tour", "finale"]);
   expect(html).toContain('<span class="clip-credit">NASA/JPL-Caltech/University of Iowa</span>');
+  expect(html).toContain('<span class="clip-credit">NASA/JPL-Caltech</span>');
   expect(html).toContain(IOWA_CREDIT);
   expect(html).toContain(CC_BY);
   expect(readme).toContain("https://space-audio.org/");
   expect(readme).toContain("Creative Commons Attribution 4.0");
-  // Waves played through a speaker are measurements, even beside one recording.
-  for (const chapter of Object.keys(CASSINI)) expect(html).toMatch(new RegExp(`id="${chapter}-sounds-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real measurements</span>`));
-  expect(CASSINI.finale.find((r) => r.key === "loss-of-signal")!.text).toContain("A real recording, made on Earth.");
+  // Mission control plays as the reader arrives after the plunge, as the last signal reached Earth after it.
+  expect(CASSINI.legacy).toEqual([expect.objectContaining({ key: "loss-of-signal", at: 0 })]);
   // The story reaches each recording's date where the recording plays.
   const flight = cassiniFlight(JSON.parse(read("assets/missions/cassini/trajectory.json")));
   const cue = (chapter: keyof typeof CASSINI, key: string) => CASSINI[chapter].find((r) => r.key === key)!.at;
@@ -468,14 +515,12 @@ test("Cassini plays what its antennas picked up, and the room as its signal stop
   near(flight.chapterDay.tour(cue("tour", "saturn-lightning")), flight.dayOn(2006, 1, 23), 30);
   near(flight.chapterDay.finale(cue("finale", "ring-gap")), flight.dayOn(2017, 4, 26, 9), 0.5);
   near(flight.chapterDay.finale(cue("finale", "enceladus-waves")), flight.dayOn(2017, 9, 2), 1);
-  near(flight.chapterDay.finale(cue("finale", "loss-of-signal")), flight.DAYS.end, 0.01);
   // The Huygens "sounds of Titan" are a laboratory reconstruction under ESA's terms: not used.
   expect(Object.values(CASSINI).flat().map((r) => r.key).join()).not.toMatch(/huygens|titan/);
 });
 
 test("Webb, which hears nothing, plays NASA's recordings on Earth as each step happened", () => {
   const html = read("missions/webb.html"), readme = read("assets/missions/webb/README.md");
-  expect(Object.keys(WEBB)).toEqual(["journey", "unfold"]);
   expect(html).toContain('<span class="clip-credit">NASA</span>');
   expect(html).toContain("Webb carries no microphone, so everything you hear with Sound on was recorded on Earth");
   expect(readme).toContain("https://images.nasa.gov/details/");

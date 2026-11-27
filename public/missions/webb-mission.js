@@ -45,8 +45,8 @@ export const STEPS = [
 // and `at` is the scroll progress from which the story plays it by itself
 // for a reader with sound on. Webb carries nothing that hears or feels
 // waves, so all four are NASA's recordings on Earth: the launch broadcast
-// and the control room. The unfolding's `at` are where its clip finishes
-// the step each one celebrates.
+// and the control room. The unfolding's `at` are within the step each one
+// celebrates, early enough to play out before the chapter ends.
 export const RECORDINGS = {
   journey: [
     { key: 'liftoff', label: 'Liftoff', at: 0,
@@ -55,9 +55,9 @@ export const RECORDINGS = {
       text: '<strong>Twenty-seven minutes later.</strong> Applause in mission control as Webb comes away from the rocket and flies on alone. 25 December 2021.' },
   ],
   unfold: [
-    { key: 'sunshield-tensioned', label: 'Sunshield pulled tight', at: 0.65,
+    { key: 'sunshield-tensioned', label: 'Sunshield pulled tight', at: 0.6,
       text: '<strong>4 January 2022.</strong> The control room in Baltimore hears that all five layers of the sunshield are pulled tight, and cheers.' },
-    { key: 'mirror-latched', label: 'Last wing locks', at: 0.9,
+    { key: 'mirror-latched', label: 'Last wing locks', at: 0.84,
       text: '<strong>8 January 2022.</strong> The second mirror wing locks into place: “We have a fully deployed JWST observatory.” Two weeks of unfolding, done.' },
   ],
 };

@@ -30,9 +30,12 @@ import { RECORDINGS as WEBB } from "../public/missions/webb-mission.js";
 // `from` and `to` are seconds into the source. `pad` widens the cut on both
 // sides; `fade` is the length of the fade at each end, longer where a cut
 // lands in the middle of a room's noise.
-type Cut = { source: string; from: number; to: number; kbps?: number; pad?: number; fade?: number };
+type Cut<S extends string = string> = { source: S; from: number; to: number; kbps?: number; pad?: number; fade?: number };
 type Source = { file: string } | { url: string };
-type Mission = { recordings: Record<string, { key: string }[]>; sources: Record<string, Source>; cuts: Record<string, Cut> };
+type Mission<S extends string = string> = { recordings: Record<string, { key: string }[]>; sources: Record<S, Source>; cuts: Record<string, Cut<S>> };
+// Ties each cut's `source` to the mission's own source names, so a misspelt
+// one is an error in the editor.
+const defineMission = <S extends string>(m: Mission<S>) => m;
 
 const IOWA = "https://space-audio.org/cassini/";
 const JPL = "https://d2pn8kiwq2w21t.cloudfront.net/media/videoscassini";
@@ -40,7 +43,7 @@ const NASA_LIBRARY = (id: string) => ({ url: `https://images-assets.nasa.gov/vid
 const ROOM = { kbps: 56, fade: 0.25 };
 
 const MISSIONS: Record<string, Mission> = {
-  "voyager-1": {
+  "voyager-1": defineMission({
     recordings: VOYAGER,
     sources: {
       greetings: { file: "Voyager_Golden_Record_Greetings_In_55_Languages.mp3" },
@@ -73,8 +76,8 @@ const MISSIONS: Record<string, Mission> = {
       "termination-shock": { source: "terminationShock", from: 0, to: 6.37 },
       "plasma-waves": { source: "interstellar", from: 12.12, to: 23.88, kbps: 96 },
     },
-  },
-  cassini: {
+  }),
+  cassini: defineMission({
     recordings: CASSINI,
     sources: {
       bowShock: { url: IOWA + "bow-shock/t2004_179_oneshock.wav" },
@@ -99,8 +102,8 @@ const MISSIONS: Record<string, Mission> = {
       "enceladus-waves": { source: "enceladus", from: 33, to: 47, fade: 0.25 },
       "loss-of-signal": { source: "control", from: 17, to: 35.3, ...ROOM },
     },
-  },
-  webb: {
+  }),
+  webb: defineMission({
     recordings: WEBB,
     sources: {
       launch: NASA_LIBRARY("Coverage of the launch of the James Webb Space Telescope on an Ariane 5 rocket from the Guiana Space Center in Kourou, French Guiana"),
@@ -115,7 +118,7 @@ const MISSIONS: Record<string, Mission> = {
       "sunshield-tensioned": { source: "sunshield", from: 8551.5, to: 8568.4, ...ROOM },
       "mirror-latched": { source: "mirror", from: 13571.9, to: 13585.4, ...ROOM },
     },
-  },
+  }),
 };
 
 const [name, dir] = process.argv.slice(2);
@@ -127,6 +130,7 @@ if (!dir && Object.values(mission.sources).some((source) => "file" in source)) t
 const keys = Object.values(mission.recordings).flat().map(({ key }) => key);
 for (const key of keys) if (!mission.cuts[key]) throw new Error("No cut times for " + key);
 for (const key of Object.keys(mission.cuts)) if (!keys.includes(key)) throw new Error("Cut times for " + key + ", which the page does not play");
+for (const [key, { source }] of Object.entries(mission.cuts)) if (!mission.sources[source]) throw new Error("No source named " + source + " for " + key);
 const out = fileURLToPath(new URL(`../public/assets/missions/${name}/audio/`, import.meta.url));
 mkdirSync(out, { recursive: true });
 const PEAK_DB = -2;
