@@ -4,9 +4,9 @@
      mountMissionSound({ recordings, assets })
 
    is all a page calls: it finds the page's sound controls and follows the
-   page's story (mission-story.js) itself, with the 3D scene or without it. Underneath is the
-   player, createMissionAudio({ clips, button, start }), exported for the
-   tests.
+   page's story (mission-story.js) itself, with the 3D scene or without
+   it. Underneath is the player, createMissionAudio({ clips, button,
+   start }), exported for the tests.
 
    A recording is fetched when first played. One plays when the reader
    presses its button, whatever the sound switch says: the press is the
@@ -242,8 +242,9 @@ export function mountMissionSound({ recordings, assets, env = globalThis, story 
   // Each chapter's recordings go in the box its own section holds.
   const boxes = new Map(Object.keys(recordings).map((chapter) => {
     const box = doc.getElementById(chapter)?.querySelector('.clip-box');
-    if (!box) throw new Error('Chapter #' + chapter + ' has recordings but no .clip-box');
-    return [chapter, { box, buttons: box.querySelector('.parts'), heard: box.querySelector('.hello-out') }];
+    const buttons = box?.querySelector('.parts'), heard = box?.querySelector('.hello-out');
+    if (!buttons || !heard) throw new Error('Chapter #' + chapter + ' has recordings but no .clip-box with .parts and .hello-out');
+    return [chapter, { box, buttons, heard }];
   }));
   if (audio.supported) {
     for (const [chapter, list] of Object.entries(recordings)) {

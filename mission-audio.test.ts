@@ -375,6 +375,9 @@ test("a chapter with recordings but no box of its own stops the page at once", (
   const findById = env.document.getElementById;
   Object.assign(env.document, { getElementById: (id: string) => (id === "yard" ? { querySelector: () => null } : findById(id)) });
   expect(() => mount({ recordings: story, assets: "/assets/x/", env })).toThrow("Chapter #yard has recordings but no .clip-box");
+  // A box without its caption line is as broken as no box.
+  Object.assign(env.document, { getElementById: (id: string) => (id === "yard" ? { querySelector: () => ({ querySelector: (selector: string) => (selector === ".parts" ? {} : null) }) } : findById(id)) });
+  expect(() => mount({ recordings: story, assets: "/assets/x/", env })).toThrow("Chapter #yard has recordings but no .clip-box");
 });
 
 // A page's story element, chapter rail and window: what theStory() reads.
