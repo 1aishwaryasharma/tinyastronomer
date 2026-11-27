@@ -40,13 +40,15 @@ export function storyState(chapters, scrollY, viewportHeight) {
   };
 }
 
-// The page's story: its chapters, measured, read from the scroll position.
-// There is one per page, made by whoever first asks for it (the 3D scene,
-// the sound), and it keeps the chapter rail current on every scroll itself,
-// so the rail works whether or not anything else runs.
-//   read()           storyState plus the chapter's id, its stage, and the
+// The page's story: its chapters, measured, and where the reader is in them.
+// There is one per page, made by whoever first asks for it; the 3D scene
+// makes it before it knows whether it can draw, so the story, and with it
+// the chapter rail, runs on every mission page whatever else does. It moves
+// on in one place: whenever the page scrolls or its layout changes, it works
+// out the state, keeps the rail current, then tells whoever listens.
+//   state()          storyState plus the chapter's id, its stage, and the
 //                    side of the screen its card sits on (`.chapter.right`)
-//   follow(onState)  onState(read()) now and on every scroll
+//   onState(fn)      fn(state) now and whenever it changes
 //   onChapter(fn)    fn(chapter) now and whenever the active chapter changes
 let pageStory = null;
 export function theStory() {
@@ -60,45 +62,45 @@ function createStory(root) {
   }));
   const rail = document.querySelector('.chapter-rail');
   const railLinks = rail ? [...rail.querySelectorAll('a')] : [];
-  const chapterListeners = new Set(), followers = new Set();
-  let current = -1;
+  const chapterListeners = new Set(), stateListeners = new Set();
+  let current = -1, state = null;
 
-  function measure() {
-    for (const chapter of chapters) {
-      const rect = chapter.el.getBoundingClientRect();
-      chapter.top = rect.top + window.scrollY;
-      chapter.height = Math.max(1, rect.height);
-    }
-  }
-
-  function read() {
-    const state = storyState(chapters, window.scrollY, window.innerHeight);
-    const chapter = chapters[state.index];
-    if (state.index !== current) {
-      current = state.index;
+  function advance() {
+    const next = storyState(chapters, window.scrollY, window.innerHeight);
+    const chapter = chapters[next.index];
+    state = { ...next, id: chapter.id, stage: chapter.stage, side: chapter.side };
+    if (next.index !== current) {
+      current = next.index;
       for (const link of railLinks) {
         if (link.getAttribute('href') === '#' + chapter.id) link.setAttribute('aria-current', 'step');
         else link.removeAttribute('aria-current');
       }
       for (const fn of chapterListeners) fn(chapter);
     }
-    return { ...state, id: chapter.id, stage: chapter.stage, side: chapter.side };
+    for (const fn of stateListeners) fn(state);
+  }
+
+  // A chapter that grows or shrinks moves the reader within the story
+  // without a scroll.
+  function measure() {
+    for (const chapter of chapters) {
+      const rect = chapter.el.getBoundingClientRect();
+      chapter.top = rect.top + window.scrollY;
+      chapter.height = Math.max(1, rect.height);
+    }
+    advance();
   }
 
   measure();
   addEventListener('resize', measure);
   new ResizeObserver(measure).observe(root);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
-  addEventListener('scroll', () => {
-    const state = read();
-    for (const fn of followers) fn(state);
-  }, { passive: true });
-  read();
+  addEventListener('scroll', advance, { passive: true });
 
   return {
     chapters,
-    read,
-    follow(onState) { followers.add(onState); onState(read()); },
+    state: () => state,
+    onState(fn) { stateListeners.add(fn); fn(state); },
     onChapter(fn) { chapterListeners.add(fn); fn(chapters[current]); },
   };
 }

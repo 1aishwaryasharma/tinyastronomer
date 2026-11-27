@@ -21,9 +21,9 @@
    Markup a page provides, all of it shipped `hidden` where it needs sound:
      #sound-toggle                 the switch
      #sound-start                  the opening card's invitation (optional)
-     #<chapter>-sounds-box         a chapter's recordings, holding
-     #<chapter>-sounds               the group their buttons go in, and
-     #<chapter>-heard                the line that says what is playing */
+     .clip-box                     in each chapter with recordings, holding
+       .parts                        the group their buttons go in, and
+       .hello-out                    the line that says what is playing */
 import { theStory } from './mission-story.js?v=20261127-1';
 
 export const SOUND_KEY = 'ta-sound';
@@ -220,7 +220,7 @@ function createClipButtons(container, items, audio, onPress, doc) {
 //               button only.
 //   assets      the page's asset folder, ending in a slash
 //   story       the story to follow, the page's own unless given; one with
-//               just follow(onState) will do
+//               just onState(fn) will do
 // With the sound switch on, a chapter's recordings play in the order listed,
 // one at a time, each once per visit, as the reader passes their `at`. The
 // reader pressing a recording's button takes over that chapter from the
@@ -239,10 +239,17 @@ export function mountMissionSound({ recordings, assets, env = globalThis, story 
     button: doc.getElementById('sound-toggle'),
     start: doc.getElementById('sound-start'),
   });
+  // Each chapter's recordings go in the box its own section holds.
+  const boxes = new Map(Object.keys(recordings).map((chapter) => {
+    const box = doc.getElementById(chapter)?.querySelector('.clip-box');
+    if (!box) throw new Error('Chapter #' + chapter + ' has recordings but no .clip-box');
+    return [chapter, { box, buttons: box.querySelector('.parts'), heard: box.querySelector('.hello-out') }];
+  }));
   if (audio.supported) {
     for (const [chapter, list] of Object.entries(recordings)) {
-      doc.getElementById(chapter + '-sounds-box').hidden = false;
-      createClipButtons(doc.getElementById(chapter + '-sounds'), list, audio, () => queued.set(chapter, []), doc);
+      const { box, buttons } = boxes.get(chapter);
+      box.hidden = false;
+      createClipButtons(buttons, list, audio, () => queued.set(chapter, []), doc);
     }
   }
 
@@ -265,16 +272,14 @@ export function mountMissionSound({ recordings, assets, env = globalThis, story 
     // Sound-state changes arrive here too; rewriting the same caption would
     // have a screen reader announce it again.
     if (recording !== captioned) {
-      doc.getElementById(recording.chapter + '-heard').innerHTML = recording.text;
+      boxes.get(recording.chapter).heard.innerHTML = recording.text;
       captioned = recording;
     }
   });
 
-  function follow(state) {
+  story.onState((state) => {
     if (cued && last && state.id !== last.id) audio.stop();
     last = state;
     offer();
-  }
-  story.follow(follow);
-  return { follow };
+  });
 }

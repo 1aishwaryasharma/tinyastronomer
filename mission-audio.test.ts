@@ -213,43 +213,43 @@ test("sound off stops a recording too, and a browser that refuses audio leaves t
   expect(texts).toEqual(["Tap for sound", "Sound off", "Tap for sound", "Sound off"]);
 });
 
-// The page around the player: just enough DOM for mountMissionSound.
+// The page around the player: just enough DOM for mountMissionSound. Every
+// chapter holds a box of recordings; `nodes` names each chapter's box, its
+// buttons and its caption ("hall box", "hall buttons", "hall heard").
 function page_(env: ReturnType<typeof browser>["env"], button: unknown) {
-  const nodes = new Map<string, any>([["sound-toggle", button]]);
+  const nodes = new Map<string, any>();
   const element = () => ({
     hidden: true, innerHTML: "", textContent: "", pressed: "false", children: [] as any[], click: () => {},
     setAttribute(_: string, value: string) { this.pressed = value; },
     addEventListener(_: string, handler: () => void) { this.click = handler; },
     appendChild(child: unknown) { this.children.push(child); },
   });
+  const chapter = (id: string) => {
+    const box = Object.assign(element(), { querySelector: (selector: string) => nodes.get(id + (selector === ".parts" ? " buttons" : " heard")) });
+    nodes.set(id + " box", box).set(id + " buttons", element()).set(id + " heard", element());
+    return { querySelector: () => box };
+  };
   Object.assign(env.document, {
     createElement: element,
-    getElementById: (id: string) => { if (!nodes.has(id) && id !== "sound-start") nodes.set(id, element()); return nodes.get(id) ?? null; },
+    getElementById: (id: string) => (id === "sound-toggle" ? button : id === "sound-start" ? null : chapter(id)),
   });
   return nodes;
 }
 const story = { hall: [{ key: "a", label: "A", text: "<b>A</b>", at: 0.2 }, { key: "b", label: "B", text: "B", at: 0.2 }, { key: "c", label: "C", text: "C" }], yard: [{ key: "d", label: "D", text: "D", at: 0.5 }] };
 const at = (id: string, progress: number) => ({ id, progress, dim: 0, past: false });
-// The page's own story is the default; the tests drive follow() themselves.
-const mount = (options: Parameters<typeof mountMissionSound>[0]) => mountMissionSound({ story: { follow() {} }, ...options });
-
-test("the sound follows the story it is given, with no help from the page", async () => {
-  const { env, button, played } = browser({ stored: "on" });
-  page_(env, button);
-  let follow: ((state: ReturnType<typeof at>) => void) | null = null;
-  mountMissionSound({ recordings: story, assets: "/assets/x/", env, story: { follow: (onState: typeof follow) => { follow = onState; } } });
-  button.click();
-  follow!(at("hall", 0.9));
-  await settle();
-  expect(played()).toHaveLength(1);
-});
+// The player follows the story it is given; here, one the test moves by hand.
+function mount(options: Parameters<typeof mountMissionSound>[0]) {
+  let onState: (state: ReturnType<typeof at>) => void = () => {};
+  mountMissionSound({ story: { onState: (fn: typeof onState) => { onState = fn; } }, ...options });
+  return { follow: (state: ReturnType<typeof at>) => onState(state) };
+}
 
 test("the story plays a chapter's recordings in order, one at a time, once", async () => {
   const { env, button, fetched, played } = browser();
   const nodes = page_(env, button);
   const sound = mount({ recordings: story, assets: "/assets/x/", env });
-  expect(nodes.get("hall-sounds-box").hidden).toBe(false);
-  expect(nodes.get("hall-sounds").children.map((b: any) => b.textContent)).toEqual(["A", "B", "C"]);
+  expect(nodes.get("hall box").hidden).toBe(false);
+  expect(nodes.get("hall buttons").children.map((b: any) => b.textContent)).toEqual(["A", "B", "C"]);
   // Nothing with sound off, however far the reader scrolls.
   sound.follow(at("hall", 0.9));
   await settle();
@@ -261,13 +261,13 @@ test("the story plays a chapter's recordings in order, one at a time, once", asy
   sound.follow(at("hall", 0.9));
   await settle();
   expect(fetched).toEqual(["/assets/x/audio/a.mp3"]);
-  expect(nodes.get("hall-heard").innerHTML).toBe("<b>A</b>");
-  expect(nodes.get("hall-sounds").children.map((b: any) => b.pressed)).toEqual(["true", "false", "false"]);
+  expect(nodes.get("hall heard").innerHTML).toBe("<b>A</b>");
+  expect(nodes.get("hall buttons").children.map((b: any) => b.pressed)).toEqual(["true", "false", "false"]);
   // The next follows without another scroll; the one with no `at` never does.
   played()[0].onended();
   await settle();
   expect(fetched).toEqual(["/assets/x/audio/a.mp3", "/assets/x/audio/b.mp3"]);
-  expect(nodes.get("hall-heard").innerHTML).toBe("B");
+  expect(nodes.get("hall heard").innerHTML).toBe("B");
   played()[1].onended();
   await settle();
   sound.follow(at("hall", 0.95));
@@ -290,9 +290,9 @@ test("leaving a chapter stops its recording, and a press takes the chapter over 
   sound.follow(at("hall", 0.1));
   expect(played()[0].stopped).toBe(true);
   // The reader picks C before the story reaches A: A and B are theirs to press now.
-  nodes.get("hall-sounds").children[2].click();
+  nodes.get("hall buttons").children[2].click();
   await settle();
-  expect(nodes.get("hall-heard").innerHTML).toBe("C");
+  expect(nodes.get("hall heard").innerHTML).toBe("C");
   played()[1].onended();
   await settle();
   sound.follow(at("hall", 0.9));
@@ -340,7 +340,7 @@ test("replaying the story's recording makes it the reader's: it plays on past th
   button.click();
   sound.follow(at("yard", 0.6));
   await settle();
-  const replay = nodes.get("yard-sounds").children[0];
+  const replay = nodes.get("yard buttons").children[0];
   replay.click();
   await settle();
   replay.click();
@@ -354,19 +354,27 @@ test("a recording the reader pressed plays on into the next chapter", async () =
   const nodes = page_(env, button);
   const sound = mount({ recordings: story, assets: "/assets/x/", env });
   sound.follow(at("hall", 0.1));
-  nodes.get("hall-sounds").children[2].click();
+  nodes.get("hall buttons").children[2].click();
   await settle();
   sound.follow(at("yard", 0.1));
   expect(played()[0].stopped).toBe(false);
-  expect(nodes.get("hall-sounds").children[2].pressed).toBe("true");
+  expect(nodes.get("hall buttons").children[2].pressed).toBe("true");
 });
 
 test("without Web Audio the page keeps its recordings hidden", () => {
   const { env, button } = browser({ hasAudio: false });
   const nodes = page_(env, button);
   const sound = mount({ recordings: story, assets: "/assets/x/", env });
-  expect(nodes.has("hall-sounds-box")).toBe(false);
+  expect(nodes.get("hall box").hidden).toBe(true);
   sound.follow(at("hall", 0.9));
+});
+
+test("a chapter with recordings but no box of its own stops the page at once", () => {
+  const { env, button } = browser();
+  page_(env, button);
+  const findById = env.document.getElementById;
+  Object.assign(env.document, { getElementById: (id: string) => (id === "yard" ? { querySelector: () => null } : findById(id)) });
+  expect(() => mount({ recordings: story, assets: "/assets/x/", env })).toThrow("Chapter #yard has recordings but no .clip-box");
 });
 
 // A page's story element, chapter rail and window: what theStory() reads.
@@ -392,7 +400,10 @@ function storyPage(chapters: { id: string; top: number }[]) {
 test("by default the sound follows the page's own story, which keeps the chapter rail current", async () => {
   const dom = storyPage([{ id: "hall", top: 0 }, { id: "yard", top: 1000 }]);
   try {
-    const { theStory } = await import("./public/mission-story.js");
+    // The same module the player imports, so the same story. It stays made
+    // for the rest of this file: no other test may use the page's own story.
+    const version = read("mission-audio.js").match(/mission-story\.js(\?v=[\d-]+)/)![1];
+    const { theStory } = await import("./public/mission-story.js" + version);
     const { env, button, played } = browser({ stored: "on" });
     page_(env, button);
     mountMissionSound({ recordings: story, assets: "/assets/x/", env });
@@ -403,8 +414,7 @@ test("by default the sound follows the page's own story, which keeps the chapter
     expect(played()).toHaveLength(1);
     dom.scrollTo(1200);
     expect(dom.links.map((l) => l.current)).toEqual([null, "step"]);
-    // The 3D scene follows the same story: one per page.
-    expect(theStory()).toBe(theStory());
+    // The 3D scene asks for the same story the sound follows: one per page.
     let entered = "";
     theStory().onChapter((chapter: { id: string }) => { entered = chapter.id; });
     expect(entered).toBe("yard");
@@ -425,7 +435,9 @@ const SOUND_PAGES: SoundPage[] = [
   { mission: "cassini", recordings: CASSINI, kinds: { arrival: "measurements", tour: "measurements", finale: "measurements", legacy: "recordings" }, fileKB: 140, totalKB: 720 },
   { mission: "webb", recordings: WEBB, kinds: { journey: "recordings", unfold: "recordings" }, fileKB: 140, totalKB: 720 },
 ];
-const IN_CHAPTER = (chapter: string) => new RegExp(`<section class="chapter[^"]*" id="${chapter}"(?:(?!</section>)[^])*?id="${chapter}-sounds-box"`);
+// Each chapter's section of the page, by id.
+const sections = (html: string) => new Map(html.split('<section class="chapter').slice(1)
+  .map((part) => [part.match(/id="([^"]+)"/)![1], part.slice(0, part.indexOf("</section>"))]));
 
 for (const { mission, recordings, kinds, undated = [], fileKB, shortKB = fileKB, totalKB } of SOUND_PAGES) {
   test(`${mission}: every recording is shipped, small, dated and in its chapter, and the page ships silent`, () => {
@@ -437,12 +449,14 @@ for (const { mission, recordings, kinds, undated = [], fileKB, shortKB = fileKB,
     // Each is fetched only when it plays, so this is a ceiling on a visit that hears everything.
     expect(files.reduce((sum, file) => sum + statSync(root + dir + file).size, 0)).toBeLessThan(totalKB * 1024);
     expect(Object.keys(kinds)).toEqual(Object.keys(recordings));
-    for (const [chapter, list] of Object.entries(recordings)) {
-      expect(html).toMatch(new RegExp(`id="${chapter}-sounds-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real ${kinds[chapter]}</span>`));
-      expect(html).toMatch(IN_CHAPTER(chapter));
-      expect(html).toContain(`id="${chapter}-heard"`);
-      expect(html).toContain(`id="${chapter}-sounds"`);
-      if (!undated.includes(chapter)) for (const recording of list) expect(recording.text, recording.key).toMatch(/\b(19|20)\d\d\b/);
+    // The player finds each chapter's box inside its section: one there for
+    // every chapter with recordings, none anywhere else.
+    for (const [chapter, section] of sections(html)) {
+      const boxes = section.split('<div class="clip-box" hidden>').length - 1;
+      expect(boxes, chapter).toBe(chapter in recordings ? 1 : 0);
+      if (!(chapter in recordings)) continue;
+      expect(section).toMatch(new RegExp(`<div class="clip-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real ${kinds[chapter]}</span>.*</p>\\s*<p class="hello-out" aria-live="polite">.+</p>\\s*<div class="parts" role="group" aria-label="[^"]+"></div>\\s*</div>`));
+      if (!undated.includes(chapter)) for (const recording of recordings[chapter]) expect(recording.text, recording.key).toMatch(/\b(19|20)\d\d\b/);
     }
     expect(html).toContain('<button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" hidden>Sound off</button>');
     expect(html).toContain('<button type="button" class="hello-btn" id="sound-start" hidden>▶ Play with sound</button>');
@@ -452,12 +466,6 @@ for (const { mission, recordings, kinds, undated = [], fileKB, shortKB = fileKB,
     expect(read(`missions/${mission}.js`)).toContain("\nmountMissionSound({ recordings: RECORDINGS, assets: ASSETS });\n");
   });
 }
-
-test("a box that strays into the next chapter is caught", () => {
-  const html = '<section class="chapter" id="tour"><p></p></section><section class="chapter" id="next"><div id="tour-sounds-box"></div></section>';
-  expect(html).not.toMatch(IN_CHAPTER("tour"));
-  expect(html.replace('</section><section class="chapter" id="next">', "")).toMatch(IN_CHAPTER("tour"));
-});
 
 test("no page makes sound of its own, or starts any by itself", () => {
   // No made-up sound: the player has no oscillators or noise in it.
