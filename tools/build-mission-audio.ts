@@ -3,10 +3,11 @@
 //   bun tools/build-mission-audio.ts MISSION [DIR]
 //
 // MISSION is voyager-1, cassini or webb. Needs ffmpeg on PATH. A source is
-// either a file in DIR, downloaded anywhere outside the repository, or a URL
-// ffmpeg reads directly, seeking to the excerpt so a two-hour broadcast is not
-// downloaded whole. Each mission's README in public/assets/missions/ says
-// where every source comes from.
+// either a { file } in DIR, downloaded anywhere outside the repository, or a
+// { url } ffmpeg reads directly, seeking to the excerpt so a two-hour
+// broadcast is not downloaded whole. DIR is needed only by a mission with
+// files. Each mission's README in public/assets/missions/ says where every
+// source comes from.
 //
 // Voyager's greetings are the Golden Record's "Greetings in 55 Languages" as
 // one track. Their cut times were found by silence detection and each slice
@@ -30,23 +31,24 @@ import { RECORDINGS as WEBB } from "../public/missions/webb-mission.js";
 // sides; `fade` is the length of the fade at each end, longer where a cut
 // lands in the middle of a room's noise.
 type Cut = { source: string; from: number; to: number; kbps?: number; pad?: number; fade?: number };
-type Mission = { recordings: Record<string, { key: string }[]>; sources: Record<string, string>; cuts: Record<string, Cut> };
+type Source = { file: string } | { url: string };
+type Mission = { recordings: Record<string, { key: string }[]>; sources: Record<string, Source>; cuts: Record<string, Cut> };
 
 const IOWA = "https://space-audio.org/cassini/";
 const JPL = "https://d2pn8kiwq2w21t.cloudfront.net/media/videoscassini";
-const NASA_LIBRARY = (id: string) => `https://images-assets.nasa.gov/video/${encodeURIComponent(id)}/${encodeURIComponent(id)}~mobile.mp4`;
+const NASA_LIBRARY = (id: string) => ({ url: `https://images-assets.nasa.gov/video/${encodeURIComponent(id)}/${encodeURIComponent(id)}~mobile.mp4` });
 const ROOM = { kbps: 56, fade: 0.25 };
 
 const MISSIONS: Record<string, Mission> = {
   "voyager-1": {
     recordings: VOYAGER,
     sources: {
-      greetings: "Voyager_Golden_Record_Greetings_In_55_Languages.mp3",
-      interstellar: "PIA17045_20130906-640.mp4",
-      whistlers: "jwhist.mp3",
-      chorus: "jov-chor.mp3",
-      bowShock: "jovbow.mp3",
-      terminationShock: "vgertermshock4.wav",
+      greetings: { file: "Voyager_Golden_Record_Greetings_In_55_Languages.mp3" },
+      interstellar: { file: "PIA17045_20130906-640.mp4" },
+      whistlers: { file: "jwhist.mp3" },
+      chorus: { file: "jov-chor.mp3" },
+      bowShock: { file: "jovbow.mp3" },
+      terminationShock: { file: "vgertermshock4.wav" },
     },
     // The greetings are in the order they are on the record, and cut with a
     // little air around the speech. The interstellar soundtrack plays the
@@ -75,12 +77,12 @@ const MISSIONS: Record<string, Mission> = {
   cassini: {
     recordings: CASSINI,
     sources: {
-      bowShock: IOWA + "bow-shock/t2004_179_oneshock.wav",
-      radio: IOWA + "SKR1/SKR-03-324.wav",
-      lightning: IOWA + "cas-sed-06-023-2hr/cas-sed-06-023-twohour.wav",
-      bigEmpty: IOWA + "rev271rpx/cas-Rev271-RPXNG-10kHz-17-116-085820-0901.wav",
-      enceladus: JPL + "20180709JPL-20180709-CASSINf-0001-720cc.m4v",
-      control: JPL + "20170915JPL-20170915-CASSINf-0001-720cc.m4v",
+      bowShock: { url: IOWA + "bow-shock/t2004_179_oneshock.wav" },
+      radio: { url: IOWA + "SKR1/SKR-03-324.wav" },
+      lightning: { url: IOWA + "cas-sed-06-023-2hr/cas-sed-06-023-twohour.wav" },
+      bigEmpty: { url: IOWA + "rev271rpx/cas-Rev271-RPXNG-10kHz-17-116-085820-0901.wav" },
+      enceladus: { url: JPL + "20180709JPL-20180709-CASSINf-0001-720cc.m4v" },
+      control: { url: JPL + "20170915JPL-20170915-CASSINf-0001-720cc.m4v" },
     },
     // The bow shock clip is whole: the crossing is at its fifth second. The
     // radio and lightning excerpts are their busiest stretch; the ring-gap
@@ -116,9 +118,15 @@ const MISSIONS: Record<string, Mission> = {
   },
 };
 
-const [name, dir = ""] = process.argv.slice(2);
+const [name, dir] = process.argv.slice(2);
 const mission = MISSIONS[name];
-if (!mission) throw new Error("usage: bun tools/build-mission-audio.ts " + Object.keys(MISSIONS).join("|") + " [DIR]");
+const usage = "usage: bun tools/build-mission-audio.ts " + Object.keys(MISSIONS).join("|") + " [DIR]";
+if (!mission) throw new Error(usage);
+if (!dir && Object.values(mission.sources).some((source) => "file" in source)) throw new Error(usage + "\n" + name + " needs DIR, the folder holding its source files");
+// The cut table and the page's recordings name the same clips, each once.
+const keys = Object.values(mission.recordings).flat().map(({ key }) => key);
+for (const key of keys) if (!mission.cuts[key]) throw new Error("No cut times for " + key);
+for (const key of Object.keys(mission.cuts)) if (!keys.includes(key)) throw new Error("Cut times for " + key + ", which the page does not play");
 const out = fileURLToPath(new URL(`../public/assets/missions/${name}/audio/`, import.meta.url));
 mkdirSync(out, { recursive: true });
 const PEAK_DB = -2;
@@ -131,8 +139,8 @@ function ffmpeg(args: string[]) {
 }
 
 function cut(file: string, { source, from, to, kbps = 64, pad = 0, fade = 0.04 }: Cut) {
-  const path = mission.sources[source];
-  const input = /^https:/.test(path) ? path : join(dir, path);
+  const origin = mission.sources[source];
+  const input = "url" in origin ? origin.url : join(dir!, origin.file);
   const start = Math.max(0, from - pad), length = to + pad - start;
   const slice = ["-ss", start.toFixed(3), "-t", length.toFixed(3), "-i", input, "-vn", "-ac", "1"];
   const peak = Number(ffmpeg([...slice, "-af", "volumedetect", "-f", "null", "-"]).match(/max_volume: (-?[\d.]+) dB/)![1]);
@@ -145,7 +153,4 @@ function cut(file: string, { source, from, to, kbps = 64, pad = 0, fade = 0.04 }
   console.log(file.padEnd(26), (statSync(out + file).size / 1024).toFixed(1) + " KB", length.toFixed(2) + " s");
 }
 
-for (const { key } of Object.values(mission.recordings).flat()) {
-  if (!mission.cuts[key]) throw new Error("No cut times for " + key);
-  cut(`${key}.mp3`, mission.cuts[key]);
-}
+for (const key of keys) cut(`${key}.mp3`, mission.cuts[key]);

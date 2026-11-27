@@ -4,7 +4,7 @@
      storyState(chapters, scrollY, viewportHeight)   pure scroll arithmetic
      createStory(root, { onChapter })                the page's chapters, measured
      followStory(root, onState)                      the story's state on every scroll,
-                                                     for a page with no 3D scene to drive it
+                                                     for what follows the story without the 3D scene
      follow(dt, jump)                                the camera's easing
      yieldingLabels(boxes)                           which of a frame's labels give way
      createPartPicker(parts)                         the spacecraft-parts buttons
@@ -81,8 +81,10 @@ export function createStory(root, { onChapter } = {}) {
   return { chapters, measure, read };
 }
 
-// For a page whose 3D scene could not start: nothing draws frames, so read
-// the story on each scroll instead. The chapter rail keeps working too.
+// The story's state on every scroll, for what follows the story whether or
+// not the 3D scene runs (the page's sound). It keeps the chapter rail current
+// too, so the rail works where the scene could not start; where the scene
+// runs, both set the same link.
 export function followStory(root, onState) {
   const story = createStory(root);
   const read = () => onState(story.read());

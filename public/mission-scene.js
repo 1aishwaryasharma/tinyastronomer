@@ -53,7 +53,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
   approach, clamp01, equatorialToEcliptic, indexAt, lerp, planetOrbit, planetPosition,
 } from './mission-orbits.js?v=20261121-2';
-import { createStory, follow, yieldingLabels } from './mission-story.js?v=20261121-3';
+import { createStory, follow, yieldingLabels } from './mission-story.js?v=20261127-1';
 import { createPlanetModelLoader } from './planet-models.js?v=20261121-1';
 
 const FOV = 35;

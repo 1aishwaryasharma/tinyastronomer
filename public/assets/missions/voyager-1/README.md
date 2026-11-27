@@ -205,11 +205,14 @@ changed but length, level and encoding (mono MP3).
   | `termination-shock.mp3` | `https://space.physics.uiowa.edu/space-audio/voyager/termination-shock/vgertermshock4.wav` | Plasma oscillations before the termination shock, 18:00 to 21:00 on 15 December 2004, compressed to six seconds | `4e0f2fe9158be96d1e492bb7eb231730d172373f11235171827a033d0073c15c` |
 
   Licence: Creative Commons Attribution 4.0 International
-  (<https://space-audio.org/citation.html>), which asks for the credit
+  (<https://space-audio.org/citation.html>). It asks for the credit
   "Original space audio recordings provided courtesy of NASA and The
-  University of Iowa." The page credits them beside each set of buttons and
-  links to space-audio.org in its sources. These too are electric waves played
-  through a speaker, not sound.
+  University of Iowa", a link to the licence, and a note of any change. The
+  page credits NASA and the University of Iowa beside each set of buttons,
+  and its sources list links to space-audio.org with the licence named and
+  "shortened here" (the clips are trimmed, levelled and re-encoded), and
+  links to the licence itself. These too are electric waves played through a
+  speaker, not sound.
 
 The Golden Record's music is a different matter: it belongs to its performers
 and publishers, and none of it is used here.

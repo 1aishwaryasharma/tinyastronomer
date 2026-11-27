@@ -193,11 +193,14 @@ how much where its source does.
   <https://www.jpl.nasa.gov/videos/sounds-of-saturn-hear-radio-emissions-of-the-planet-and-its-moon-enceladus/>.
 - Licence: the Iowa clip pages say Creative Commons Attribution 3.0
   Unported; the site's citation page (<https://space-audio.org/citation.html>)
-  says Creative Commons Attribution 4.0 International. Either asks for credit:
-  "Original space audio recordings provided courtesy of NASA and The
-  University of Iowa." The page credits NASA/JPL-Caltech/University of Iowa
-  beside each set of buttons and links to space-audio.org in its sources. The
-  Enceladus clip is the same group's data as released by NASA/JPL.
+  says Creative Commons Attribution 4.0 International, which the page
+  follows. Both ask for credit ("Original space audio recordings provided
+  courtesy of NASA and The University of Iowa"), a link to the licence, and a
+  note of any change. The page credits NASA and the University of Iowa beside
+  each set of buttons, and its sources list links to space-audio.org with the
+  licence named and "shortened here" (the clips are trimmed, levelled and
+  re-encoded), and links to the licence itself. The Enceladus clip is the
+  same group's data as released by NASA/JPL.
 
 `loss-of-signal.mp3` is a sound recording, made on Earth: the room at JPL as
 Cassini's signal stopped on 15 September 2017, from JPL's "Final Moments in
