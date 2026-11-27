@@ -155,7 +155,7 @@
     <details class="science-note">
       <summary><span class="science-kind">Reference record</span><span>Accuracy &amp; sources</span></summary>
       <p>Mission histories come from NASA mission records and were reviewed in August 2026. Changing values are identified as estimates; follow each card’s NASA source for current status and imagery.</p>
-      <p>Voyager 1’s distance from the Sun is a linear estimate. It starts from the JPL Horizons figure for 1 January 2026 and adds about 16.9 km each second. The real speed changes slightly, so the last few digits are illustrative, not measured.</p>
+      <p>Voyager 1’s distance from the Sun is a linear estimate. The page shows the JPL Horizons figure for 1 January 2026 and, once its script is running, adds about 16.9 km each second. The real speed changes, so the estimate grows less accurate over time.</p>
       <p class="science-sources"><span>Source index</span><a href="https://science.nasa.gov/missions/">NASA Missions</a><span>Reviewed Aug 16, 2026</span></p>
     </details>
   </div>
@@ -176,7 +176,7 @@
         <span class="dive-text"><span class="dive-name">James Webb</span><span class="dive-tag">The unfolding telescope</span></span>
       </a>
     </div>
-    <p class="dive-note">Voyager 1’s distance is an estimate counted forward from 1 January 2026. Accuracy &amp; sources, above, explains how.</p>
+    <p class="dive-note">Voyager 1’s distance is <span id="dive-voyager-basis">shown as of 1 January 2026</span>. Accuracy &amp; sources, above, explains how it is estimated.</p>
   </section>
   <div class="grid">
     <article class="card" style="--mission-accent: #d0674a">
@@ -304,7 +304,7 @@ const diveDist = document.getElementById('dive-voyager-km');
 const EPOCH = Date.UTC(2026, 0, 1);
 // JPL Horizons heliocentric vector for Voyager 1 on 2026-01-01, rounded radial
 // speed. This remains an explicitly labelled estimate. The markup ships the
-// epoch figure so a no-JS read still matches the sentence around it.
+// epoch figure labelled "as of" its date; the label changes once this runs.
 const KM_AT_EPOCH = 25320225956;
 const KM_PER_SEC = 16.8825;
 const tick = () => {
@@ -313,6 +313,7 @@ const tick = () => {
 };
 tick();
 setInterval(tick, 1000);
+document.getElementById('dive-voyager-basis').textContent = 'an estimate counted forward from 1 January 2026';
 
 // Full cards run screens deep on a phone. Each card gets a Read more button
 // for its wow fact and links; the stylesheet only
