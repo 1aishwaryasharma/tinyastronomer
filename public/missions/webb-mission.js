@@ -40,6 +40,28 @@ export const STEPS = [
   { date: [2022, 1, 8, 18], label: 'Second mirror wing locks' },
 ];
 
+// The recordings each chapter can play, as mission-audio.js takes them:
+// `key` names audio/<key>.mp3, `text` is what the card says while it plays,
+// and `at` is the scroll progress from which the story plays it by itself
+// for a reader with sound on. Webb carries nothing that hears or feels
+// waves, so all four are NASA's recordings on Earth: the launch broadcast
+// and the control room. The unfolding's `at` are where its clip finishes
+// the step each one celebrates.
+export const RECORDINGS = {
+  journey: [
+    { key: 'liftoff', label: 'Liftoff', at: 0,
+      text: '<strong>25 December 2021.</strong> NASA’s broadcast from French Guiana as the Ariane 5’s engines lit: “Liftoff from a tropical rainforest to the edge of time itself.”' },
+    { key: 'separation', label: 'Separation', at: 0,
+      text: '<strong>Twenty-seven minutes later.</strong> Applause in mission control as Webb comes away from the rocket and flies on alone. 25 December 2021.' },
+  ],
+  unfold: [
+    { key: 'sunshield-tensioned', label: 'Sunshield pulled tight', at: 0.65,
+      text: '<strong>4 January 2022.</strong> The control room in Baltimore hears that all five layers of the sunshield are pulled tight, and cheers.' },
+    { key: 'mirror-latched', label: 'Last wing locks', at: 0.9,
+      text: '<strong>8 January 2022.</strong> The second mirror wing locks into place: “We have a fully deployed JWST observatory.” Two weeks of unfolding, done.' },
+  ],
+};
+
 // NASA's two figures for the sunshield's faces, in °C.
 export const SHIELD_C = { sun: 85, mirror: -233 };
 export const celsius = (degrees) => (degrees > 0 ? '+' : '−') + Math.abs(degrees) + ' °C';

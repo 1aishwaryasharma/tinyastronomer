@@ -14,9 +14,10 @@ import { SPACE } from '/common.bundle.js?v=20261121-3';
 import {
   clockTime, formatDate, formatLightTime, lerp, planetPosition, smooth, unpackRows,
 } from '/mission-orbits.js?v=20261121-2';
+import { mountMissionSound } from '/mission-audio.js?v=20261121-9';
 import { createMissionKit } from '/mission-scene.js?v=20261121-4';
-import { createChart, createPartPicker } from '/mission-story.js?v=20261121-3';
-import { PARTS, SATURN, createFlight } from '/missions/cassini-mission.js?v=20261121-2';
+import { createChart, createPartPicker, followStory } from '/mission-story.js?v=20261121-3';
+import { PARTS, RECORDINGS, SATURN, createFlight } from '/missions/cassini-mission.js?v=20261127-1';
 
 const ASSETS = '/assets/missions/cassini/';
 const $ = (id) => document.getElementById(id);
@@ -38,6 +39,8 @@ tickLive();
 setInterval(tickLive, 1000);
 
 const picker = createPartPicker(PARTS);
+
+const sound = mountMissionSound({ recordings: RECORDINGS, assets: ASSETS });
 
 const drawCruiseChart = createChart($('chart-cruise'), data.speed, { events: flight.flybys.map((flyby) => ({ day: flyby.day, label: flyby.name[0] })) });
 drawCruiseChart(data.speed[0][0]);
@@ -596,6 +599,7 @@ function startScene(kit) {
       finale: { play: finale.play, phoneBack: 1.9 },
     },
     studio: { sun: [-10, 20, 18] },
+    frame: sound.follow,
     onChapter(chapter) {
       // Fetch Saturn a chapter early so it is there when the cut lands.
       if (chapter.id !== 'hero' && chapter.id !== 'craft') saturn.load();
@@ -604,4 +608,6 @@ function startScene(kit) {
 }
 
 const kit = createMissionKit();
+// Sound follows the story with or without the 3D scene.
 if (kit) startScene(kit);
+else followStory($('story'), sound.follow);

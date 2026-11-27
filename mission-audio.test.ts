@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { SOUND_KEY, createMissionAudio, mountMissionSound } from "./public/mission-audio.js";
+import { RECORDINGS as CASSINI, createFlight as cassiniFlight } from "./public/missions/cassini-mission.js";
 import { RECORDINGS, createFlight } from "./public/missions/voyager-1-mission.js";
+import { RECORDINGS as WEBB, createFlight as webbFlight } from "./public/missions/webb-mission.js";
 
 const root = fileURLToPath(new URL("./public/", import.meta.url));
 const read = (path: string) => readFileSync(root + path, "utf8");
@@ -403,4 +405,66 @@ test("the page says which sounds are real, and ships silent", () => {
   // Sound starts from a press, so the site-wide ban on autoplay stays.
   expect(read("_headers")).toContain("autoplay=()");
   expect(read("_headers")).toContain("media-src 'self'");
+});
+
+// What every mission page with sound shares: the switch, the invitation, a
+// box per chapter with its recordings, each shipped, small and dated, and
+// the page saying that space is silent.
+function expectSoundPage(mission: string, recordings: Record<string, { key: string; text: string }[]>, credits: string[]) {
+  const html = read(`missions/${mission}.html`);
+  const script = read(`missions/${mission}.js`);
+  const dir = `assets/missions/${mission}/audio/`;
+  const files = readdirSync(root + dir).sort();
+  const list = Object.values(recordings).flat();
+  expect(files).toEqual(list.map((r) => `${r.key}.mp3`).sort());
+  for (const file of files) expect(statSync(root + dir + file).size, file).toBeLessThan(140 * 1024);
+  expect(files.reduce((sum, file) => sum + statSync(root + dir + file).size, 0)).toBeLessThan(720 * 1024);
+  for (const [chapter, chapterList] of Object.entries(recordings)) {
+    expect(html).toMatch(new RegExp(`id="${chapter}-sounds-box" hidden>\\s*<p class="clip-note"><span class="science-kind">Real (measurements|recordings)</span>`));
+    expect(html).toMatch(new RegExp(`<section class="chapter[^"]*" id="${chapter}"[^]*?id="${chapter}-sounds"[^]*?</section>`));
+    expect(html).toContain(`id="${chapter}-heard"`);
+    for (const recording of chapterList) expect(recording.text, recording.key).toMatch(/\b(19|20)\d\d\b/);
+  }
+  for (const credit of credits) expect(html).toContain(`<span class="clip-credit">${credit}</span>`);
+  expect(html).toContain('<button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" hidden>Sound off</button>');
+  expect(html).toContain('<button type="button" class="hello-btn" id="sound-start" hidden>▶ Play with sound</button>');
+  expect(html).toContain("Space is silent, so this page makes no sound of its own.");
+  expect(html).not.toMatch(/<audio|autoplay/i);
+  // Sound follows the story with the 3D scene and without it.
+  expect(script).toContain("mountMissionSound({ recordings: RECORDINGS, assets: ASSETS })");
+  expect(script).toContain("else followStory($('story'), sound.follow);");
+  expect(script).toMatch(/frame(: sound\.follow|\(state\) \{\s*sound\.follow\(state\))/);
+  return { html, readme: read(`assets/missions/${mission}/README.md`) };
+}
+
+test("Cassini plays what its antennas picked up, and the room as its signal stopped, each on its date", () => {
+  const { html, readme } = expectSoundPage("cassini", CASSINI, ["NASA/JPL-Caltech/University of Iowa"]);
+  expect(Object.keys(CASSINI)).toEqual(["arrival", "tour", "finale"]);
+  expect(html).toContain("https://space-audio.org/");
+  expect(readme).toContain("https://space-audio.org/");
+  expect(readme).toContain("Creative Commons Attribution");
+  // The story reaches each recording's date where the recording plays.
+  const flight = cassiniFlight(JSON.parse(read("assets/missions/cassini/trajectory.json")));
+  const at = (chapter: string, key: string) => (CASSINI as any)[chapter].find((r: any) => r.key === key).at as number;
+  const near = (day: number, target: number, days: number) => expect(Math.abs(day - target)).toBeLessThan(days);
+  near(flight.chapterDay.tour(at("tour", "saturn-lightning")), flight.dayOn(2006, 1, 23), 30);
+  near(flight.chapterDay.finale(at("finale", "ring-gap")), flight.dayOn(2017, 4, 26, 9), 0.5);
+  near(flight.chapterDay.finale(at("finale", "enceladus-waves")), flight.dayOn(2017, 9, 2), 1);
+  near(flight.chapterDay.finale(at("finale", "loss-of-signal")), flight.DAYS.end, 0.01);
+  // The Huygens "sounds of Titan" are a laboratory reconstruction under ESA's terms: not used.
+  expect(Object.values(CASSINI).flat().map((r) => r.key).join()).not.toMatch(/huygens|titan/);
+});
+
+test("Webb, which hears nothing, plays NASA's recordings on Earth as each step happened", () => {
+  const { html, readme } = expectSoundPage("webb", WEBB, ["NASA"]);
+  expect(Object.keys(WEBB)).toEqual(["journey", "unfold"]);
+  expect(html).toContain("Webb carries no microphone, so everything you hear with Sound on was recorded on Earth");
+  expect(readme).toContain("https://images.nasa.gov/details/");
+  // No sonifications: they are composed from pictures, not recorded.
+  expect(readme).toContain("sonification");
+  // The unfolding plays each recording as its clip finishes the step it celebrates.
+  const flight = webbFlight(JSON.parse(read("assets/missions/webb/trajectory.json")));
+  const [tensioned, latched] = WEBB.unfold;
+  expect(flight.unfoldAt(tensioned.at!).label).toBe("Five layers pulled tight");
+  expect(flight.unfoldAt(latched.at!).label).toBe("Second mirror wing locks");
 });

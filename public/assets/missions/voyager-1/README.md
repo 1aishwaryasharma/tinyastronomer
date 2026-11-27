@@ -143,7 +143,7 @@ one hard Sun, a weak blue fill and a rim light, composited over a flat
 
 ## Recordings (`audio/`)
 
-Built by `tools/build-voyager-audio.ts` from NASA and University of Iowa originals. Nothing is
+Built by `tools/build-mission-audio.ts` from NASA and University of Iowa originals. Nothing is
 changed but length, level and encoding (mono MP3).
 
 - `greeting-<language>.mp3`: ten of the Golden Record's fifty-five spoken
@@ -217,7 +217,7 @@ and publishers, and none of it is used here.
 Rebuild, with ffmpeg on PATH and the six source files downloaded into one
 folder outside the repository, under the names the script lists:
 
-    bun tools/build-voyager-audio.ts /tmp/voyager-audio
+    bun tools/build-mission-audio.ts voyager-1 /tmp/voyager-audio
 
 The fifteen files total about 690 KB. None is fetched until it plays: on its
 button, or, with Sound on, when the story reaches its moment. The page makes

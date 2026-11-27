@@ -9,11 +9,12 @@
    trajectory.json (JPL Horizons). */
 import { SPACE } from '/common.bundle.js?v=20261121-3';
 import { clamp01, formatDate, lerp, smooth } from '/mission-orbits.js?v=20261121-2';
+import { mountMissionSound } from '/mission-audio.js?v=20261121-9';
 import { createMissionKit } from '/mission-scene.js?v=20261121-4';
-import { createChart, createPartPicker } from '/mission-story.js?v=20261121-3';
+import { createChart, createPartPicker, followStory } from '/mission-story.js?v=20261121-3';
 import {
-  CLIP, PARTS, SHIELD_C, alignmentCaption, celsius, createFlight, infraredCaption,
-} from '/missions/webb-mission.js?v=20261121-2';
+  CLIP, PARTS, RECORDINGS, SHIELD_C, alignmentCaption, celsius, createFlight, infraredCaption,
+} from '/missions/webb-mission.js?v=20261127-1';
 
 const ASSETS = '/assets/missions/webb/';
 const $ = (id) => document.getElementById(id);
@@ -135,9 +136,13 @@ const unfolded = (state) => (state.id === 'unfold' ? flight.unfoldAt(state.progr
 // How far the mirror chapter's yardsticks have grown in, 0 to 1.
 const yardsticksIn = (state) => (state.id === 'mirror' ? smooth(0, 0.2, state.progress) : 0);
 
+const sound = mountMissionSound({ recordings: RECORDINGS, assets: ASSETS });
+
 /* ──── 3D scene ──── */
 const kit = createMissionKit({ shadowMap: true });
+// Sound follows the story with or without the 3D scene.
 if (kit) startScene(kit);
+else followStory($('story'), sound.follow);
 
 function buildTelescope(kit) {
   const { THREE, sunLight } = kit;
@@ -484,6 +489,7 @@ function startScene(kit) {
     },
     studio: SHOWN,
     frame(state) {
+      sound.follow(state);
       kit.sunLight.castShadow = kit.stage === 'craft';
       telescope.unfoldTo(unfolded(state));
       telescope.showYardsticks(yardsticksIn(state));
