@@ -90,6 +90,7 @@
   .dive-tag { display: block; margin-top: 4px; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-warm); }
   .dive-tag::after { content: ' →'; color: var(--accent); }
   #dive-voyager-km { font-variant-numeric: tabular-nums; }
+  .dive-note { margin: 14px 0 0; text-align: center; font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); }
   /* Phones fold each card to its hook behind Read more (added by the script,
      so a no-JS read still sees every card in full). */
   .more-btn { display: none; }
@@ -154,7 +155,7 @@
     <details class="science-note">
       <summary><span class="science-kind">Reference record</span><span>Accuracy &amp; sources</span></summary>
       <p>Mission histories come from NASA mission records and were reviewed in August 2026. Changing values are identified as estimates; follow each card’s NASA source for current status and imagery.</p>
-      <p>Voyager 1’s distance from the Sun is a linear estimate. It starts from the JPL Horizons figure for 1 January 2026 and adds about 16.9 km each second.</p>
+      <p>Voyager 1’s distance from the Sun is a linear estimate. It starts from the JPL Horizons figure for 1 January 2026 and adds about 16.9 km each second. The real speed changes slightly, so the last few digits are illustrative, not measured.</p>
       <p class="science-sources"><span>Source index</span><a href="https://science.nasa.gov/missions/">NASA Missions</a><span>Reviewed Aug 16, 2026</span></p>
     </details>
   </div>
@@ -175,6 +176,7 @@
         <span class="dive-text"><span class="dive-name">James Webb</span><span class="dive-tag">The unfolding telescope</span></span>
       </a>
     </div>
+    <p class="dive-note">Voyager 1’s distance is an estimate counted forward from 1 January 2026. Accuracy &amp; sources, above, explains how.</p>
   </section>
   <div class="grid">
     <article class="card" style="--mission-accent: #d0674a">
@@ -272,7 +274,7 @@
         <li>Give each group one mission. They answer: where did it go, what kind of mission is it, and what did it discover?</li>
         <li>Build a class timeline from Apollo 11 (1969) to the James Webb Space Telescope (2021).</li>
         <li>Design challenge: plan a mission to a world of your choice. What type of mission is it? What instruments does it carry? How will it cope with distance, heat or cold, and power?</li>
-        <li>Find the world each mission explored in the <a href="/solar-system">Grand Tour</a>.</li>
+        <li>If your mission visited a world, find that world in the <a href="/solar-system">Grand Tour</a>.</li>
       </ol>
       <h4>Discussion questions</h4>
       <ul>
