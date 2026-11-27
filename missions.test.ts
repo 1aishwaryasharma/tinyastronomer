@@ -355,7 +355,7 @@ test("the page is reachable from the home deck and the Missions card", () => {
   const missions = read("missions.html");
   for (const [id, path] of [["dive-voyager", "voyager-1"], ["dive-cassini", "cassini"], ["dive-webb", "webb"]]) {
     expect(missions).toContain(`<a class="dive" id="${id}" href="/missions/${path}">`);
-    expect(missions).toContain(`<a class="go" href="/missions/${path}">`);
+    expect(missions).not.toContain(`<a class="go" href="/missions/${path}">`);
     expect(statSync(`${root}missions/${path}.html`).isFile()).toBe(true);
   }
   expect(page).toContain('<a class="crumb" href="/missions">');
