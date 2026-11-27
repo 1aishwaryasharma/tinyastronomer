@@ -355,8 +355,12 @@ test("the page is reachable from the home deck and the Missions card", () => {
   const missions = read("missions.html");
   for (const [id, path] of [["dive-voyager", "voyager-1"], ["dive-cassini", "cassini"], ["dive-webb", "webb"]]) {
     expect(missions).toContain(`<a class="dive" id="${id}" href="/missions/${path}">`);
-    expect(missions).not.toContain(`<a class="go" href="/missions/${path}">`);
     expect(statSync(`${root}missions/${path}.html`).isFile()).toBe(true);
   }
+  // A mission with a deep dive has no static card repeating it below.
+  const cards = [...missions.matchAll(/<article class="card"[\s\S]*?<h3>([^<]+)<\/h3>/g)].map((m) => m[1]);
+  expect(cards).toEqual(["Perseverance", "New Horizons", "Parker Solar Probe", "Apollo 11", "Hubble Telescope"]);
+  expect(missions).toContain('About <span id="dive-voyager-km">25,320,225,956</span> km from the Sun');
+  expect(missions).toContain("JPL Horizons figure for 1 January 2026");
   expect(page).toContain('<a class="crumb" href="/missions">');
 });
