@@ -58,9 +58,6 @@
   .card .wow { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); }
   .card .wow b { color: var(--ink); font-weight: 500; }
   .card .wow .lbl { display: block; font-family: 'Fragment Mono', monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
-  .card .live { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); }
-  .card .live b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
-  .card .live .lbl { display: block; font-family: 'Fragment Mono', monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent-cool); margin-bottom: 5px; }
   .card .go {
     display: inline-block; margin-top: 14px; font-family: 'Fragment Mono', monospace;
     font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
@@ -93,6 +90,7 @@
   .dive-tag { display: block; margin-top: 4px; font-family: 'Fragment Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-warm); }
   .dive-tag::after { content: ' →'; color: var(--accent); }
   #dive-voyager-km { font-variant-numeric: tabular-nums; }
+  .dive-note { margin: 14px 0 0; text-align: center; font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); }
   /* Phones fold each card to its hook behind Read more (added by the script,
      so a no-JS read still sees every card in full). */
   .more-btn { display: none; }
@@ -157,6 +155,7 @@
     <details class="science-note">
       <summary><span class="science-kind">Reference record</span><span>Accuracy &amp; sources</span></summary>
       <p>Mission histories come from NASA mission records and were reviewed in August 2026. Changing values are identified as estimates; follow each card’s NASA source for current status and imagery.</p>
+      <p>Voyager 1’s distance from the Sun is a linear estimate. The page shows the JPL Horizons figure for 1 January 2026 and, once its script is running, adds about 16.9 km each second. The real speed changes, so the estimate grows less accurate over time.</p>
       <p class="science-sources"><span>Source index</span><a href="https://science.nasa.gov/missions/">NASA Missions</a><span>Reviewed Aug 16, 2026</span></p>
     </details>
   </div>
@@ -166,7 +165,7 @@
     <div class="dive-row">
       <a class="dive" id="dive-voyager" href="/missions/voyager-1">
         <img src="assets/missions/voyager-1/poster-800.webp" alt="" width="800" height="500">
-        <span class="dive-text"><span class="dive-name">Voyager 1</span><span class="dive-tag"><span id="dive-voyager-km">25,320,225,956</span> km out</span></span>
+        <span class="dive-text"><span class="dive-name">Voyager 1</span><span class="dive-tag">About <span id="dive-voyager-km">25,320,225,956</span> km from the Sun</span></span>
       </a>
       <a class="dive" id="dive-cassini" href="/missions/cassini">
         <img src="assets/missions/cassini/poster-800.webp" alt="" width="800" height="500">
@@ -177,21 +176,9 @@
         <span class="dive-text"><span class="dive-name">James Webb</span><span class="dive-tag">The unfolding telescope</span></span>
       </a>
     </div>
+    <p class="dive-note">Voyager 1’s distance is <span id="dive-voyager-basis">shown as of 1 January 2026</span>. Accuracy &amp; sources, above, explains how it is estimated.</p>
   </section>
   <div class="grid">
-    <article class="card" style="--mission-accent: #6ab0ff">
-      <span class="icon" aria-hidden="true">🛰️</span><span class="yr">Launched 1977</span>
-      <h3>Voyager 1 &amp; 2</h3>
-      <div class="tag">The farthest travellers</div>
-      <p class="blurb">Two probes that flew past the giant planets and kept going. Both have crossed the heliopause — the edge of the Sun's protective bubble — into interstellar space. Each carries a Golden Record of sounds and pictures from Earth.</p>
-      <div class="more" id="more-voyager">
-        <div class="wow"><span class="lbl">✦ Wow</span>Voyager 1 is so far away that its faint radio whisper takes <b>nearly 24 hours</b> to reach Earth.</div>
-        <div class="live"><span class="lbl">⟡ Live estimate</span>Voyager 1 is about <b><span id="voyager-dist">25,320,225,956</span> km</b> from the Sun. This linear estimate starts from a January 2026 reference and adds about 16.9 km each second.</div>
-        <a class="source" href="https://science.nasa.gov/mission/voyager/where-are-voyager-1-and-voyager-2-now/">NASA mission source ↗</a>
-        <a class="go" href="/missions/voyager-1">Fly Voyager 1's whole journey in 3D →</a>
-        <a class="go" href="/solar-system#neptune">Visit Neptune, its last flyby →</a>
-      </div>
-    </article>
     <article class="card" style="--mission-accent: #d0674a">
       <span class="icon" aria-hidden="true">🤖</span><span class="yr">Launched 2020</span>
       <h3>Perseverance</h3>
@@ -201,30 +188,6 @@
         <div class="wow"><span class="lbl">✦ Wow</span>The Ingenuity helicopter it carried made the <b>first powered, controlled flight</b> on another planet.</div>
         <a class="source" href="https://science.nasa.gov/mission/mars-2020-perseverance/">NASA mission source ↗</a>
         <a class="go" href="/solar-system#mars">Visit Mars, where it explores →</a>
-      </div>
-    </article>
-    <article class="card" style="--mission-accent: #f4c560">
-      <span class="icon" aria-hidden="true">🔭</span><span class="yr">Launched 2021</span>
-      <h3>James Webb Space Telescope</h3>
-      <div class="tag">A time machine for light</div>
-      <p class="blurb">A giant telescope with a golden mirror, orbiting the Sun near the Sun–Earth L2 point about 1.5 million kilometres from Earth. It sees infrared light, letting it peer through dust and spot galaxies from when the universe was very young.</p>
-      <div class="more" id="more-webb">
-        <div class="wow"><span class="lbl">✦ Wow</span>Webb can catch light that left its stars <b>over 13 billion years ago</b>.</div>
-        <a class="source" href="https://science.nasa.gov/mission/webb/">NASA mission source ↗</a>
-        <a class="go" href="/missions/webb">Watch Webb unfold in 3D →</a>
-        <a class="go" href="/solar-system">Tour the neighbourhood Webb looks beyond →</a>
-      </div>
-    </article>
-    <article class="card" style="--mission-accent: #e6d3a0">
-      <span class="icon" aria-hidden="true">🪐</span><span class="yr">Launched 1997</span>
-      <h3>Cassini</h3>
-      <div class="tag">Saturn's explorer</div>
-      <p class="blurb">A spacecraft that orbited Saturn for 13 years, studying its rings and moons. It carried ESA's Huygens probe, which parachuted through Titan's hazy atmosphere and landed on its surface.</p>
-      <div class="more" id="more-cassini">
-        <div class="wow"><span class="lbl">✦ Wow</span>Cassini found plumes of <b>water vapour and ice grains</b> spraying from fractures near Enceladus's south pole.</div>
-        <a class="source" href="https://science.nasa.gov/mission/cassini/">NASA mission source ↗</a>
-        <a class="go" href="/missions/cassini">Fly Cassini's whole mission in 3D →</a>
-        <a class="go" href="/solar-system#saturn">Visit Saturn and its rings →</a>
       </div>
     </article>
     <article class="card" style="--mission-accent: #c9b8a0">
@@ -308,10 +271,10 @@
       </ul>
       <h4>Try this in class</h4>
       <ol>
-        <li>Give each group one mission card. They answer: where did it go, what kind of mission is it, and what did it discover?</li>
+        <li>Give each group one mission. They answer: where did it go, what kind of mission is it, and what did it discover?</li>
         <li>Build a class timeline from Apollo 11 (1969) to the James Webb Space Telescope (2021).</li>
         <li>Design challenge: plan a mission to a world of your choice. What type of mission is it? What instruments does it carry? How will it cope with distance, heat or cold, and power?</li>
-        <li>Use the links on each card to visit that world in the <a href="/solar-system">Grand Tour</a>.</li>
+        <li>If your mission visited a world shown in the <a href="/solar-system">Grand Tour</a>, find it there.</li>
       </ol>
       <h4>Discussion questions</h4>
       <ul>
@@ -337,23 +300,23 @@ import { SPACE } from './chrome.js?v=20261008-1';
 
 // Live Voyager 1 distance: a linear estimate from a recent epoch. The probe
 // recedes at ~16.9 km/s, so the last digits visibly climb every second.
-const voyagerDist = document.getElementById('voyager-dist');
 const diveDist = document.getElementById('dive-voyager-km');
 const EPOCH = Date.UTC(2026, 0, 1);
 // JPL Horizons heliocentric vector for Voyager 1 on 2026-01-01, rounded radial
 // speed. This remains an explicitly labelled estimate. The markup ships the
-// epoch figure so a no-JS read still matches the sentence around it.
+// epoch figure labelled "as of" its date; the label changes once this runs.
 const KM_AT_EPOCH = 25320225956;
 const KM_PER_SEC = 16.8825;
 const tick = () => {
   const km = KM_AT_EPOCH + ((Date.now() - EPOCH) / 1000) * KM_PER_SEC;
-  voyagerDist.textContent = diveDist.textContent = Math.round(km).toLocaleString('en-US');
+  diveDist.textContent = Math.round(km).toLocaleString('en-US');
 };
 tick();
 setInterval(tick, 1000);
+document.getElementById('dive-voyager-basis').textContent = 'an estimate counted forward from 1 January 2026';
 
-// Eight full cards run five screens deep on a phone. Each card gets a Read
-// more button for its wow fact, live figures, and links; the stylesheet only
+// Full cards run screens deep on a phone. Each card gets a Read more button
+// for its wow fact and links; the stylesheet only
 // folds cards below 620px, so wide screens keep every card open.
 document.querySelectorAll('.card').forEach((card) => {
   const more = card.querySelector('.more');

@@ -25,7 +25,7 @@ const requiredIds: Record<string, string[]> = {
     'play-btn',
     'save-view-btn',
   ],
-  'missions.html': ['missions-header', 'voyager-dist', 'dive-voyager-km', 'deep-dives', 'dive-voyager', 'dive-cassini', 'dive-webb'],
+  'missions.html': ['missions-header', 'dive-voyager-km', 'deep-dives', 'dive-voyager', 'dive-cassini', 'dive-webb'],
   'missions/cassini.html': ['mission-header', 'story', 'parts', 'hero-signal', 'guide'],
   'missions/webb.html': ['mission-header', 'story', 'parts', 'hero-asof', 'guide'],
   'missions/voyager-1.html': ['mission-header', 'story', 'parts', 'chart-jupiter', 'ld-earth-km', 'ld-light', 'hello-btn', 'guide'],
